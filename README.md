@@ -1,15 +1,20 @@
 # EEC-IV-disassembler
-semi automatic disassembler for Ford EEC-IV and V binaries - latest is 3.03
+semi automatic disassembler for Ford EEC-IV and V binaries - version 3.04
+
+NOTE - this code is intended to help understand only how each EEC works, not as a tuning or commercial tool. 
+
+
+MASTER
 
 SAD.pdf    disassembler documentation  (a little out of date, but still 96% correct)
 
-SADWIN.pdf  Wrapper documentation
+SADWIN.pdf  Windows Wrapper documentation
 
-Windows and Linux versions now posted in Master branch.
+Windows and Linux exe versions posted in separate subdirectories.
 
 -------------------------------------------------
 
-WINDOWS with GUI interface 'Wrapper'
+WINDOWS Subdirectory
 
 SAD.exe     version 3.03 for windows   (32 bit build)
 
@@ -17,22 +22,24 @@ SADWIN.exe  Windows GUI 'Wrapper'   (32 bit build)
 
 chip.ico   icon file
 
-! IMPORTANT !  do *NOT* use sad.ini in Windows, SADWIN will create one.  The sad.ini here is set for Linux and has wrong path structure for Windows.
+
+Notes -  SADwin will create a default config file for you, which you can then setup to your preference
 
 ---------------------------------------
 
-FOR LINUX ONLY 
+LINUX Subdirectory 
 
 SADX   linux amd64 build.    After download, make this file executable if necessary with chmod
-
 sad.ini    - an example file to show path orders, not auto generated. (no SADWIN equiv yet)
 
-Edit sad.ini for your setup. If sad.ini is not in same directory as SADX  then run command
+Notes
 
-SADX -c 'path'   where path is location of sad.ini.
+Edit sad.ini for your setup.
+
+If sad.ini is not in same directory as SADX  then run command  SADX -c 'path'   where path is location of sad.ini.
 
 If no SAD.ini present, then everything must be in same directory as SADX
 
 ----------------------------------
 
-NOTE - this code is intended to help understand only how each EEC works, not as a tuning or commercial tool. 
+
