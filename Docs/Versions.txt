@@ -1,0 +1,24 @@
+
+** Version 3.01
+
+ First Github Release
+
+
+
+** Version 3.02
+ Fixed path problem when reading SAD.ini
+ Released Windows Gui Wrapper (version 0.1)
+
+** Version 3.03
+
+ Fixed error with psuedo code printout for JC/JNC
+restored 'casts' for opcodes e.g. (long) (uns) etc.
+
+
+** Version 3.04
+ Fixed error in argument size for subroutines defined by command (in dir file)
+ Fixed further error in JC/JNC and some conditional jumps psudo code not showing correct
+ operands.  [ Still not convinced it's correct in all circumstances ]
+
+3.05
+error with immediates ....
