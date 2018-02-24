@@ -5,8 +5,7 @@
  * This program is for private use only.
  * No liability of any kind accepted or offered.
  *
- * AJP
- *******************************************************
+ ******************************************************
 
  * This code assumes INT is at least 32 bits, on some older compilers this would require
  * the use of LONG instead of INT.  Some code here also uses a LONG for a VOID *.
@@ -6985,6 +6984,8 @@ int calc_mult_ops(int xofst)
      op_val (firstb, 1);        
 
      o = curops+1;                             // most action is for [1]
+     
+     
      switch (opcsub)
 	  {
 	   case 1:                                          // first op is immediate value, byte or word
@@ -6998,8 +6999,8 @@ int calc_mult_ops(int xofst)
           }
 
           
-         if (val_code_addr(o->addr)) 
-         add_ddt(o->addr, o->ssize);                          // may be an address of struct...
+    //     if (val_code_addr(o->addr)) 
+    //     add_ddt(o->addr, o->ssize);                          // may be an address of struct...
 
          break;
 
@@ -8922,7 +8923,7 @@ int parse_com(char *flbuf)
 
   cmnd.posn = readpunc(cmnd.posn, maxlen);
 
-  if (cmnd.posn < maxlen && crdir->namee && flbuf[cmnd.posn] == '\"')
+  if (crdir->namee && cmnd.posn < maxlen &&  flbuf[cmnd.posn] == '\"')
    {
     cmnd.posn++;   // skip quote
     ans = sscanf(flbuf+cmnd.posn," %32s%n", cmnd.symname,&rlen);     //max 32 char names.
@@ -8947,13 +8948,13 @@ int parse_com(char *flbuf)
         if (cmnd.posn >= maxlen) break;         // safety
      
         ans = sscanf(flbuf+cmnd.posn,crdir->opts, rdst, &rlen);
-        t = flbuf+cmnd.posn;                                            // remember char
+        t = flbuf+cmnd.posn;                                               // remember char
 	
         if (ans <= 0) return do_error("Illegal Option", cmnd.posn);        // illegal option char (4)
    
-	    cmnd.posn += 1;       // Not rlen, only single char here
+	    cmnd.posn += 1;                                                    // Not rlen, only single char here
     
-        if (!crdir->maxps) do_opt_letter(&cmnd, rdst[0]);        // cmd : ABC  style
+        if (!crdir->maxps) do_opt_letter(&cmnd, rdst[0]);                  // cmd : ABC  style
         else
          {
           if (do_adnl_letter (&cmnd, rdst[0]))  return 1;
