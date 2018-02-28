@@ -8,6 +8,8 @@
 
 #define _XSHARX_H 1
 
+#include  <stdio.h>
+
 typedef unsigned char  uchar;
 typedef unsigned short ushort;
 typedef unsigned int   uint;
@@ -54,7 +56,7 @@ typedef struct                 // indexed by REAL bank id (0-16)
  uint   *opbt;                // bit array pointer.
  
  int     filstrt;             // start FILE OFFSET. ( = real offset - PCORG)
- int     filend;              // end   FILE OFFSET. 
+ int     filend;              // end   FILE OFFSET.
  int     minpc;               // min PC (normally PCORG)
  int     maxpc;               // end PC (= max PC allowed (where fill starts)
  int     maxbk;               // where bank really ends
