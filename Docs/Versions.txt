@@ -17,8 +17,18 @@ restored 'casts' for opcodes e.g. (long) (uns) etc.
 
 ** Version 3.04
  Fixed error in argument size for subroutines defined by command (in dir file)
- Fixed further error in JC/JNC and some conditional jumps psudo code not showing correct
+ Fixed further error in JC/JNC and some conditional jumps pseudo code not showing correct
  operands.  [ Still not convinced it's correct in all circumstances ]
 
 3.05
-error with immediates ....
+
+yet another Carry fix.  Hopefully this one works.
+
+Fix error with % in symbol names
+
+Put back manual method of defining 'special' subroutines (1D and 2D lookups)
+
+Improve autodetection of signed/unsigned with auto subroutine name option for 1D (functions)
+Improve autodetection of signed/unsigned with auto subroutine name option for 2D (tables)
+But I don't think it's perfect yet......
+
