@@ -1,9 +1,7 @@
 
 ** Version 3.01
 
- First Github Release
-
-
+ First Release
 
 ** Version 3.02
  Fixed path problem when reading SAD.ini
@@ -11,24 +9,23 @@
 
 ** Version 3.03
 
- Fixed error with psuedo code printout for JC/JNC
-restored 'casts' for opcodes e.g. (long) (uns) etc.
+Fixed error with psuedo code printout for JC/JNC
+Restored 'casts' for opcodes e.g. (long) (uns) etc.
 
 
 ** Version 3.04
  Fixed error in argument size for subroutines defined by command (in dir file)
  Fixed further error in JC/JNC and some conditional jumps pseudo code not showing correct
- operands.  [ Still not convinced it's correct in all circumstances ]
+ operands.
 
-3.05
+** Version 3.05
 
-yet another Carry fix.  Hopefully this one works.
-
+Yet another Carry fix.  Hopefully this one works. Some cases now shown as a COMMENT instead.
 Fix error with % in symbol names
-
 Put back manual method of defining 'special' subroutines (1D and 2D lookups)
 
 Improve autodetection of signed/unsigned with auto subroutine name option for 1D (functions)
 Improve autodetection of signed/unsigned with auto subroutine name option for 2D (tables)
-But I don't think it's perfect yet......
+Autodetect not perfect yet....
 
+**
