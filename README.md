@@ -1,5 +1,5 @@
 # EEC-IV-disassembler
-semi automatic disassembler for Ford EEC-IV and V binaries - version 3.05
+semi automatic disassembler for Ford EEC-IV and V binaries - version 3.06
 
 NOTE - this code is intended to help understand only how each EEC works, not as a tuning or commercial tool. 
 
@@ -14,7 +14,7 @@ SAD.pdf    disassembler documentation  (a little out of date, but still 96% corr
 
 SADWIN.pdf  Windows Wrapper documentation
 
-Version.txt  Short description of bugs fixed and changes
+Version.txt  Short description of bugs fixed and changes made
 
 -------------------------------------------------
 

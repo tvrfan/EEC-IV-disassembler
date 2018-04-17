@@ -3,24 +3,24 @@
 
  First Release
 
-** Version 3.02
+** Version 3.02 *****************
  Fixed path problem when reading SAD.ini
  Released Windows Gui Wrapper (version 0.1)
 
-** Version 3.03
+** Version 3.03 *****************
 
 Fixed error with psuedo code printout for JC/JNC
 Restored 'casts' for opcodes e.g. (long) (uns) etc.
 
 
-** Version 3.04
+** Version 3.04 *****************
  Fixed error in argument size for subroutines defined by command (in dir file)
  Fixed further error in JC/JNC and some conditional jumps pseudo code not showing correct
  operands.
 
-** Version 3.05
+** Version 3.05 *****************
 
-Yet another Carry fix.  Hopefully this one works. Some cases now shown as a COMMENT instead.
+Another Carry fix.  Some cases now shown as a COMMENT instead.
 Fix error with % in symbol names
 Put back manual method of defining 'special' subroutines (1D and 2D lookups)
 
@@ -28,4 +28,23 @@ Improve autodetection of signed/unsigned with auto subroutine name option for 1D
 Improve autodetection of signed/unsigned with auto subroutine name option for 2D (tables)
 Autodetect not perfect yet....
 
-**
+** Version 3.06 *****************
+
+Fixed the ADDC for folowing JC/JNC not including carry flag in comment
+Added check for JC/JNC after INC or DEC opcodes.
+Changed shifts to put a comment for equivalent multiply and divide instead of substituting it.
+
+Removed incorrect debug info in subroutine listings.
+
+Fixed - JNVT sometimes prints as "if (CY)" should be "if (OVT)"
+Fixed - NRML opcode prints as "Rxx = NRML(0);"  instead of "NRML(Ryy);"
+
+Reorder internal index tables for opcodes (declared this in case new bug pops up) 
+
+change (long) and (int)  to LR and WR format, add S (signed) and Y (byte) where relevant for extra clarity.
+
+Add glossary at top of listing.
+
+Remove 'V' option (divisor) for words and bytes - it doesn't work anyway.
+
+Fixed - bug which can 'lose' commands - error in address overlap checking.
