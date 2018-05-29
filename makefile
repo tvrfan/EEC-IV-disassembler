@@ -1,12 +1,12 @@
 CC=g++
-CXXFLAGS=-pipe -Wpedantic -Wall -Wextra -Wunreachable-code -Wformat-security -Warray-bounds -fomit-frame-pointer
+CXXFLAGS=-pipe -Wpedantic -Wall -Wextra
 CXXFLAGS64=-m64 -march=nocona -Og #supports 64 bit x86 processors
 CXXFLAGS32=-m32 -march=i386 -Og #supports legacy 32 bit x86 processors
-DEBUG=-ggdb #-fsanitize=address,undefined
+DEBUG=-ggdb #-fsanitize=address,undefined -Wformat-security -Warray-bounds
 
 SRCDIR=./source
-VERSION=3.04
-SRC=$(SRCDIR)/$(VERSION)/core.h $(SRCDIR)/$(VERSION)/Core.cpp $(SRCDIR)/$(VERSION)/debug.h $(SRCDIR)/$(VERSION)/main.cpp $(SRCDIR)/$(VERSION)/shared.h $(SRCDIR)/$(VERSION)/sign.cpp $(SRCDIR)/$(VERSION)/sign.h
+VERSION=3.06
+SRC=$(SRCDIR)/$(VERSION)/*.h $(SRCDIR)/$(VERSION)/*.cpp
 
 all: SAD
 
