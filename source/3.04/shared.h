@@ -19,7 +19,7 @@ typedef unsigned long  ulong;
 
 #define BMAX      16             // maximum bank index
 
-#define SADVERSION "3.05"
+#define SADVERSION "3.04"
 #define SADDATE    "23/02/18"
 
 //  file order is (xx.bin, xx_lst.txt, xx_msg.txt, xx.dir, xx.cmt, SAD.ini)

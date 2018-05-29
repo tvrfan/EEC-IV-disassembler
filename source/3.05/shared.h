@@ -8,6 +8,8 @@
 
 #define _XSHARX_H 1
 
+#include <cstdio>
+
 typedef unsigned char  uchar;
 typedef unsigned short ushort;
 typedef unsigned int   uint;
