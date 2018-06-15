@@ -6,6 +6,9 @@ NOTE - this code is intended to help understand only how each EEC works, not as 
 
 Split into separate subdirectories.
 
+Have released a 3.07 for user function requests, but kept 3.06 in the directories as well .
+3.07 is not fully tested, but seems to work Ok so far, so have released it for user evaluation/testing
+
 -------------------------------------------------
 
 Docs subdirectory

@@ -30,14 +30,44 @@ Autodetect not perfect yet....
 
 ** Version 3.06 *****************
 
-Fixed the ADDC for folowing JC/JNC not including carry flag in comment
-Added check for JC/JNC after INC or DEC opcodes.
-Changed shifts to put a comment for equivalent multiply and divide instead of substituting it.
-Removed incorrect debug info in subroutine listings.
+Fixed - ADDC with folowing JC/JNC not including carry flag in comment
 Fixed - JNVT sometimes prints as "if (CY)" should be "if (OVT)"
 Fixed - NRML opcode prints as "Rxx = NRML(0);"  instead of "NRML(Ryy);"
-Reorder internal index tables for opcodes (declared this in case new bug pops up) 
-Change (long) and (int)  to LR and WR format, add S (signed) and Y (byte) where relevant for extra clarity.
+Fixed - Error in address overlap checking can 'lose' commands entered.  
+
+Add check for JC/JNC after INC or DEC opcodes.
 Add glossary at top of listing.
-Remove 'V' option (divisor) for words and bytes - it doesn't work anyway.
-Fixed - bug which can 'lose' commands - error in address overlap checking.
+
+Change shifts to put a comment for equivalent multiply and divide instead of substituting it.
+Change (long) and (int)  to LR and WR format, add S (signed) and Y (byte) where relevant for extra clarity.
+
+Reorder internal index tables for opcodes (declared in case new bug pops up) 
+
+Removed 'V' option (divisor) for words and bytes - it doesn't work anyway.
+Removed incorrect debug info in subroutine listings.
+
+
+** Version 3.07 *****************
+
+** NOT FULLY TESTED ** INTERIM RELEASE **
+
+Reorder/Tidy opcode internal tables - last phase (I hope)
+
+Fixed -  Fail to pick up a PUSH(addr) in the initial code block as a jump to rest of code (LA3)
+Fixed -  Error in analysis of indexed PUSH(Rxx + ADDR) can cause a data address to be incorrectly interpreted as code.
+Fixed -  Error in processing of function and table lookup subroutines gives inconsistent results for signed vs. unsigned structures. (AGAIN!!)
+Fixed -  Finding banks in multibank bin may fail if a bank has extra NOP opcodes at front.
+Fixed -  Fixed inconsistent output order of newlines with comment blocks
+
+Change - Hold mechanism (for subroutine arguments) to a more efficient chain setup.
+Added -  Handling of bins which use altstack (R22) for their background task list e.g. BWAK3N2.bin  (needs more testing, but seems to work)
+Added -  optional address ranges for commands RBASE and SYMbol. See documentation for correct syntax.   
+
+Improve print handling of R0 in conditional jumps (not quite right yet...)
+
+Still doesn't always get subroutine arguments right !! 
+
+
+
+
+
