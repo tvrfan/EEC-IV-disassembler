@@ -36,16 +36,16 @@ Notes -  SADwin will create a default config file for you, which you can then se
 
 Linux Subdirectory 
 
-SADX   linux amd64 build.    After download, make this file executable if necessary with chmod
-sad.ini    an example file to show path orders, not auto generated. (no SADWIN equiv yet)
+SAD3_06 and SAD3_07  linux amd64 build.    After download, make this file executable if necessary with chmod.
+sad.ini    an example file to show path locations, not auto generated. (no SADWIN equiv yet)
 
 Notes
 
 Edit sad.ini for your setup.
 
-If sad.ini is not in same directory as SADX  then run command  SADX -c 'path'   where path is location of sad.ini.
+If sad.ini is not in same directory as SADx  then run command  SADx -c 'path'   where path is location of sad.ini.
 
-If no SAD.ini present, then everything must be in same directory as SADX
+If no sad.ini present, then everything must be in same directory as SADx
 
 ----------------------------------
 
