@@ -13,7 +13,7 @@ Have released a 3.07 for user function requests, but kept 3.06 in the directorie
 
 Docs subdirectory
 
-SAD.pdf    disassembler documentation  (a little out of date, but still 96% correct)
+SAD.pdf    disassembler documentation (inc 3.07)
 
 SADWIN.pdf  Windows Wrapper documentation
 
@@ -23,7 +23,7 @@ Version.txt  Short description of bugs fixed and changes made
 
 Windows Subdirectory
 
-SAD.exe     version 3.03 for windows   (32 bit build)
+SAD.exe     version 3.06 and 3.07 for windows   (32 bit build)
 
 SADWIN.exe  Windows GUI 'Wrapper'   (32 bit build)
 
