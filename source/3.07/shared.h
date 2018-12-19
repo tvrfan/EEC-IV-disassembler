@@ -19,8 +19,14 @@ typedef unsigned long  ulong;
 
 #define BMAX      16             // maximum bank index
 
+<<<<<<< HEAD:source/3.03/shared.h
 #define SADVERSION "3.03"
 
+=======
+#define SADVERSION "3.07"
+#define SADDATE    "15/06/18"
+
+>>>>>>> 0178a40eb6e72322276bffa37a26737bb6c192fb:source/3.07/shared.h
 //  file order is (xx.bin, xx_lst.txt, xx_msg.txt, xx.dir, xx.cmt, SAD.ini)
 
 
@@ -95,6 +101,8 @@ typedef struct                 // indexed by REAL bank id (0-16)
 #define X  0x800000
 #define Y  0x1000000
 #define Z  0x2000000
+
+// 6 spare
 
 #endif
 

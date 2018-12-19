@@ -21,21 +21,30 @@
 #define     OPJMP  0x20000000        // keep jump destination
 #define     OPRPT  0x10000000        // repeat opcode - repeats must have an index (tval)
 
-// next nibble
-#define     OPSPV  0x08000000        // extras - keep bit from JB or JNB, keep carry state (JC,JNC,STC,CLC),
-                                     // check opcode subtype against tval (M opcodes) to check imd, inx etc
-#define     OPSWP  0x04000000        // allow swop vals to match ldx and stx, and jb,jnb to match other conds (not djnz)
-
-// OPSKP  0x02                      // skip pattern flgs ??
-// OPSUB  0x01 
-
+// next nibble - extra flags
+#define     OPSPV  0x08000000
+#define     OPSPX  0x04000000        
+#define     OPSVL  0x02000000
+/* extra flags
+ * OPSPV      special func flag 1 
+ *    keep jump bit bit and state from JB or JNB (into params[tval])
+ *    keep carry state from a JC,JNC,STC,CLC
+ *    check opcode subtype against tval for multitype opcodes to define only imd, inx etc
+ *    allow zero repeats (i.e. optional + repeat) with OPRPT
+ * 
+ * OPSPX 
+ *    allow ldx to match stx (and swop register data i.e LDX a, b is same as STX b, a)
+ *    with 'sign prefix' opcodes, specify whether prefix is there (0xFE)
+ * OPSVL
+ *    a flag to specify prefix present or not with OPSPX. used for mults and divs (i.e. signed or unsigned)
+*/
 
 // DATA WORD(s)  
 
 #define     SDINC  0x8000000                 // increment/save index on a repeat
 #define     SDLBT  0x4000000                 // drop lowest bit of register (for autoinc and some byte ops)
 #define     SDANY  0x2000000                 // is allow any value, save first one
-//#define     SDINC  0x100000                 // increment/save index on a repeat
+//#define     SDDAT  0x1000000                 // save data in register if indirect or indexed
 
 /*************************************
  * DESCRIPTION 
@@ -45,7 +54,7 @@
  * First integer (opcode) 
  * NB. if sigindex is zero and OPCODE flag is zero, this means a special subpattern (see further below)
  * 
- * 0xff00 0000     flags (opcode, only 0xfc used do far)
+ * 0xff00 0000     flags (opcode, 0xfe used)
  * 0x001f 0000     index value into params array for saved items, repeat counts, regs  etc
 
  * 0x0000 f000     pattern size (= num of ints including this int) >> 12 & 0xf
@@ -55,7 +64,7 @@
  * All patterns begin with a first integer 
  * then rest of words are DATA pattern.  (as in OPCODE-DATA-DATA, etc)
  * 
- * DATA integers (follwos first opcode int)
+ * DATA/operands (follows opcode match)
  * 
  * 0x0f00 0000  flags (data)
  * 0x001f 0000  index for saved value (register or data) for matching (ixval)
@@ -120,46 +129,17 @@ typedef struct xsig
 } SIG;
 
 
-//  if this goes disc based, then may well need the 'type' field back....and ditch proc addresses
-
-// ptnx is main (static) sig definition
-// prep_sig params when -  1st     2nd
-// sig is chained       -  SIG*   0
-// sig copied/processed -  SIG*   SBK* -> SXT*
-
 typedef struct xptn
 {
- uint *sig;                          // actual sig pattern
- const char *name;                   // name (can be null)
- short size;                           // no of instructions in sig
- short vxsz ;                            // size of param array 16 or 32  (could be single bit !!) not used yet...
- void (*sig_prep) (SIG *, SBK*);           // preprocess  (various)
- void (*sig_pr)   (CSIG *, SXT *, SBK *);     // process sig when encountered
+ uint *sig;                                   // actual sig pattern
+ const char *name;                            // name of pattern
+ short size;                                  // no of instructions in sig
+ uint spf    : 1 ;                            // special func (ignore Process SIG option)
+ uint olap   : 1;                             // allow overlaps
+ uint vsz    : 1 ;                            // size of param array 0 = 16, 1 = 32
+ void (*sig_prep) (SIG *, SBK*);              // preprocess  (various)
+ void (*sig_pr)   (CSIG *, SBK *, SBK *);     // process sig when encountered
 } PAT;
-
-
-// called from sub sign -  
-
-// uint cpu : 2;              // 1 = 8061, 2 = 8065, 3 = both
- // uint funcsp : 1;           // special extra handling for funcs and tabs for sign ?
- //uint prescan : 1;                            // look for sig at beginning
-
- //short subtype ;                            // for subroutine naming (and other ?)
-
-/*
-typedef struct dz
-{
- uint opc  : 8 ;
- uint size : 4;
- uint nops : 3;
- uint opcs : 2;
- uint inc  : 1;
- uint imd  : 1;
- uint inx  : 1;
-} DSZ;
-*/
-
-
 
 
 

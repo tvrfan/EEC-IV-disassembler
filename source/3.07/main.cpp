@@ -75,7 +75,7 @@ int main (int argc, const char **argv)
   char *x, *fn;
   char* pth[3];
   prt_stars();
-  printf ("EEC-IV disassembler Version %s", SADVERSION);
+  printf ("EEC-IV disassembler Version %s (%s)", SADVERSION, SADDATE);
 
  /* #ifdef __unix__
   printf ("UNIX");

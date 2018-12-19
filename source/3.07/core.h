@@ -6,7 +6,7 @@ common declarations for 'core' code modules (disassembly)
  * NOTE - This code assumes 'int' is at least 32 bit (4 bytes),
  * 
  * On some older compilers this would require the use of LONG instead of INT.
- * code here also uses a lot of casts, even LONG for a VOID*.
+ * code here also uses a lot of casts.
 
  * On Win32 builds (Codeblocks mingw) int=long=void*  all at 32 bits.
  * On Linux builds (CodeBlocks gcc amd64)   int at 32 bits, long=void* at 64 bits.
@@ -18,7 +18,7 @@ common declarations for 'core' code modules (disassembly)
  * which could be 1 Mb (1048576), but biggest bins seem to be 256k (= 0x40000), or 4 banks.
  * 
  * This code can handle the full 16 banks with only changes to read_bin subroutine, where bank structure
- * is set up.  After this, code uses bank+address everywhere. (not tested beyond 4 banks)
+ * is set up.  After this, code uses bank+address everywhere. (but not tested beyond 4 banks)
  *********************************************************/
 
 #ifndef _XCOREX_H
@@ -34,7 +34,6 @@ common declarations for 'core' code modules (disassembly)
 #include  <math.h>
 
 #include  "shared.h"
-#include  "debug.h"
 
 
 #define NC(x)  sizeof(x)/sizeof(x[0])     // no of cells in struct 'x'
@@ -44,7 +43,7 @@ common declarations for 'core' code modules (disassembly)
 // options (as bitmask letters in an int)
 
 #define PSSRC     (cmdopts & C)      // source code
-#define PDCM      (cmdopts & D)      // print variables in decimal  (hex default was X)
+#define PDCM      (cmdopts & X)      // print variables in decimal  (hex default was X)
 #define PFUNC     (cmdopts & F)      // auto function and table names
 #define PSTRS     (cmdopts & G)      // auto subroutine names for function and table lookups
 #define P8065     (cmdopts & H)      // 8065 codeset (can be set internally)
@@ -64,7 +63,7 @@ common declarations for 'core' code modules (disassembly)
 
 // command values
 
-#define C_DFLT   0     // command offsets up to 32 commands at present (32 is cmd flag, can move it)
+#define C_DFLT   0     // command values. Up to 32 commands (32 is cmd flag, can move it)
 #define C_BYTE   1
 #define C_WORD   2
 #define C_TEXT   3
@@ -81,26 +80,23 @@ common declarations for 'core' code modules (disassembly)
 #define C_SCAN   13
 
 #define C_CMD    32      // by command (can't change)
-#define C_TST    64      // test flag (for gaps)
 
 // scan block types
 
-#define S_IJMP   1
-#define S_SJMP   2
-#define S_CJMP   3
-#define S_ISUB   4
-#define S_VSUB   5
-#define S_CSUB   6
-#define S_JSUB   7
+#define S_RETJ   0       // return opcodes  
+#define S_SJMP   1       // 'fixed' or static jump
+#define S_CJMP   2       // conditional jump  ('if') 
+#define S_CSUB   3       // subroutine call
+#define S_JSUB   4       //  special - a jump to a subr
 
 
 // opcode main definition - called from INDEX structure, not opcode value
 
 typedef struct            // main OPCODE struct
  {
-  uchar sigix;            // type index for signatures
-  uchar alx;              // alternate index - signed prefix (divs etc) & src jump swaps
-
+  uint sigix : 7;         // type index for signatures
+  uint sign  : 1;         // signed prefix allowed (to next entry)
+  uint p65   : 1;         // 8065 only
   uint pswc  : 1;         // changes PSW (for src printout of conditional ifs)
   uint nops  : 2;         // number of ops   (max 3)
   uint wop   : 2;         // write op index  (max 3)
@@ -109,9 +105,8 @@ typedef struct            // main OPCODE struct
   uint rsz2  : 3;
   uint rsz3  : 3;
 
-  int opt ;                // opcode type flags - may disappear
-  int (*eml) (struct sbk *);    // emulation func
-  const char *name;              // opcode name
+  void (*eml) (struct sbk *);    // emulation func
+  const char name [6];           // opcode name
   const char  *sce;              // high level code description (with op markers)
  } OPC;
 
@@ -128,7 +123,7 @@ size_t size;      // size of block
 * used by data structs and subrs for inline params
 **********************************************/
 
-typedef struct cadt {   // size = 16 (4 int) this for cmnd chain 21 bits in flags
+typedef struct cadt {   // size = 24 (6 int) in amd64
 struct cadt *next;
 
 float  divd;          // full float for divisor
@@ -143,32 +138,33 @@ uint vect   : 1 ;    // value is a vect to a subr
 uint name   : 1 ;    // look for symbol name
 
 uint cnt    : 5 ;    // repeat count, 32 max
-uint enc    : 3 ;    // encoded data type  1-7
+uint enc    : 3 ;    // encoded data type  1-7         (only subrs)
 uint foff   : 1 ;    // fixed offset (using addr)
 
 uint nodis  : 1 ;    // don't print this entry in commands (but active)
-uint disb   : 1 ;    // this entry disabled, skip over print (used for grnf)
+uint disb   : 1;     // this entry disabled, skip over print (used for F:)
 uint pget   : 1 ;    // this is a par getter (for encdx to find later !)
-uint split  : 1 ;    // break printout with newline
+uint newl   : 1 ;    // break printout with newline here (=at this level)
 
 } CADT;
 
 
 // main CHAIN struct to hold stuff for binary chop searches etc
-// void * allows different struct types to be fed in for searches etc.
+// void* provides for different structs to be used in each chain
+// with defined handlers for free mem, compare, and equals
 
 typedef struct chain                           // done like a class with subroutines by chain type
 {
 short num;                                     // no of (used) elements;
 short pnum;                                    // no of pointers in array.
-short asize;                                   // allocation size for pointer blocks (50 default)
+short asize;                                   // allocation size for pointer blocks (50 is default)
 short esize;                                   // entry (struct) size  - ZERO if remote chain
-short max;                                     // max no of ptrs allocated   for debug
-short allocs;                                  // no of reallocs
+short DBGmax;                                  // max no of ptrs allocated   for debug
+short DBGallocs;                               // no of reallocs   for debug
 void  **ptrs;                                  // ptr to array of pointers
-void  (*cfree) (void*);                        // struct chain *, int);                          // block free (by index)
-int   (*comp)  (int, void*);                   // binary chop compare
-int   (*equal) (int, void*);                   // equals, for find operations
+void  (*cfree) (void*);                        // block free (by pointer)
+int   (*comp)  (int, void*);                   // compare,  for binary chop
+int   (*equal) (int, void*);                   // equals,  for finer checks and inserts
 } CHAIN;
 
 
@@ -179,14 +175,15 @@ int   (*equal) (int, void*);                   // equals, for find operations
 
 typedef struct
 {
-  short  radd;          // register (as address)
-  int    rval;          // address value pointed to, including bank
-  int    start;
-  int    end;           // valid for these addresses (= 0 for all) TEST
-  uint   inv : 1;       // invalid flag  (value changes in code)
-  uint   cmd : 1;       // added by cmd
-  uint   cnt : 4;       // count > 1 or cmd to make sure.....
 
+  int    val;          // address value pointed to, including bank
+  int    start;
+  int    end;           // valid for these addresses (= 0 for all)
+  short  reg;           // register (as address)
+  uint   inv : 1;       // invalid flag  (value changes in code)
+  uint   cmd : 1;       // added by cmd (not changeable)
+  uint   blk : 1;       // add as part of rbase block (via signature)  
+  uint   cnt : 4;       // count of changes
 } RBT;
 
  /********************************
@@ -195,9 +192,11 @@ typedef struct
 
 typedef struct
 {
- int    add;
- char   *name;
- short  size  ;        // size of symnam string (in chars)
+
+ char  *name;
+ int   add;
+ int   start;
+ int   end;
 
  char   bitno  ;       // bit 0 to 31, signed.  -1 for whole word/byte
  uint   used  : 1 ;    // 'used' marker set if name used
@@ -206,7 +205,9 @@ typedef struct
  uint   anum  : 1 ;    // autonumber type (prevents updates)
  uint   writ  : 1 ;    // write symbol if set (read if not)
  } SYT;
+ 
 
+ 
 /************************
 operand tracking for printouts and anlysis
 OPS has 2 sets of 4 entries (up to 3 op with indexed)
@@ -214,14 +215,13 @@ OPS has 2 sets of 4 entries (up to 3 op with indexed)
 
 typedef struct          // operand storage, max 4 for each instruction
 {
- int  val;               // value of register contents or an immediate    uns short ?
+ int  val;               // value of register contents or an immediate value
  int  addr;              // actual operand address
  RBT  *rbs;              // rbase pointer if reg is an rbase
  SYT  *sym;              // symbol pointer if exists
 
  uint ssize   : 3;      // Read size  as CADT above
- uint wsize   : 3;      // Write size, zero if no write (can be diff to read)
-
+ uint wsize   : 3;      // Write size, zero if no write (can be different to read size)
  uint imd     : 1;      // this is an immediate value
  uint rgf     : 1;      // this is a register  value
  uint bit     : 1;      // this is a bit value
@@ -235,8 +235,8 @@ typedef struct          // operand storage, max 4 for each instruction
 
 typedef struct
 {
-  const OPC *opl;         // pointer to opcodes
   OPS  opr[4];            // up to 4 operands
+  int opcix;              // opcode index
   int  ofst;              // address of opcode, inc bank
   int nextaddr;           // add to make arg additions easier....
 
@@ -248,7 +248,6 @@ typedef struct
   uint bnk     : 1;      // this has a BANK CHANGE prefix - seems to override both code and data banks for opcode
   uint bank    : 4;      // bank - new bank if flg set, otherwise, databank (0-16)  (add codebank ?)
 } INST;
-
 
 //*****  for data addresses found in code analysis 
 
@@ -272,29 +271,25 @@ typedef struct dd
   uint rbt      : 1;        // rbase
   uint psh      : 1;        // PUSH
   uint dis      : 1;        // disable (for overlaps)
-
- // others ??
- // add tables, vect etc ?
+  uint cmd      : 1;        // by user cmd, no changes
 } DDT;
 
 
 typedef struct lbk        // command header structure
 {
-CADT *adnl;                 // additional cmd structs (chained)
+CADT *adnl;                // additional cmd structs (chained)
 int  start;                // start offset
 int  end;                  // end offset
 
-uint size : 8;              // CPARS and struct (subr or data) sizes (use for word/byte ?)
-
-uint fcom : 5;            // command index  - only 13 commands so far...
+uint size : 8;            // for args and struct sizes
+uint fcom : 5;            // command index
 uint term : 2;            // data command has terminating byte(s)
 uint cmd  : 1;            // added by user command, guess otherwise
-uint split : 1;           // split printout
- //uint chk  : 1;         // do ptn analysis from here (immediate or absolute address)
+uint newl : 1;            // newline in printout requested in CADT chain
 } LBK ;
 
 
-typedef struct csig        // preprocess if copied flag ?
+typedef struct csig        // signature holder struct
 {
  struct csig  *next;
  struct xsig  *sig;        // SIG*  same sig may be referenced more than once.
@@ -324,52 +319,35 @@ typedef struct pex
 
 typedef struct
 {
- SXDT *sdat;             // intermediate holder (most will be NULL)
- int   addr;             // start address (and bank)
- uint nargs1 : 5;          // total size (bytes) of any params (max 32)
- uint nargs2 : 5;          // test - for alternate param nums
- uint  cmd    : 1;       // set by command, no mods allowed  - guess otherwise
- uint  psp    : 1;       // subr starts with a push pswflags (adds one to address searches)
-// int   popl   : 5;       // subr pop level (messes with stack)
-// uint  inv    : 1;       // invalid (from dodgy vect)
- uint  sgclc  : 1;       // (re)calc sigs from scratch (for encodes) ???   TEST 
- uint  xnam   : 3;       // for subroutine names (funcs and tabs)
+ SXDT *sdat;              // intermediate holder (most will be NULL)
+ int   addr;              // start address (and bank)
+ uint  nargs1 : 5;        // total size (bytes) of any params (max 32)
+ uint  nargs2 : 5;        // test - for alternate param nums
+ uint  xnam   : 5;        // for subroutine names (funcs and tabs)
+ uint  cmd    : 1;        // set by command, no mods allowed
+ uint  cname  : 1;        // name added by command - don't change it
+ uint  psp    : 1;        // subr starts with a push pswflags (for address searches)
+ uint  sgclc  : 1;        // recalc sigs from scratch (for encodes) 
  } SXT;
 
 
-// hash works quite well with address in bottom 13 bits (0x1fff)
-// and value byte shifted above it. (>> 13 & 0xff)
-
-/* add fake stack for subr which have arguments.
-
-typedef struct stack
+typedef struct hdls
 {
-
-//struct sbk *cblk;     // caller for this entry   (reqd ?)
-uint psw : 1;         // this is a PSW entry - need for 8065
-uint reg : 8 ;        // register (when popped)
-uint addr : 20;       // a full address (inc bank)
-} STK;
-*/
-
-
-
-
-
-typedef struct spars
-{
-
-ushort preg [NPARS];         // registers or ram saved
-ushort pval [NPARS];         // and their values
-
-} SPARS;
+struct hdls *next; 	
+struct sbk *hblk;	
+} HOLDS;
 
 
 typedef struct sbk {         // scan structure
-struct sbk *hblk;            // holder of this block [single] to be scanned, or zero if not on hold
+HOLDS *hchn;                 // chain of other blocks held by this block
 struct sbk *caller;          // called from - for subroutine tracking
-SPARS  *pars;                // params for scan
 SXT    *sub;                 // Subroutine (new or existing - needed for sigs)
+
+struct sbk *held;                 // for debug, hold latest caller, can be flag otherwise this block on hold to another sbk block
+
+ushort preg [NPARS];         // registers or ram saved             put scanpars in here directly
+ushort pval [NPARS];         // and their values                   nearly all sbks have them anyway
+int cksum;                   // simple checksum 
 
 int start;                   // start addr
 int end;                     // where set, defines a stop point (for if-then conds)
@@ -377,24 +355,17 @@ int curaddr;                 // current addr - scan position (inc. start)
 int retaddr;                 // RETURN  addr - for param tracking 
 int nextaddr;
 
-uint  type     : 4;          // scan type = 1 init jump, 2 static jump, 3 cond jump,
-                             // 4 int subr 5 vect subr, 6 called subr, 7 jmp to subr
-uint  htype    : 4;          // hold type (same as type)
+int  stk       : 8 ;          // SIGNED stack pointer
+uint  ctype    : 4;          // scan type 
 uint  cmd      : 1;          // added by user command, guess otherwise
 uint  scanned  : 1;          // scan complete
 uint  inv      : 1;          // invalid opcode or flag in scan - could be dodgy vect call
-uint  holder   : 1;          // this block has holds waiting upon it (not itself)
-uint  stop     : 1;          // stop scanning flag  (separated from count to make simpler
-//uint  tst      : 1;          // test or investigate mode
-//uint  ckd      : 1;           // checked
+//uint  held     : 1;          // block is held by another block  
+uint  stop     : 1;          // stop scanning flag
 }  SBK ;
 
-
-// a block can be held ONLY by one holder....
-
-
 /********************************
- *   Jump list structure
+ *   Jump list structure       replace with binary tree ?
  ********************************/
 
 typedef struct
@@ -402,32 +373,32 @@ typedef struct
   int  from;              // from and to are addrs
   int  to;
 
-  uint   type : 4;    // type (from scan)
-  uint   cnt  : 2;    // this jump size (bytes) for ELSE
-  uint   uco  : 1;    // not clean (jumps out)
-  uint   uci  : 1;    // not clean  (jumps in)
-  uint   mult : 1;    // Multiple 'to' points
-  uint   back : 1;    // Backwards jump
-  uint   cbkt : 1;    // add close bracket
-  uint   retn : 1;    // a jump to a 'ret' opcode, a subr return point
-  uint   bswp : 1;    // bank swop
-  uint   lstp : 1;    // loopstop
-  uint   elif : 1;    // ELSE type goto
+  uint   jtype : 4;     // type (from scan)
+  uint   jcnt  : 2;     // this jump size (bytes)
+  uint   bswp  : 1;     // bank change
+  uint   back  : 1;     // backwards jump  
+  uint   uco   : 1;     // not clean (jumps out)
+  uint   uci   : 1;     // not clean  (jumps in)
+  uint   cbkt  : 1;     // add close bracket
+  uint   retn  : 1;     // a jump to a 'ret' opcode
+
+
  } JLT;
 
+ 
 
-typedef struct         // command holder for cmd parsing 
+typedef struct             // command holder for cmd parsing 
 {
-  CADT  *add;
-  int   p[4];             // 4 params
-  uint  npars : 3;        // num of pars in p array (for error checks)
-  uint  fcom : 5 ;
-  uint  term : 1;         // terminating byte
+  CADT  *adnl;
+  struct xsig *z;         // SIG  *z;  doesn't compile.... 
+  int   p[4];             // 4 params max
+  uint  npars  : 3;       // num of pars in p array (for error checks)
+  uint  fcom   : 5 ;
+  uint  term   : 1;       // terminating byte
   uint  levels : 8;       // additonal levels (after the colon)
-  uint  split : 1;
+  uint  newl   : 1;       // split print here (=newline)
   int   posn;             // char posn (for errors)
-  int   size;            // command size (up to newline if a '|' char)
-//  int   size2;            // command size after a split (=newline) level
+  int   size;             // command size (up to newline if a '|' char)
   char  symname[33];      // max 32 chars ?
 
  } CPS;
@@ -436,16 +407,14 @@ typedef struct         // command holder for cmd parsing
  *  Input Commands structure
  ********************************/
 
-
-// if maxad = 0 then command is a FLAGS type (e.g. opt)
-
  typedef struct drs                  // command definition
-{ int cxom;                       //const char *com;                   // command string  was com[6]
-  int   (*setz) (CPS*);              // command processor
-  int   (*prtz) (int, int);          // command printer (ofst,ix)
+{ const char com[8];                 // command string
+  int   (*setcmd) (CPS*);            // command processor(cmd struct)
+  int   (*prtcmd) (int, int);        // command printer (ofst,ix)
   uint  maxlv  : 5 ;                 // max CADT levels (31)
   uint  maxps  : 3 ;                 // max front pars/addresses expected 0-4
-  uint  spos   : 3;                  // where 'start' is (par1 2 3 4 or none)
+  uint  vpos   : 3 ;                 // single addr to be verified
+  uint  spos   : 3 ;                 // where 'start/end' pair is (1 2 3 4 or none)
   uint  namee  : 1 ;                 // name expected/allowed
   uint  ovrde  : 5 ;                 // overrides for 32 commands (bit mask)
   uint  merge  : 1 ;                 // can be merged with same command (adj or olap)
@@ -459,13 +428,11 @@ typedef struct         // command holder for cmd parsing
 typedef struct
 { short start;
   short end;
-  uint  p5 : 1;       // 8061 or 8065 ?
-  uint num : 1;       // with number ?
+  uint  p5 : 1;       // 8061 or 8065
+  uint num : 1;       // with auto number
   const char *name;
 } NAMES;
 
-
-// add a STACK marker uint as well ??
 
 /********************************
  * Preset sym names structure
@@ -477,7 +444,7 @@ typedef const struct
  short  addr;
  short  bit1;
  uint pcx  : 2;       // 8061 = 1, 8065 = 2, both = 3;
- uint wrt : 1;       // write symbol
+ uint wrt : 1;        // write symbol
 
 } DFSYM;
 
