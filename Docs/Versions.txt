@@ -1,71 +1,29 @@
 
-** Version 3.01
-
- First Release
-
-** Version 3.02 *****************
- Fixed path problem when reading SAD.ini
- Released Windows Gui Wrapper (version 0.1)
-
-** Version 3.03 *****************
-
-Fixed error with psuedo code printout for JC/JNC
-Restored 'casts' for opcodes e.g. (long) (uns) etc.
+Version Summary
 
 
-** Version 3.04 *****************
- Fixed error in argument size for subroutines defined by command (in dir file)
- Fixed further error in JC/JNC and some conditional jumps pseudo code not showing correct
- operands.
+** Version 4.0.1 *****************
 
-** Version 3.05 *****************
+Automatically handles VARIABLE ARGUMENTS.
 
-Another Carry fix.  Some cases now shown as a COMMENT instead.
-Fix error with % in symbol names
-Put back manual method of defining 'special' subroutines (1D and 2D lookups)
+Issues.
 
-Improve autodetection of signed/unsigned with auto subroutine name option for 1D (functions)
-Improve autodetection of signed/unsigned with auto subroutine name option for 2D (tables)
-Autodetect not perfect yet....
+Doesn't always expand tables (2D lookups) to their full size
 
-** Version 3.06 *****************
+May miss code blocks which are called via a 'remote' push.
+This is where code sets a register remotely form the call.
+E.g. A9L has a LDX, R34, 79f9; and a PUSH(R34); elsewhere,
+so 79f9 is missed. Add a  'scan 79f9' comand in the directive file to sort this.   
 
-Fixed - ADDC with folowing JC/JNC not including carry flag in comment
-Fixed - JNVT sometimes prints as "if (CY)" should be "if (OVT)"
-Fixed - NRML opcode prints as "Rxx = NRML(0);"  instead of "NRML(Ryy);"
-Fixed - Error in address overlap checking can 'lose' commands entered.  
+May not always get correct size of arguments shows 2 bytes instead of one word,
+but encoded addresses work (as far as I can tell) 
 
-Add check for JC/JNC after INC or DEC opcodes.
-Add glossary at top of listing.
+Cannot always determine correct order of banks in file for mutlibanks.
 
-Change shifts to put a comment for equivalent multiply and divide instead of substituting it.
-Change (long) and (int)  to LR and WR format, add S (signed) and Y (byte) where relevant for extra clarity.
-
-Reorder internal index tables for opcodes (declared in case new bug pops up) 
-
-Removed 'V' option (divisor) for words and bytes - it doesn't work anyway.
-Removed incorrect debug info in subroutine listings.
+... I'm sure there's more bugs to find ! .......
 
 
-** Version 3.07 *****************
-
-** NOT FULLY TESTED ** INTERIM RELEASE **
-
-Reorder/Tidy opcode internal tables - last phase (I hope)
-
-Fixed -  Fail to pick up a PUSH(addr) in the initial code block as a jump to rest of code (LA3)
-Fixed -  Error in analysis of indexed PUSH(Rxx + ADDR) can cause a data address to be incorrectly interpreted as code.
-Fixed -  Error in processing of function and table lookup subroutines gives inconsistent results for signed vs. unsigned structures. (AGAIN!!)
-Fixed -  Finding banks in multibank bin may fail if a bank has extra NOP opcodes at front.
-Fixed -  Fixed inconsistent output order of newlines with comment blocks
-
-Change - Hold mechanism (for subroutine arguments) to a more efficient chain setup.
-Added -  Handling of bins which use altstack (R22) for their background task list e.g. BWAK3N2.bin  (needs more testing, but seems to work)
-Added -  optional address ranges for commands RBASE and SYMbol. See documentation for correct syntax.   
-
-Improve print handling of R0 in conditional jumps (not quite right yet...)
-
-Still doesn't always get subroutine arguments right !! 
+(no version 3.09)
 
 
 ** Version 3.08 *****************
@@ -91,14 +49,42 @@ Tidy up incorrect printout when 'filler' area is not 0xff, which happens in some
 Allow operand prints in comment lines with \1 \2 \3 
 
 
+** Version 3.07 *****************
+
+** NOT FULLY TESTED ** INTERIM RELEASE **
+
+Reorder/Tidy opcode internal tables - last phase (I hope)
+
+Fixed -  Fail to pick up a PUSH(addr) in the initial code block as a jump to rest of code (LA3)
+Fixed -  Error in analysis of indexed PUSH(Rxx + ADDR) can cause a data address to be incorrectly interpreted as code.
+Fixed -  Error in processing of function and table lookup subroutines gives inconsistent results for signed vs. unsigned structures. (AGAIN!!)
+Fixed -  Finding banks in multibank bin may fail if a bank has extra NOP opcodes at front.
+Fixed -  Fixed inconsistent output order of newlines with comment blocks
+
+Change - Hold mechanism (for subroutine arguments) to a more efficient chain setup.
+Added -  Handling of bins which use altstack (R22) for their background task list e.g. BWAK3N2.bin  (needs more testing, but seems to work)
+Added -  optional address ranges for commands RBASE and SYMbol. See documentation for correct syntax.   
+
+Improve print handling of R0 in conditional jumps (not quite right yet...)
+
+Still doesn't always get subroutine arguments right !! 
 
 
+** Version 3.06 *****************
 
+Fixed - ADDC with folowing JC/JNC not including carry flag in comment
+Fixed - JNVT sometimes prints as "if (CY)" should be "if (OVT)"
+Fixed - NRML opcode prints as "Rxx = NRML(0);"  instead of "NRML(Ryy);"
+Fixed - Error in address overlap checking can 'lose' commands entered.  
 
+Add check for JC/JNC after INC or DEC opcodes.
+Add glossary at top of listing.
 
+Change shifts to put a comment for equivalent multiply and divide instead of substituting it.
+Change (long) and (int)  to LR and WR format, add S (signed) and Y (byte) where relevant for extra clarity.
 
+Reorder internal index tables for opcodes (declared in case new bug pops up) 
 
-
-
-
+Removed 'V' option (divisor) for words and bytes - it doesn't work anyway.
+Removed incorrect debug info in subroutine listings.
 
