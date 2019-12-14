@@ -23,6 +23,7 @@ Cannot always determine correct order of banks in file for mutlibanks.
 ... I'm sure there's more bugs to find ! .......
 
 
+Added SADwin as separate subdirectory, with its source code
 (no version 3.09)
 
 

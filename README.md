@@ -1,8 +1,8 @@
 # EEC-IV-disassembler
 
-semi automatic disassembler for Ford EEC-IV and V binaries
+Semi Automatic Disassembler for Ford EEC-IV and V binaries
 
-NOTE - this code is intended to help understand only how each EEC works, not as a tuning or commercial tool. 
+NOTE - this code is intended to help understand only how each EEC works, not as a tuning or commercial tool.
 
 Split into separate subdirectories.
 
@@ -22,11 +22,20 @@ Windows Subdirectory
 
 SADvvv.exe   Windows executable      (32 bit build. 'vvv' is version number) 
 
-SADWIN.exe   Windows GUI 'Wrapper'   (32 bit build)
-
 chip.ico     icon file
 
-Notes -  SADwin will create a default config file for you, which you can then setup to your preference
+---------------------------------------
+
+Windows/SADwin Subdirectory
+
+SADWIN.exe   Windows GUI 'Wrapper'   (32 bit build)
+
+SADwin.cpp   Source code             (WIN32 API)
+
+chip.ico     icon file               (same as Windows above)
+
+Notes -  SADwin will create a default config file for you on first run,
+         which you can then setup to your preference
 
 ---------------------------------------
 
