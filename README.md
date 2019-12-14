@@ -1,5 +1,6 @@
 # EEC-IV-disassembler
-semi automatic disassembler for Ford EEC-IV and V binaries - version 3.08
+
+semi automatic disassembler for Ford EEC-IV and V binaries
 
 NOTE - this code is intended to help understand only how each EEC works, not as a tuning or commercial tool. 
 
