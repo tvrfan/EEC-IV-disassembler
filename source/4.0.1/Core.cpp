@@ -9720,23 +9720,23 @@ int set_subr (CPS *c)
   SXT *xsub;
   SYT *s;
 
-  xsub = add_subr(c->p[0]);
+ // xsub = add_subr(c->p[0]);
 
-  if (xsub)
-   {
-     if (*c->symname)
-        {
+ // if (xsub)
+ //  {
+ //    if (*c->symname)
+  //      {
          s = add_sym(0,c->symname,c->p[0],0,0);
          if (s) s ->cmd = 1;     // cmd set if sym specified
-        }
-     add_scan (c->p[0], J_SUB|C_CMD,0);
+   //     }
+  //   add_scan (c->p[0], J_SUB|C_CMD,0);
 
-     if (c->levels <= 0 || !c->adnl) return 0;    // no addnl block
+   //  if (c->levels <= 0 || !c->adnl) return 0;    // no addnl block
 
-     xsub->cmd = 1;              // only set if extra cmds
+   //  xsub->cmd = 1;              // only set if extra cmds
   //   xsub->adnl = c->adnl;          // move chain to subroutine
-     freecadt(&c->adnl);      c->adnl = NULL;             // and drop from cmnd structure
-   }
+ //    freecadt(&c->adnl);      c->adnl = NULL;             // and drop from cmnd structure
+ //  }
   
   return 0;
  }
