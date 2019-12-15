@@ -21,7 +21,28 @@
 typedef unsigned char  uchar;
 typedef unsigned short ushort;
 typedef unsigned int   uint;
-typedef unsigned long  ulong;
+//typedef unsigned long  ulong;
+
+
+#if defined __linux__ || defined __MINGW64__
+
+ typedef unsigned long  ulong;
+ typedef long plong;
+
+#endif      
+
+#if defined __MINGW32__ 
+
+ //typedef unsigned double  ulong;
+ typedef double plong;    
+
+#endif
+
+
+
+
+
+
 
 // True banks may be anywhere 0-15,although only 0,1,8,9 used
 // Bank 16 is used for RAM data, sized at 0x2000 bytes
@@ -35,7 +56,7 @@ typedef unsigned long  ulong;
 // DBGPRT is kept to make debug code more obvious to view
 // DBG_xxx subrs are also for debug printout and ignored if XDBGX not defined
 
-//#define XDBGX
+ #define XDBGX
 
 
 //  file order is (xx.bin, xx_lst.txt, xx_msg.txt, xx.dir, xx.cmt, SAD.ini, xx_dbg.txt)

@@ -10,7 +10,7 @@
  * NOTES 
  * This code assumes INT and UNSIGNED INT is at least 32 bits.
  * Win32 Codeblocks (mingw)     int = long = void* = 32 bits.
- * amd64 CodeBlocks (linux-gcc) int = 32 bits, long = void* = 64 bits.
+ * amd64 CodeBlocks (linux-gcc) int = 32 bits. long = double = void* = 64 bits.
 
  ******************************************************
  *  Declarations and includes
@@ -7954,7 +7954,7 @@ void pset_psw(INST *c, int t, int mask)
 
  }
 
-void set_psw(INST *c, long val, int size, int mask)
+void set_psw(INST *c, plong val, int size, int mask)
  {
  
     c->psw &= (~mask);     // clear defined bits
@@ -9717,7 +9717,7 @@ int set_sym (CPS *c)
 
 int set_subr (CPS *c)
 {
-  SXT *xsub;
+  //SXT *xsub;
   SYT *s;
 
  // xsub = add_subr(c->p[0]);
