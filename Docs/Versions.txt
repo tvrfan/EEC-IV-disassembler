@@ -20,12 +20,23 @@ but encoded addresses work (as far as I can tell)
 
 Cannot always determine correct order of banks in file for mutlibanks.
 
+Added SADwin as separate subdirectory, with its source code
+
+- - - - -
+
+2 quick fixes so far, kept version as 4.0.1
+
+1. change SUB command to ignore any extra parameters (works same as SYM for now)
+2. Fix platform problem causing incorrect emulation, and so wrong number of arguments
+   in some subroutines (64 bit linux to 32 bit Windows)
+
+
 ... I'm sure there's more bugs to find ! .......
 
 
-Added SADwin as separate subdirectory, with its source code
+- - - - -
 (no version 3.09)
-
+- - - - -
 
 ** Version 3.08 *****************
 
