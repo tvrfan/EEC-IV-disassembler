@@ -1,6 +1,35 @@
 
 Version Summary
 
+** Version 4.0.2 *****************
+
+Automatically handles VARIABLE ARGUMENTS.
+
+Issues.
+
+Doesn't always expand tables (2D lookups) to their full size
+
+May miss code blocks which are called via a 'remote' push.
+This is where code sets a register remotely form the call.
+E.g. A9L has a LDX, R34, 79f9; and a PUSH(R34); elsewhere,
+so 79f9 is missed. Add a  'scan 79f9' comand in the directive file to sort this.   
+
+Cannot always determine correct order of banks in file for mutlibanks.
+
+FIXES
+
+1. TEMP  - sub command will ignore any extra parameters (symbol name should work)
+2. TEMP  - removed bank commands - not normally required anyway
+
+3. Fixed problem with inorrect number of arguments (CARD and others)
+4. Fixed problem with listing displaying incorrect number/symbol in indexed opcodes
+5. Fixed 'NULL' symbol with word commands
+6. Added more code to correctly size arguments.    
+7. Fixed crash when commands overlap - now gives error message
+
+May still not always get correct size of arguments 
+
+
 
 ** Version 4.0.1 *****************
 
