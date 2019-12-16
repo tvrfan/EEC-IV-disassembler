@@ -6,6 +6,8 @@ NOTE - this code is intended to help understand only how each EEC works, not as 
 
 Split into separate subdirectories.
 
+Latest Version is 4.0.2
+
 -------------------------------------------------
 
 Docs subdirectory
