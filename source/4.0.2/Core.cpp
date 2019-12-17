@@ -724,7 +724,9 @@ int recurse  = 0;               // recurse count check
 
    HOP fd[] ={{".bin","r"},    {"_lst.txt","w"}, {"_msg.txt","w"},
               {"_dir.txt","r"},{"_cmt.txt","r"}, {"sad.ini","r"} , {"_dbg.txt","w"} };
-const char pathchar = '/';
+
+ #define PATHCHAR  '/'
+
 #endif      
 
 #if defined __MINGW32__ || defined __MINGW64__
@@ -733,7 +735,8 @@ const char pathchar = '/';
    HOP fd[] ={{".bin","rb"},    {"_lst.txt","wt"}, {"_msg.txt","wt"},
               {"_dir.txt","rt"},{"_cmt.txt","rt"}, {"sad.ini","rt"} , {"_dbg.txt","wt"} };
 
-const char pathchar = '\\';
+ #define PATHCHAR  '\\'
+
 #endif
 
 
@@ -1352,8 +1355,8 @@ bool val_data_addr(uint addr)
  int bank;
  BANK *b;
 
- bank = dbank(addr);
- b = bkmap+bank;                 // handles < PCORG
+ bank = dbank(addr);             // handles < PCORG
+ b = bkmap+bank;
 
  if (!b->bok) return 0;          // invalid
 
@@ -3887,11 +3890,65 @@ void DBG_ovr(void)
  DBGPRTN(0);
 }
 
+
+void DBG_banks(void)
+{
+ int ix;
+ BANK *b;
+
+ DBGPRTN("\n-----------BANKS---------");
+ DBGPRTN("fbuf, opbt, filstart, filend, minpc, bkend, maxpc, bok,cmd,dbnk, btype" );
+
+ DBGPRTN("ibuf %x, opbt %x",ibuf, opbit);
+ for (ix = 0; ix <= BMAX; ix++)
+   {
+            b = bkmap + ix;
+       if (b->bok){
+ 
+   if (ix < BMAX)   DBGPRT("%2d %5x %5x", ix, b->fbuf-ibuf, b->opbt-opbit );
+    else    DBGPRT("%2d %5x %5x", ix, b->fbuf-ibuf, b->opbt );
+      
+ DBGPRT("  %5x %5x", b->filstrt, b->filend );
+DBGPRT("  %5x %5x %5x", b->minpc, b->maxbk, b->maxpc);
+DBGPRT("  %x %x %x %x", b->bok, b->cmd, b->dbnk, b->btype);
+       DBGPRTN(0);}
+     }
+ DBGPRTN(0);
+ for (ix = 0; ix <= BMAX; ix++)
+   {
+            b = bkmap + ix;
+       if (b->fbuf && !b->bok){
+            DBGPRT(" [ ");
+     DBGPRT("%2d %5x %5x", ix, b->fbuf-ibuf, b->opbt-opbit );
+ DBGPRT("  %5x %5x", b->filstrt, b->filend );
+DBGPRT("  %5x %5x %5x", b->minpc, b->maxbk, b->maxpc);
+DBGPRT("  %x %x %x %x", b->bok, b->cmd, b->dbnk, b->btype);
+    DBGPRT(" ] ");
+       DBGPRTN(0);}
+     }
+
+
+
+
+
+
+ DBGPRTN(0);
+}
+
+
+
+
+
+
+
+
+
 void DBG_data()
  {
     DBGPRTN("\n\n -- DEBUG INFO --");
     DBG_jumps();
     DBG_scans();
+    DBG_banks();
     DBG_ovr();
     DBG_rgchain();
     DBG_sigs(&sigch);
@@ -7027,7 +7084,8 @@ if (o->off)
     {            //offset address - signed
      v = o->addr;
      if (v < 0)  v = -v;
-     pstr ("%x", v & camk[2]);  
+     if (!numbanks) v &= camk[2];   /// remove bank
+     pstr ("%x", v);               // & camk[2]);  
      return 1;
     }
     
@@ -7460,7 +7518,10 @@ void fix_sym_names(const char **tx, INST *c)
         if (c->opr->addr > 0xff)  
           {
      //       if (c->opr->wsize) s = get_sym(1, databank(c->opr->addr,c),c->ofst);   // is this ever true ?
-            if (!s) s = get_sym(0, c->opr->addr,c->ofst); 
+     // actually change this with databank, for multibank displays ??
+     // this can be negative, only add databank if > PCORG
+            if (numbanks && (int) c->opr->addr > PCORG) c->opr->addr = databank(c->opr->addr,c);
+            s = get_sym(0, databank(c->opr->addr,c),c->ofst); 
             if (s) c->opr->sym = 1;
           }
       }
@@ -12133,6 +12194,7 @@ int do_banks(void)
 
   b = bkmap+BMAX;
   b->maxbk = PCORG-1;               // 0-0x1fff in bank 16 for registers
+  b->opbt = 0;
   b->maxpc = PCORG-1;
   b->minpc = 0;
   b->fbuf  = ibuf;                  // first 0x2000  in bank 16 for regs and RAM
@@ -12753,12 +12815,12 @@ char *calcfiles(char *fname)
 
   x = fname;                           // keep possible pathname
 
-  t = strrchr(fname, pathchar);         // stop at last backslash
+  t = strrchr(fname, PATHCHAR);         // stop at last backslash
   if (t)
    {          // assume a path in filename, replace path.
     *t = '\0';
     fname = t+1;
-    sprintf(fldata.path, "%s%c", x,pathchar);
+    sprintf(fldata.path, "%s%c", x,PATHCHAR);
    }
 
 
@@ -12870,7 +12932,7 @@ short dissas (char *fstr)
 //   DBGPRT("tscans = %d\n", tscans);               // tscans used as safety check
   #endif 
 
-//   x = strrchr(fldata.fn[1], pathchar);
+//   x = strrchr(fldata.fn[1], PATHCHAR);
  //  if (!x) x = empty; else x++;
    
    wnprtn("\n\n# ----- Output Listing to file %s\n", fldata.fn[1]);              //fldata.fn[1], );
@@ -12886,7 +12948,7 @@ short dissas (char *fstr)
     DBG_data();
   #endif    
 
-//   x = strrchr(fldata.fn[3], pathchar);
+//   x = strrchr(fldata.fn[3], PATHCHAR);
 //   if (!x) x = empty; else x++;
  
   wnprtn("\n\n# ---------------------------------------------------------------------------------------------");
@@ -12924,7 +12986,7 @@ short dissas (char *fstr)
 
     for (i =0; i < 5; i++)
       {
-       t = strrchr(fldata.fn[i], pathchar);          // is there a path ?
+       t = strrchr(fldata.fn[i], PATHCHAR);          // is there a path ?
        if (t)
         {
          *t = '\0';                     // terminate the path
@@ -12933,9 +12995,9 @@ short dissas (char *fstr)
        else
         {
          t = fldata.dpath;                // set default path
-         sprintf(fldata.fn[i],"%s%c", t,pathchar);   // and put in file path
+         sprintf(fldata.fn[i],"%s%c", t,PATHCHAR);   // and put in file path
         }
-       fprintf (fldata.fl[5], "%s%c    #%s location \n", t,pathchar,fd[i].suffix);
+       fprintf (fldata.fl[5], "%s%c    #%s location \n", t,PATHCHAR,fd[i].suffix);
       }
     fclose(fldata.fl[5]);
 
@@ -12960,16 +13022,16 @@ int get_config(char** pts)
   strcpy(fldata.dpath, t);
 
  // t = strchr(fldata.dpath, '\\');
- // if (t) pathchar = '\\';                    // assume DOS or WIN
+ // if (t) PATHCHAR = '\\';                    // assume DOS or WIN
  // else
  //  {
  //   t = strchr(fldata.dpath, '/');
- //   if (t) pathchar = '/';                   // assume UX
+ //   if (t) PATHCHAR = '/';                   // assume UX
  //  }
    
   if (!t) printf("error in cmdline !!");
 
-  t = strrchr(fldata.dpath, pathchar);           // stop at last backslash to get path
+  t = strrchr(fldata.dpath, PATHCHAR);           // stop at last backslash to get path
   if (t) *t = '\0';
 
   if (pts[1])
@@ -12977,9 +13039,9 @@ int get_config(char** pts)
      strncpy(fldata.fn[5],pts[1], 255);           // copy max of 255 chars
      i = strlen(fldata.fn[5]);                    // size to get last char
      t = fldata.fn[5]+i-1;                        // t = last char
-     if (*t == pathchar) *t = 0; else t++;
+     if (*t == PATHCHAR) *t = 0; else t++;
 
-     sprintf(t, "%c%s",pathchar,fd[5].suffix);    // and add sad.ini to it...
+     sprintf(t, "%c%s",PATHCHAR,fd[5].suffix);    // and add sad.ini to it...
 
      fldata.fl[5] = fopen(fldata.fn[5], fd[5].fpars);
      if (!fldata.fl[5])
@@ -12992,7 +13054,7 @@ int get_config(char** pts)
  else
   {
     // else use bin path to make up file file name of SAD.INI
-    sprintf(fldata.fn[5], "%s%c%s",fldata.dpath,pathchar,fd[5].suffix);
+    sprintf(fldata.fn[5], "%s%c%s",fldata.dpath,PATHCHAR,fd[5].suffix);
     fldata.fl[5] = fopen(fldata.fn[5], fd[5].fpars);         //open it if there
   }
 
@@ -13011,7 +13073,7 @@ int get_config(char** pts)
             {
              *t = '\0';
              t--;
-             if (*t != pathchar) sprintf(t+1, "%c", pathchar);
+             if (*t != PATHCHAR) sprintf(t+1, "%c", PATHCHAR);
             }
          strcpy(fldata.fn[i], flbuf);
          

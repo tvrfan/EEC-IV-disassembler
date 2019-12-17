@@ -15,6 +15,11 @@ E.g. A9L has a LDX, R34, 79f9; and a PUSH(R34); elsewhere,
 so 79f9 is missed. Add a  'scan 79f9' comand in the directive file to sort this.   
 
 Cannot always determine correct order of banks in file for mutlibanks.
+ADDED
+
+TEST > for indirect and indexed opcodes,  added bank number, where it's certain
+that the reference is to an absolute address.
+
 
 FIXES
 
@@ -27,6 +32,7 @@ FIXES
 6. Added more code to correctly size arguments.    
 7. Fixed crash when commands overlap - now gives error message
 8. Fixed a path problem for Windows which causes no processing to occur 
+9. Fixed symbol name not being resolved for multibank indirects and indexed opcodes
 
 May still not always get correct size of arguments 
 
