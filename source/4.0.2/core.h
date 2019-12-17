@@ -312,7 +312,7 @@ typedef struct cmnt
 
 typedef struct
 {
- CADT *adnl;              // special functions, arguments, etc.
+// CADT *adnl;              // special functions, arguments, etc.
  struct xsig  *sig;       // sig attached
  uint  cmd    : 1;        // set by command, no mods allowed
  uint  spf    : 5;        // subr has special func/signature (to match xnum/ in addnl ?)

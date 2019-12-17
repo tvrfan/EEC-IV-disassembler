@@ -620,7 +620,7 @@ DFSYM defsyms [] = {
  **************************************************/
  
 HDATA fldata;                 // files data holder
-char pathchar;
+
 
 // IBUF - generic memory array.
 // First 8192 (0x2000) reserved for RAM (and REG) data.
@@ -724,7 +724,7 @@ int recurse  = 0;               // recurse count check
 
    HOP fd[] ={{".bin","r"},    {"_lst.txt","w"}, {"_msg.txt","w"},
               {"_dir.txt","r"},{"_cmt.txt","r"}, {"sad.ini","r"} , {"_dbg.txt","w"} };
-
+const char pathchar = '/';
 #endif      
 
 #if defined __MINGW32__ || defined __MINGW64__
@@ -732,6 +732,8 @@ int recurse  = 0;               // recurse count check
 // windows (CodeBlocks and Mingw)
    HOP fd[] ={{".bin","rb"},    {"_lst.txt","wt"}, {"_msg.txt","wt"},
               {"_dir.txt","rt"},{"_cmt.txt","rt"}, {"sad.ini","rt"} , {"_dbg.txt","wt"} };
+
+const char pathchar = '\\';
 #endif
 
 
@@ -2478,8 +2480,9 @@ void set_rgsize(int ix, uint ssize)
    if ((r->ssize & 3) < (ssize & 3))
     {
      r->ssize = ssize;                         // just do size
+     #ifdef XDBGX
      DBGPRTN("reg %x size = %d", r->reg, r->ssize);
-
+#endif
      // drop upper register if part of reg
      if ((r->ssize & 2) && ix < rgstch.num)
       {
@@ -2489,7 +2492,9 @@ void set_rgsize(int ix, uint ssize)
        
        if (r->reg == reg+1)
          {
+                  #ifdef XDBGX
          DBGPRTN("del reg %x size = %d", r->reg, r->ssize);
+         #endif
          chdelete(&rgstch,ix,1); 
          }
       }
@@ -2861,7 +2866,9 @@ void fix_args(uint addr)
        // sanity check here
      if (size != sizew(k->adnl))
        {
+                #ifdef XDBGX
         DBGPRTN("ADDNL SIZE NOT MATCH - FIXED");
+        #endif
         // emergency fix !!
         freecadt(&k->adnl);
         a = add_cadt(&k->adnl);
@@ -7831,9 +7838,6 @@ void do_regstats(INST *c)
   {
     // arg used as address, so will always be WORD
     set_rgsize(ix,2);
-    
-    DBGPRT("z");
-    
   }
   }
 
@@ -9365,14 +9369,6 @@ void do_code (SBK *s, INST *c)
 
   s->nextaddr = xofst;                      // address of actual opcode - for eml call
 
-if (c->ofst == 0x87807)
-{
-    DBGPRTN("z");
-}
-
-
-
-
   opl->eml(s, c);                           // opcode handler
                                             // s->nextaddr now points to next opcode
   upd_watch(s, c);
@@ -9429,10 +9425,6 @@ uint pp_code (uint ofst, LBK *dummy)
       if (--i) pchar (',');
      }
 
-//if (ofst == 0x8209a)
-//{
-//    DBGPRTN("z");
-//}
 
   /**********************************************
   * source code generation from here
@@ -9792,13 +9784,13 @@ int set_sym (CPS *c)
 
 int set_subr (CPS *c)
 {
-  SXT *xsub;
+//  SXT *xsub;
   SYT *s;
 
-  xsub = add_subr(c->p[0]);
+//  xsub = add_subr(c->p[0]);
 
-  if (xsub)
-   {
+//  if (xsub)
+//   {
      if (*c->symname)
         {
          s = add_sym(0,c->symname,c->p[0],0,0);
@@ -9808,10 +9800,11 @@ int set_subr (CPS *c)
 
      if (c->levels <= 0 || !c->adnl) return 0;    // no addnl block
 
-     xsub->cmd = 1;              // only set if extra cmds
-     xsub->adnl = c->adnl;          // move chain to subroutine
-      c->adnl = NULL;             // and drop from cmnd structure
-   }
+  //   xsub->cmd = 1;              // only set if extra cmds
+ //    xsub->adnl = c->adnl;          // move chain to subroutine
+  //    c->adnl = NULL;             // and drop from cmnd structure
+  freecadt(&c->adnl);
+//   }
   
   return 0;
  }
@@ -9955,7 +9948,7 @@ int set_bnk (CPS *cmnd)
   int bk;
   BANK *b;
 
-   
+   return 0;
    bk = cmnd->p[0];          // first param
    if (!check_bank(bk)) {do_error("Illegal Bank Number", cmnd->posn); return 1;} 
    
@@ -11202,7 +11195,7 @@ int parse_com(char *flbuf)
 
  ans = dirs[cmnd.fcom].setcmd (&cmnd);
 
- if (ans) do_error("Command Failed. Overlaps?)", cmnd.posn);
+ if (ans) do_error("Command Failed. Overlaps?", cmnd.posn);
 
 freecadt(&(cmnd.adnl));                                 // safety
 show_prog(0);
@@ -12966,13 +12959,13 @@ int get_config(char** pts)
   if (*t == '\"' || *t == '\'') t++;      // skip any opening quote
   strcpy(fldata.dpath, t);
 
-  t = strchr(fldata.dpath, '\\');
-  if (t) pathchar = '\\';                    // assume DOS or WIN
-  else
-   {
-    t = strchr(fldata.dpath, '/');
-    if (t) pathchar = '/';                   // assume UX
-   }
+ // t = strchr(fldata.dpath, '\\');
+ // if (t) pathchar = '\\';                    // assume DOS or WIN
+ // else
+ //  {
+ //   t = strchr(fldata.dpath, '/');
+ //   if (t) pathchar = '/';                   // assume UX
+ //  }
    
   if (!t) printf("error in cmdline !!");
 

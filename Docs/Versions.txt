@@ -19,13 +19,14 @@ Cannot always determine correct order of banks in file for mutlibanks.
 FIXES
 
 1. TEMP  - sub command will ignore any extra parameters (symbol name should work)
-2. TEMP  - removed bank commands - not normally required anyway
+2. TEMP  - removed and ignore bank commands - not normally required anyway
 
-3. Fixed problem with inorrect number of arguments (CARD and others)
+3. Fixed problem with incorrect number of arguments (CARD and others)
 4. Fixed problem with listing displaying incorrect number/symbol in indexed opcodes
 5. Fixed 'NULL' symbol with word commands
 6. Added more code to correctly size arguments.    
 7. Fixed crash when commands overlap - now gives error message
+8. Fixed a path problem for Windows which causes no processing to occur 
 
 May still not always get correct size of arguments 
 
