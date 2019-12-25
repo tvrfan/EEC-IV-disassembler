@@ -1,4 +1,7 @@
 
+#include <signal.h>
+#include <stdlib.h>
+
 #include <stdio.h>
 #include <string.h>                // linux
 #include "shared.h"
@@ -9,6 +12,17 @@ void   startup   (void);
 short  dissas    (char *);
 char   *get_filemap (void);
 
+void closefiles(void);
+
+void DBG_data();
+void prt_dirs(void);
+
+
+extern HDATA fldata;
+
+#ifdef __linux__
+struct sigaction sa;                // for signal capture
+#endif
 
 char fstr[256];
 
@@ -16,13 +30,12 @@ short incpg = 0;
 uint lastsym = 0;
 int lastpass = -1;
 
-const char *passd [] = {"Checking Binary", "Processing Commands", "Analysing Bin 1" ,
-                 "Analysing Bin 2","Analysing Bin 3", " Producing Listing" };
+const char *passd [] = {"Checking Binary ", "Process Commands", "Analyse Bin [1] " ,
+                 "Analyse Bin [2] ","Analyse Bin [3] ", "Output Listing " };
 
 
 
-char prg[] = { '|', '/', '-', '\\' };        /* for rotating symbol display */
-
+char prg[] = { '|', '/', '-', '\\' };       //  for rotating symbol display 
 
 void show_prog (int s)
 {
@@ -37,7 +50,7 @@ void show_prog (int s)
     }
   incpg++;
 
-  if (incpg > 200 )
+  if (incpg > 50 )           // not if redirected to a file.....
     {
       incpg = 0;
       if (lastsym >= sizeof (prg)) lastsym = 0;
@@ -46,8 +59,6 @@ void show_prog (int s)
       lastsym++;
     }
 }
-
-
 
 
 
@@ -68,27 +79,58 @@ then <bin> file
 
 */
 
+#ifdef __linux__
+void segfault(int signal, siginfo_t *si, void *arg)
+{
+    printf("** Caught CRASH signal at address %p code %x\n", si->si_addr, si->si_code);
+    printf("** Abandon disassembly\n\n");
+
+    fprintf (fldata.fl[2], "\n\n ** Caught signal %d ** \n", signal); // same as wrnprt
+    fprintf (fldata.fl[2],"** Abandon disassembly\n\n");
+
+    fprintf (fldata.fl[6], "\n\n ** Caught signal %d ** \n", signal); // same as wrnprt
+    fprintf (fldata.fl[6],"** Abandon disassembly\n\n");
+
+
+
+ #ifdef XDBGX   
+    if (signal == SIGINT) DBG_data();            // this seems to work, even if not technically safe...
+ #endif
+
+    prt_dirs();
+    closefiles();
+
+    exit(0);
+}
+#endif
+
+
 
 int main (int argc, const char **argv)
 {
   short go;
   char *x, *fn;
   char* pth[3];
+
+#ifdef __linux__
+  // set up signal catcher for disasters
+
+    memset(&sa, 0, sizeof(struct sigaction));
+    sigemptyset(&sa.sa_mask);
+    sa.sa_sigaction = segfault;
+    sa.sa_flags   = SA_SIGINFO;
+
+    sigaction(SIGSEGV, &sa, NULL);
+    sigaction(SIGINT, &sa, NULL);
+#endif
+
+
+
+
   prt_stars();
   printf ("EEC-IV disassembler Version %s (%s)", SADVERSION, SADDATE);
-
- /* #ifdef __unix__
-  printf ("UNIX");
-  #endif
-
-  #ifdef __DOS__
-  printf ("DOS");
-  #endif   */
-
   printf ("\nAbsolutely no warranty or liability");
-
   prt_stars();
-
  
   fn = 0;
 
@@ -110,18 +152,8 @@ int main (int argc, const char **argv)
          case 'c' :
          case 'C' :
           pth[1] = (char *) argv[go+1];              // path of config file
-  //        printf ("config R dir = %s\n", pth[1]);
           go++;
           break;
-          
- /*       case 'w' :
-         case 'W' :
-          pth[2] = (char *) argv[go+1];              // path of config file
-   //       printf ("config W dir = %s\n", pth[2]);
-          go++;
-          break; 
-   */       
-          
           
          case 'h':
          case 'H':
@@ -129,46 +161,21 @@ int main (int argc, const char **argv)
            printf ("\nsad  <-c configdir> <-w configdir> <bin_filename>");
            printf ("\n   options");
            printf ("\n      -c for directory of sad.ini config file to read");
-     //      printf ("\n      -w for directory to write a sad.ini config file to");
-      //     printf ("\n      'filename' to decode. Name is appended with '.bin'\n");
            printf ("\n      if no -c then looks for a sad.ini in same dir as sad exe");
-      //     printf ("\n      if -w specified will write a 'sad.ini' config file");
-      //     printf ("\n      if no directory will write it to same dir as sad exe");
            printf ("\n      asks for bin_filename if none specified\n");
           return 0;
-          
-          
-          //add a -w for create config file....
         }
-
-
-
-
-
 
      }
      else fn = (char*) argv[go];
-
-
-  //   printf(argv[go]);
-   //  printf (" | ");
-    }
+   }
 
  // printf("FN=%s\n",fn);
   // get_args here
 
-  // save argv num of one after -c and then use in get_config
-
-  if (get_config(pth))   return 1;           // this seems to work fine !!
+  if (get_config(pth))   return 1;
 
 /*******************************/
-
- // prt_stars();
-
-
-
-
-
 
 
     if (fn)
@@ -192,3 +199,4 @@ int main (int argc, const char **argv)
 
  return go;
 }
+

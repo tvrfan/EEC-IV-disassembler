@@ -1,5 +1,66 @@
 
 Version Summary
+** Version 4.0.3 *****************
+
+Fixed  -
+
+1. Symbol names not found for some indexed opcodes.
+(note that there are some rules implied to stop small offsets being interpreted as special
+registers - i.e. less than 0x20). This rule may need to be changed for some cases.
+
+2. Bug in vect list sometimes not picking up last pointer item in list.
+
+3. Change autonumbered names to <name><address> style instead of <name><sequence number>
+make command options and layout more regular
+
+4. Some rbase (register base pointers) not being detected and missed off.
+
+5. Fix data offset not appearing/working for some commands.
+
+6. Print bank commands with comment so don't get processed (more work here)
+
+
+7. User specified subroutines now work - note change in command structure.  
+
+NOTE - changed special function commands to -
+
+:F 1 32 : UY : UY
+for 1d lookups (functions) where -
+32 is register holding start address
+first UY in Input size and sign (can be UY, SY, UW, SW)
+second UY is output size and sign
+
+:F 2 32 34 : UY
+For 2D lookups (tables) where -
+32 is register holding start address
+34 is register holding number of columns
+UY is output size and sign (can be UY, SY, UW, SW but no word tables found yet)
+
+Any additional data arguments can be added at the end, for example
+
+sub  2ecf  "SUYLuTEST"   : F 1 36: UY : SY : E 4 f0 N : UWN
+
+is valid and is processed such that the first part "F 1 36: UY : SY" is treated as the special function,
+(e.g. a 1D lookup address in reg 36 unsigned byte in, signed byte out, and the "E 4 f0 N : UWN" specifies
+that the subroutine has 2 word arguments (= 4 bytes), the first is an encoded address type 4 based from register
+0xF0 and the second is a word, and both may have symbols(names).
+
+and sub 3456  "Getaddr"  : E 4 f0 N : UWN  would have same meaning but without the lookup.
+
+- - - - - - - -
+
+Issues remaining -
+
+1. Not sorted out problem with cal console (d006, e006 etc as posted with EARS.bin)
+
+2. bank (and order) commands to sort out
+
+3. missing code blocks (can be fixed by adding 'scan xxxxx' for now)
+
+4. some tables have missed end rows (can fix with a TAB command)
+
+5. data analysis to try to get layout of some of the data structures automatically. 
+
 
 ** Version 4.0.2 *****************
 

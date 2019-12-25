@@ -25,11 +25,11 @@
 #define     OPSPV  0x08000000
 #define     OPSPX  0x04000000        
 #define     OPSVL  0x02000000
+#define     OPSST  0x01000000
 /* extra flags
- * OPSPV      special func flag 1 
+ * OPSPV      special func 
  *    keep jump bit bit and state from JB or JNB (into params[tval])
  *    keep carry state from a JC,JNC,STC,CLC
- *    check opcode subtype against tval for multitype opcodes to define only imd, inx etc
  *    allow zero repeats (i.e. optional + repeat) with OPRPT
  * 
  * OPSPX 
@@ -37,6 +37,8 @@
  *    with 'sign prefix' opcodes, specify whether prefix is there (0xFE)
  * OPSVL
  *    a flag to specify prefix present or not with OPSPX. used for mults and divs (i.e. signed or unsigned)
+ * OPSST
+ *    save opcode subtype in tval for multitype opcodes
 */
 
 // DATA WORD(s)  
@@ -44,7 +46,7 @@
 #define     SDINC  0x8000000                 // increment/save index on a repeat
 #define     SDLBT  0x4000000                 // drop lowest bit of register (for autoinc and some byte ops)
 #define     SDANY  0x2000000                 // is allow any value, save first one
-//#define     SDINC  0x100000                 // increment/save index on a repeat
+//#define     SDDAT  0x1000000                 // save data from register
 
 /*************************************
  * DESCRIPTION 
@@ -55,7 +57,7 @@
  * NB. if sigindex is zero and OPCODE flag is zero, this means a special subpattern (see further below)
  * 
  * 0xff00 0000     flags (opcode, 0xfe used)
- * 0x001f 0000     index value into params array for saved items, repeat counts, regs  etc
+ * 0x000f 0000     index value into params array for saved items, repeat counts, regs  etc
 
  * 0x0000 f000     pattern size (= num of ints including this int) >> 12 & 0xf
  * 0x0000 003f     if opcode flag set, this is signature index
@@ -67,8 +69,9 @@
  * DATA/operands (follows opcode match)
  * 
  * 0x0f00 0000  flags (data)
- * 0x001f 0000  index for saved value (register or data) for matching (ixval)
- * 0x0000 1f00  count value location if SDINC is set, for incremental list
+ * 0x000f 0000  index for saved value (register or data) for matching (ixval)
+ * 0x0000 0f00  count value location if SDINC is set, for incremental list
+ * 0x0000 0f00  actual register value location if SDDAT is set
  * 0x0000 00ff  register or data to match (ignore if SDANY is set)
  * 
  * If ixval set, then a param is SAVED into the par array (0-0x1f)
@@ -121,26 +124,23 @@ then following patts can match in ANY ORDER.
 typedef struct xsig
 {
  struct xptn *ptn;      // pointer to signature pattern
- int ofst;              // start address of sig found
- int xend;              // end of signature - only really used to stop multiple pattern matches and overlaps
- uint done   : 1 ;      // processed marker - for debug really
- uint skp    : 4 ;      // skipped opcodes at front
- int v[NSGV];           // saved values
+ uint  start;           // start address of sig found
+ uint  end;             // end of signature - only really used to stop multiple pattern matches and overlaps
+ uint  done   : 1 ;     // processed marker - for debug really
+ uint  skp    : 4 ;     // skipped opcodes at front
+// uint  vflag  : 4 ;     // special values
+ uint  v[NSGV];         // 16 saved values
 } SIG;
 
 
 typedef struct xptn
 {
- uint *sig;                                   // actual sig pattern
- const char *name;                            // name of pattern
- short size;                                  // no of instructions in sig
- uint spf    : 1 ;                            // special func (ignore Process SIG option)
- uint olap   : 1;                             // allow overlaps
- uint vsz    : 1 ;                            // size of param array 0 = 16, 1 = 32
- void (*sig_prep) (SIG *, SBK*);              // preprocess  (various)
- void (*sig_pr)   (CSIG *, SBK *, SBK *);     // process sig when encountered
+ uint  *sig;                                   // actual sig pattern
+ const char *name;                             // name of pattern
+ void  (*pr_sig) (SIG *, SBK*);                // sig processor or zero if none
+ uint size  : 16;                                   // no of instructions in pattern
+ uint vflag  : 4;
 } PAT;
-
 
 
 #endif
