@@ -24,27 +24,6 @@ typedef unsigned int   uint;
 typedef unsigned long  ulong;
 
 
-/*
-#if defined __linux__ || defined __MINGW64__
-
- typedef unsigned long  ulong;
- typedef long plong;
-
-#endif      
-
-#if defined __MINGW32__ 
-
- //typedef unsigned double  ulong;
- typedef double plong;    
-
-#endif
-*/
-
-
-
-
-
-
 // True banks may be anywhere 0-15,although only 0,1,8,9 used
 // Bank 16 is used for RAM data, sized at 0x2000 bytes
 
@@ -93,15 +72,15 @@ typedef struct                 // indexed by REAL bank id (0-16)
  uchar  *fbuf;                // bin file data pointer for bank
  uint   *opbt;                // bit array pointer.
  
- int     filstrt;             // start FILE OFFSET. ( = real offset - PCORG can be -ve)
- int     filend;              // end   FILE OFFSET. 
- uint     minpc;               // min PC (normally PCORG)
- uint     maxpc;               // end PC (= max PC allowed (where fill starts)
- uint     maxbk;               // where bank really ends
- uint    bok   : 1 ;          // this bank is valid to use
- uint    cmd   : 1 ;          // set by command
- int    dbnk   : 5 ;          // destination bank (setup only...also temp 8065 marker)
- uint    btype : 3 ;          // bank type (code start or not) only ever 1 or 2
+ int   filstrt;               // start FILE OFFSET. ( = real offset - PCORG can be -ve)
+ int   filend;                // end   FILE OFFSET. 
+ uint  minpc;                 // min PC (normally PCORG)
+ uint  maxpc;                 // end PC (= max PC allowed (where fill starts)
+ uint  maxbk;                 // where bank really ends
+ uint  bok     : 1 ;          // this bank is valid to use
+ uint  cmd     : 1 ;          // set by command, only used in set_bnk
+ int   dbnk    : 5 ;          // destination bank (setup only...also temp 8065 marker)
+ uint  btype   : 3 ;          // bank type (code start or not) only ever 1 or 2
  }  BANK;
 
 

@@ -137,7 +137,7 @@ uint pp_timer (uint, LBK *); uint pp_dmy   (uint, LBK *);
 int set_vect (CPS*); int set_code (CPS*); int set_scan (CPS*); int set_cdih (CPS*);
 int set_args (CPS*); int set_data (CPS*); int set_opts (CPS*); int set_rbas (CPS*);
 int set_sym  (CPS*); int set_subr (CPS*); int set_bnk  (CPS*); int set_time (CPS*);
-int set_ordr (CPS*);
+//int set_ordr (CPS*);
 
 
 /********** COMMAND Option letters -
@@ -222,8 +222,8 @@ DIRS dirs[] = {
 {"rbase"   , set_rbas, pp_dmy,    0, 4, 3, 1, 0, 0, 0, 0, 0   },
 
 {"sym"     , set_sym,  pp_dmy,    2, 3, 1, 0, 1, 0, 0, 0, "%[:FTW]%n"    },          // flags,bit,write
-{"banks"   , set_bnk,  pp_dmy,    0, 4, 2, 1, 1, 0, 0, 0, 0 },
-{"order"   , set_ordr, pp_dmy,    2, 4, 0, 0, 0, 0, 0, 0, 0 }
+{"bank"    , set_bnk,  pp_dmy,    0, 4, 0, 1, 1, 0, 0, 0, 0 },
+//{"order"   , set_ordr, pp_dmy,    2, 4, 0, 0, 0, 0, 0, 0, 0 }
 };
 
 
@@ -763,8 +763,8 @@ void *shuffle[16];            // for chain reorganises (and deletes), a block of
 
 FSTK  scanstack[STKSZ];       // fake stack holder for previous subr calls (for arg tracking)
 FSTK  emulstack[STKSZ];       // fake stack for emulation - emulate all parameter/argument getters
-
-int recurse  = 0;               // recurse count check
+CPS  cmnd;                    // command structure
+int recurse  = 0;             // recurse count check
 
 //********** file open ext and flags for linux and Win32 ********************
 
@@ -3880,6 +3880,50 @@ void prt_opts(void)
 }
 
 
+
+void prt_spf(SXT *sub, int (*prt) (const char *, ...))
+{ 
+   AUTON *n; 
+  // print special func in style of cadt
+      /* special subr function
+               // f 1 <reg1> <size>  <size>    func reg in , out
+               // f 2 <reg1> <reg2>  <size>    tab add, cols, size
+
+               // f 3 <reg1> <size>           variable ?
+               // f 4 <?>     <size1> < size2>  switch between 2 sizes args ?
+      */
+         
+  if (sub->spf >  4  && sub->spf < 13)
+      { // func
+      
+      prt(" : F 1");
+
+      if (sub->sig) prt (" %x",sub->sig->v[4]);
+      n = anames + sub->spf;
+ 
+      prt(": %s : %s ", calo[n->sizein], calo[n->sizeout]);
+  
+        
+       // or check for args here ??? No, need the call origin
+      }
+
+   // tab subroutines
+ 
+    if (sub->spf > 12  && sub->spf < 15)
+    {
+          prt(" : F 2");
+
+      if (sub->sig) prt (" %x %x",sub->sig->v[4], sub->sig->v[3] );
+      n = anames + sub->spf;
+ 
+      prt(" : %s ", calo[n->sizein]);
+    }
+}
+
+
+
+
+
 #ifdef XDBGX
 
 void DBG_sbk(const char *t, SBK *s, int p)
@@ -3932,7 +3976,7 @@ void DBG_subs (void)
   short ix;
 
   DBGPRTN(0);  
-  DBGPRT("# ------------ Subroutine list");
+  DBGPRTN("# ------------ Subroutine list");
   DBGPRTN("# num subs = %d", subch.num);
 
   for (ix = 0; ix < subch.num; ix++)
@@ -3944,6 +3988,7 @@ void DBG_subs (void)
         if (x) {DBGPRT("%c%s%c  ", '\"', x->name, '\"');
                //  if (x->xnum > 1)   DBGPRT(" N%d", x->xnum);
         }
+        prt_spf(s, DBGPRT);
         prt_cadt(s->adnl,0,DBGPRT);
         if (s->cmd)   DBGPRT("# cmd");
 
@@ -4054,45 +4099,39 @@ void DBG_ovr(void)
 
 
 void DBG_banks(void)
-{
- int ix;
- BANK *b;
+ {
+  int ix;
+  BANK *b;
 
- DBGPRTN("\n-----------BANKS---------");
- DBGPRTN("fbuf, opbt, filstart, filend, minpc, bkend, maxpc, bok,cmd,dbnk, btype" );
+  DBGPRTN("\n-------DEBUG BANKS---------");
+  DBGPRTN("bank filstart, filend, maxpc,  ## minpc, bkend, maxpc, bok,cmd,dbnk, btype ||(->) fbuf, opbt," );
 
- DBGPRTN("ibuf %x, opbt %x",ibuf, opbit);
- for (ix = 0; ix <= BMAX; ix++)
-   {
-            b = bkmap + ix;
-       if (b->bok){
+  DBGPRTN("ibuf %x, opbt %x",ibuf, opbit);
+  for (ix = 0; ix <= BMAX; ix++)
+    {
+      b = bkmap + ix;
+      if (b->bok)
+       {
+         DBGPRT("%2d, %5x %5x %5x", ix, b->filstrt, b->filend, b->maxpc);
+         DBGPRT(" ## %5x %5x", b->minpc, b->maxbk);
+         DBGPRT("  %x %x %x %x   offx  %5x", b->bok, b->cmd, b->dbnk, b->btype, b->fbuf-ibuf);
+         if (ix < BMAX)   DBGPRT(" %5x", b->opbt-opbit ); else    DBGPRT(" %5x", b->opbt );
+         DBGPRTN(0);}
+       }
+  DBGPRTN(0);
+  DBGPRTN(" Other non bok ---"); 
  
-   if (ix < BMAX)   DBGPRT("%2d %5x %5x", ix, b->fbuf-ibuf, b->opbt-opbit );
-    else    DBGPRT("%2d %5x %5x", ix, b->fbuf-ibuf, b->opbt );
-      
- DBGPRT("  %5x %5x", b->filstrt, b->filend );
-DBGPRT("  %5x %5x %5x", b->minpc, b->maxbk, b->maxpc);
-DBGPRT("  %x %x %x %x", b->bok, b->cmd, b->dbnk, b->btype);
-       DBGPRTN(0);}
+  for (ix = 0; ix <= BMAX; ix++)
+    {
+      b = bkmap + ix;
+      if (b->fbuf && !b->bok)
+        {
+         DBGPRT("[ %2d, %5x %5x %5x", ix, b->filstrt, b->filend, b->maxpc);
+         DBGPRT(" ## %5x %5x", b->minpc, b->maxbk);
+         DBGPRT("  %x %x %x %x   offx  %5x", b->bok, b->cmd, b->dbnk, b->btype, b->fbuf-ibuf);
+         DBGPRTN("]");
+        }
      }
- DBGPRTN(0);
- for (ix = 0; ix <= BMAX; ix++)
-   {
-            b = bkmap + ix;
-       if (b->fbuf && !b->bok){
-            DBGPRT(" [ ");
-     DBGPRT("%2d %5x %5x", ix, b->fbuf-ibuf, b->opbt-opbit );
- DBGPRT("  %5x %5x", b->filstrt, b->filend );
-DBGPRT("  %5x %5x %5x", b->minpc, b->maxbk, b->maxpc);
-DBGPRT("  %x %x %x %x", b->bok, b->cmd, b->dbnk, b->btype);
-    DBGPRT(" ] ");
-       DBGPRTN(0);}
-     }
-
-
-
-
-
 
  DBGPRTN(0);
 }
@@ -4113,6 +4152,7 @@ void DBG_data()
     DBG_banks();
     DBG_ovr();
     DBG_rgchain();
+    DBG_subs();
     DBG_sigs(&sigch);
  }
 
@@ -4503,6 +4543,15 @@ void do_data_pattern(int start, int end)
   uchar a, b;
   // uint c,d; ? or ushort ?
  
+// for tables, horiz, veritcal,diagonal ?
+// for surface (tables) ascending, descending, plus lump, minus lump ?
+// or just minumum absolute difference - which probably won't work for
+// a table which is all the same value.....
+
+
+
+
+
 
 // data struct may scan beyond end.....
 #ifdef XDBGX
@@ -5202,9 +5251,8 @@ void fnplu (SIG *s,  SBK *blk)
    if (!s->v[3])       return ;
       
    subr = add_subr(blk->substart);  // ok if already exists
-   
-   // change this to check CADT not the subr itself
    if (!subr)       return;
+
    
    if (subr->cmd) 
    {
@@ -5217,7 +5265,7 @@ void fnplu (SIG *s,  SBK *blk)
         // need [7] for answer reg, possibly others....... 
         if (!g->v[7])  g->v[7] = s->v[7];
        }
-  return;             // by dir
+//  return;             // by dir  WRONG !! can still add if not specified
    }
 
    if (subr->spf) return;           // already processed
@@ -5368,7 +5416,7 @@ void tbplu (SIG *s,  SBK *blk)
         // need [7] for answer reg, possibly others....... 
         if (!g->v[3])  g->v[3] = s->v[3];
        }
-  return;             // by dir
+ // return;             // by dir
    }
    
 
@@ -6393,7 +6441,7 @@ void do_sjsubr(SBK *caller, INST *c, int type)
          { 
            sub = get_subr(newsc->substart);
            if (sub && sub->adnl)
-            {            // args set by user command
+            {            // args set by user command no args, just skip
                #ifdef XDBGX
                DBGPRT("CMD ARGS ");
                #endif
@@ -10240,6 +10288,7 @@ void cpy_banks(void);
   return 0;  
 }
 
+/*
 int set_ordr(CPS *cmnd)
  {
    int i,ans;
@@ -10287,6 +10336,8 @@ int set_ordr(CPS *cmnd)
   set_banks();
   return 0;
  }
+  * 
+  */ 
 
 int set_time(CPS *c)
  {
@@ -10363,65 +10414,88 @@ return 0;
  }
 
 
-int set_bnk (CPS *cmnd)
+int set_bnk (CPS *c)
 {
-  int bk;
+  int ix, bank, xx;
   BANK *b;
 
-   return 0;
-   
    // bank no , fileoffset, endfileoffset, maxpc (optional);
-   
-   // check param number first ?
-   bk = cmnd->p[0];          // first param
-   if (!check_bank(bk)) {return do_error(cmnd,"Illegal Bank Number");} 
-   
-   if (bkmap[bk].cmd)
-   {
-     return do_error(cmnd,"Bank already defined");
-     return 1;
-   }
 
-// file offset can legally be negative !!
+   // use bk[2].cmd as marker to indicate bank command used already for 
+   // following bank commands.
+   
+   // validate all params before overwriting anything
 
-   if (cmnd->p[1] < -20 || cmnd->p[1] > (int)fldata.fillen) return do_error(cmnd,"Illegal File Offset");
-   
-   if (cmnd->p[2] - cmnd->p[1] > 0xdfff) return do_error(cmnd,"start -> end gap too large");
-   
-   
-   if (bkmap[2].btype)
-   { 
-   // kill all banks ready for new commands
-   memset(bkmap,0,sizeof(bkmap));
-   bkmap[0].opbt = opbit;                   // bit flag array reset
-   bkmap[1].opbt = opbit + 0x800;           // = 32 bit   0x1000 = 16 bit ints
-   bkmap[8].opbt = opbit + 0x1000;
-   bkmap[9].opbt = opbit + 0x1800;
-   numbanks = -1;          
-   }
-   
-   // now add one bank
+   if (c->npars < 2) return do_error(c,"need at least 2 parameters");
 
-   b = bkmap+bk;
-    
-   b->fbuf = ibuf + cmnd->p[1];          // file offset
-   b->filstrt = cmnd->p[1];
-   b->minpc = PCORG;
-   b->maxbk = cmnd->p[2]-PCORG;
-   if (cmnd->p[3])  b->maxpc = cmnd->p[3];
+   ix = c->p[0];          // first param
+   if (!check_bank(ix)) return do_error(c,"Illegal Bank Number"); 
+   if (bkmap[ix].cmd)   return do_error(c,"Bank already defined");
 
-   if (cmnd->p[3] < PCORG || cmnd->p[3] > (int) b->maxbk)
-       return do_error(cmnd,"fill start outside start and end");
+   bank = ix << 16;          // bank in correct form
    
+   // file offset can be negative for missing bytes
+   if (c->p[1] < -10 || c->p[1] > (int)fldata.fillen) return do_error(c,"Illegal File Offset");
+
+   if (ix > 0 && bkmap[ix-1].bok)
+      {
+       if (c->p[1] <= bkmap[ix-1].filend) return do_error(c,"file offsets overlap");  
+      }
+
+   if (c->npars > 2)
+     {     // end file offset specified
+      if (c->p[2] <= c->p[1])             return do_error(c,"end < start");
+      if (c->p[2] - c->p[1] > 0xdfff)     return do_error(c,"start -> end gap too large");  
+      if (c->p[1] >= (int) fldata.fillen) return do_error(c,"start beyond end of file");  
+      if (c->p[2] >= (int) fldata.fillen)
+         {
+          c->p[2] = fldata.fillen-1;
+          do_error(c,"bank end beyond end of file, adjusted to file size"); 
+         }
+     }    
+    else 
+     {
+      c->p[2] = c->p[1] + 0xdfff;     // default to max bank size     
+      if (c->p[2] >= (int) fldata.fillen) c->p[2] = fldata.fillen-1;
+     }
+
+  if (c->npars > 3)
+  {        // filstart specified
+    c->p[3] = nobank(c->p[3]) | bank;
+    xx = c->p[2] - c->p[1] + PCORG;    // max pc 
+    xx |= bank;
+      
+    if (c->p[3] < PCORG || c->p[3] > xx ) do_error(c,"fill start outside address range - ignored");  
+  }    
+
+   if (!bkmap[2].cmd)
+      {    // clear whole map, but only once.
+       memset(bkmap,0,sizeof(bkmap)- sizeof(BANK));     // leave entry 16 (RAM)
+       bkmap[0].opbt = opbit;                   // bit flag array reset
+       bkmap[1].opbt = opbit + 0x800;           // = 32 bit   0x1000 = 16 bit ints
+       bkmap[8].opbt = opbit + 0x1000;
+       bkmap[9].opbt = opbit + 0x1800;
+       numbanks = -1;                           // numbanks 0 is single bank          
+       bkmap[2].cmd = 1; 
+      }
+   
+   b = bkmap+ix;
    b->cmd = 1;
    b->bok = 1;
+   b->filstrt = c->p[1];   
+   b->fbuf  = ibuf + b->filstrt;       // ibuf + file offset - allows for PCORG
+   b->filend =  c->p[2];
+   b->minpc = PCORG | bank;
+   b->maxbk = (b->filend-b->filstrt + PCORG) | bank;
+
+   if (c->p[3]) b->maxpc = nobank(c->p[3]) | bank;  
 
    numbanks++; 
 
-   set_banks();              // on final bank layout, not 2,3,4,5  no harm called for each bank.....
- 
+   set_banks();         // sets filler(maxpc) if not already done
+   
    #ifdef XDBGX
-     DBGPRT("Bank Set %d %x %x ",cmnd->p[1], cmnd->p[2],cmnd->p[3]);
+     DBGPRT("Bank Set %d %x %x ",c->p[1], c->p[2],c->p[3]);
      DBGPRTN(" #( = %05x - %05x fill from %05x)",b->minpc, b->maxbk, b->maxpc);
    #endif
    return 0;
@@ -11132,7 +11206,8 @@ int readpunc(CPS *c)           //uint posn, uint end)
 
 int getpx(CPS *c, int ix)
  {
-     // ix is where to start in p params, and a bitmap of x versus p ?
+     // ix is where to start in p params, 4 max pars
+     // answer is params read;
   int ans, rlen;
   int *dest;   
  
@@ -11169,22 +11244,14 @@ int chk_startaddr(CPS *c, DIRS* dir)
    // check ans fixup any address issues (bank etc) 
   int start, end, ix;
 
- /* ix = dir->veripos;
-  if (ix)
-   {            // single address, with or without a start/end pair following  
-    start = c->p[ix-1]; 
-    if (!numbanks && (start <= 0xffff && start >= PCORG)) start |= 0x80000;
-    c->p[ix-1] = start;
-   }   */    
-
   ix = dir->startpos;
-  if (ix <= 0) return 0;          // no addresses
+  if (ix <= 0) return 0;          // no addresses to check
                                   // address pair
   start = c->p[ix-1];             // so zero is ignored....
 
   if (dir->end_ex) end = c->p[ix]; else end = 0;
      
-  // autofix single banks to bank 8 
+  // autofix single banks to bank 8 except for
   if (!numbanks && (start <= 0xffff && start >= PCORG)) start |= 0x80000;
 
   if (!end) 
@@ -11195,9 +11262,9 @@ int chk_startaddr(CPS *c, DIRS* dir)
 
   if (end <= 0xffff) end |= g_bank(start);      // add start bank
 
-  if (!bankeq(start,end))  {do_error(c,"Banks don't match");return 8;}   // banks don't match
+  if (!bankeq(start,end)) do_error(c,"Banks don't match");
   
-  if ( end < start) {do_error(c,"End less than Start");return 8;}   // banks don't match
+  if ( end < start) do_error(c,"End address < Start");
     
   c->p[ix-1] = start;
   c->p[ix]   = end;  
@@ -11207,7 +11274,7 @@ int chk_startaddr(CPS *c, DIRS* dir)
 
 
 
-int do_adnl_letter (CPS* cmnd, char optl)
+int do_adnl_letter (CPS* c, char optl)
 {
    // switch by command letter - moved out of parse loop for clarity
    CADT *a;
@@ -11215,10 +11282,10 @@ int do_adnl_letter (CPS* cmnd, char optl)
    int ans, rlen;
    float f1;
     
-   a = cmnd->adnl;
+   a = c->adnl;
    while(a && a->next) a = a->next;          // make sure at end of chain
     
-   if (!a && optl != ':') return do_error(cmnd,"Missing Colon");
+   if (!a && optl != ':') return do_error(c,"Missing Colon");
  
    if (optl >= 'a' && optl <= 'z') optl -= 0x20;  // A is 0x41 A is 0x61
 
@@ -11239,37 +11306,37 @@ int do_adnl_letter (CPS* cmnd, char optl)
            
        case '|' :
 
-         a = add_cadt(&(cmnd->adnl));
-         cmnd->levels++;
+         a = add_cadt(&(c->adnl));
+         c->levels++;
          a->newl = 1;                    // mark split printout here
-         cmnd->newl = 1;                  // flag in main cmd struct too
+         c->newl = 1;                  // flag in main cmd struct too
          break;           
            
        case ':' :
 
          // colon add a new CADT struct (= level) at end of chain
-         if (!readpunc(cmnd)) break;   // not with trailing colon
-         a = add_cadt(&(cmnd->adnl));
-         cmnd->levels++;
+         if (!readpunc(c)) break;   // not with trailing colon
+         a = add_cadt(&(c->adnl));
+         c->levels++;
          break;
    
        case 'D' :
 
          // 1 hex value (address offset)
-         ans = getpx(cmnd,4);
-         if (!ans) return do_error(cmnd,"Param reqd");
+         ans = getpx(c,4);
+         if (!ans) return do_error(c,"Param reqd");
          a->foff = 1;
-         a->data  = cmnd->p[4];    // Word + fixed address offset (funcs) - bank swop vect
+         a->data  = c->p[4];    // Word + fixed address offset (funcs) - bank swop vect
          break;             
 
        case 'E' :
 
          // ENCODED 2 hex vals
-         ans = getpx(cmnd,4);
-         if (ans != 2 )  return do_error(cmnd,"2 Params Only");
+         ans = getpx(c,4);
+         if (ans != 2 )  return do_error(c,"2 Params Only");
               
-         a->enc  = cmnd->p[4]; 
-         a->data = cmnd->p[5];
+         a->enc  = c->p[4]; 
+         a->data = c->p[5];
          a->ssize = 2;            // encoded implies word
          break;
 
@@ -11280,31 +11347,31 @@ int do_adnl_letter (CPS* cmnd, char optl)
          // f 2 <reg1> <reg2> :  <size>    tab add, cols, size
          // Leave set subr to chew off extra levels for size
 
-         ans = getpx(cmnd, 4);          // max of 3
+         ans = getpx(c, 4);
                   
-         if (!ans)   return do_error(cmnd,"Special Func type reqd");
+         if (!ans)   return do_error(c,"Special Func type reqd");
 
-         if (cmnd->p[4] < 1 || cmnd->p[4] > 2) return do_error(cmnd,"Invalid Func type");
+         if (c->p[4] < 1 || c->p[4] > 2) return do_error(c,"Invalid Func type");
                  
          a->enc = 7;                     // mark it as spf
          
-         cmnd->sig = (SIG *) chmem(&sigch);
-         s = cmnd->sig;
-         s->start = cmnd->lineno;
+         c->sig = (SIG *) chmem(&sigch);
+         s = c->sig;
+         s->start = c->lineno;
          s->end   = s->start+1;        // dummy start and end address
-         s->v[0] =  cmnd->p[4];        // special func type
+         s->v[0] =  c->p[4];        // special func type
  
-         if (ans < 2)   return do_error(cmnd,"Address register reqd");
-         if (ans > 3)   return do_error(cmnd,"Too many parameters");
-         if (cmnd->p[4] == 1) s->ptn = &fnlp;           // function
-         if (cmnd->p[4] == 2)
+         if (ans < 2)   return do_error(c,"Address register reqd");
+         if (ans > 3)   return do_error(c,"Too many parameters");
+         if (c->p[4] == 1) s->ptn = &fnlp;           // function
+         if (c->p[4] == 2)
               {
                s->ptn = &tblp;
-               if (ans < 3)   return do_error(cmnd,"Column width reqd"); 
+               if (ans < 3)   return do_error(c,"Column width reqd"); 
               }
          s->v[2] = 2;               // default to byte
-         s->v[4] = cmnd->p[5];      // struct address register
-         s->v[3] = cmnd->p[6];      // tab column register
+         s->v[4] = c->p[5];      // struct address register
+         s->v[3] = c->p[6];      // tab column register
 
          inssig(s);                 // insert so it gets freed
          break;
@@ -11327,22 +11394,22 @@ int do_adnl_letter (CPS* cmnd, char optl)
        case 'O':                // Cols or count
          // 1 decimal value
 
-         ans = getpd(cmnd, 4);
-         if (!ans) return do_error(cmnd,"Param reqd");  
-         if (cmnd->p[4] < 1 || cmnd->p[4] > 32) return do_error(cmnd,"Invalid count");        
+         ans = getpd(c, 4);
+         if (!ans) return do_error(c,"Param reqd");  
+         if (c->p[4] < 1 || c->p[4] > 32) return do_error(c,"Invalid count");        
       
-         a->cnt = cmnd->p[4];            // must be positive ?
+         a->cnt = c->p[4];            // must be positive ?
          break;
 
        case 'P':               // Print fieldwidth   1 decimal
-         ans = getpd(cmnd, 4);
-         if (!ans) return do_error(cmnd,"Param reqd");  
-         if (cmnd->p[4] < 1 || cmnd->p[4] > 32) return do_error(cmnd,"Invalid count");
-         a->pfw = cmnd->p[4];
+         ans = getpd(c, 4);
+         if (!ans) return do_error(c,"Param reqd");  
+         if (c->p[4] < 1 || c->p[4] > 32) return do_error(c,"Invalid count");
+         a->pfw = c->p[4];
          break;
 
        case 'Q' :              // terminator byte
-         cmnd->term = 1;
+         c->term = 1;
          break;
 
        case 'R':               // indirect pointer to subroutine (= vect)
@@ -11354,12 +11421,12 @@ int do_adnl_letter (CPS* cmnd, char optl)
              
        case 'K' :
          // 1 decimal value (address offset)
-         ans = getpd(cmnd, 4);
-         if (!ans) return do_error(cmnd,"Param reqd"); 
+         ans = getpd(c, 4);
+         if (!ans) return do_error(c,"Param reqd"); 
          
-         if (cmnd->p[4] > 9 || cmnd->p[4] & 6) return do_error(cmnd,"Invalid bank"); 
+         if (!check_bank(c->p[4])) return do_error(c,"Invalid bank"); 
          a->vaddr = 1;
-         a->data  = cmnd->p[4];    // Word + fixed address offset (funcs) - bank swop vect
+         a->data  = c->p[4];    // Word + fixed address offset (funcs) - bank swop vect
          break;
              
        case 'S':              // Signed
@@ -11369,10 +11436,10 @@ int do_adnl_letter (CPS* cmnd, char optl)
        case 'T':                 // biT
        case 'B':
          // read one decimal val  T only allowed in sym and timer commands
-         ans = getpd(cmnd, 4);
-         if (!ans) return do_error(cmnd,"Param reqd");  
-         if (cmnd->p[4] < 0 || cmnd->p[4] > 15) return do_error(cmnd,"Invalid bit");
-         a->data = cmnd->p[4];
+         ans = getpd(c, 4);
+         if (!ans) return do_error(c,"Param reqd");  
+         if (c->p[4] < 0 || c->p[4] > 15) return do_error(c,"Invalid bit");
+         a->data = c->p[4];
          a->enc = 7;           // temp marker for  bitno  
          break;
 
@@ -11382,9 +11449,9 @@ int do_adnl_letter (CPS* cmnd, char optl)
 
        case 'V':                  // diVisor
          // read one FLOAT val
-         ans = sscanf(flbuf+cmnd->posn, "%f%n ", &f1, &rlen);       // FLOAT
-         if (!ans) return do_error(cmnd,"Param reqd");
-         cmnd->posn+=rlen;
+         ans = sscanf(flbuf+c->posn, "%f%n ", &f1, &rlen);       // FLOAT
+         if (!ans) return do_error(c,"Param reqd");
+         c->posn+=rlen;
          a->fdat = f1;                                       // now go FULL FLOAT
          break;
 
@@ -11405,7 +11472,7 @@ int do_adnl_letter (CPS* cmnd, char optl)
          // Z
  
        default:
-           return do_error(cmnd,"Illegal Option");
+           return do_error(c,"Illegal Option");
 
     }          // end switch
  return 0;
@@ -11413,7 +11480,7 @@ int do_adnl_letter (CPS* cmnd, char optl)
 
 
 
-void  do_opt_letter (CPS* cmnd, char optl)
+void  do_opt_letter (CPS* c, char optl)
 {
     // this is a  cmd: ABCD type (no params)
     
@@ -11423,13 +11490,13 @@ void  do_opt_letter (CPS* cmnd, char optl)
     if (optl >= 'A' && optl <= 'Z')
       {
        j = optl - 'A';                      // convert letter to bit offset
-       cmnd->p[0] |= (1 << j) ;
+       c->p[0] |= (1 << j) ;
      }
  }
 
 
 
-int parse_com(char *flbuf, int lineno)
+int parse_com(CPS *c, char *flbuf, int lineno)
 {
   // parse (and check) cmnd return error(s) as bit flags;
 
@@ -11441,20 +11508,19 @@ int parse_com(char *flbuf, int lineno)
   char *t, *e;                                  // where we are up to
 
   DIRS* crdir;
-  CPS  cmnd;                                            // for parse command
-  CADT *c;
+  CADT *a;
 
-  memset(&cmnd, 0, sizeof(CPS));                       // clear entire struct
-  c = 0;
+  memset(c, 0, sizeof(CPS));                       // clear entire struct
+  a = 0;
   
   crdir = NULL;
-  cmnd.maxlen = strlen(flbuf);    // safety check
+  c->maxlen = strlen(flbuf);    // safety check
 
 
 // ans = sscanf(flbuf, "[\n\r#]");      // alternate method ?
 // if (ans)  flbuf[end] = '\0';
 
-  e = flbuf + cmnd.maxlen;
+  e = flbuf + c->maxlen;
 
   t = strchr(flbuf, '\n');            // check for end of line
   if (t && t < e) e = t;                // remove it
@@ -11465,14 +11531,14 @@ int parse_com(char *flbuf, int lineno)
   t = strchr(flbuf, '#');            // stop at comment
   if (t && t < e) e = t;                  // remove any comment
 
-  cmnd.maxlen = e - flbuf;
-  cmnd.lineno = lineno;
+  c->maxlen = e - flbuf;
+  c->lineno = lineno;
   
-  if (cmnd.maxlen <=0) return 0;                // null line;
+  if (c->maxlen <=0) return 0;                // null line;
 
-  cmnd.posn = 0;
+  c->posn = 0;
 
-  if (!readpunc(&cmnd)) return 0;              // null line after punc removed
+  if (!readpunc(c)) return 0;              // null line after punc removed
   
   ans = sscanf (flbuf, "%7s%n", rdst, &rlen);    // n is no of chars read, to %n
 
@@ -11482,45 +11548,43 @@ int parse_com(char *flbuf, int lineno)
    {
     if (!strncasecmp (dirs[j].com, rdst, 3) )      // 3 chars min
       {
-       cmnd.fcom = j;                 // found
+       c->fcom = j;                 // found
        crdir = dirs+j;                // ptr to command entry
        break;
       }
    }
-  cmnd.posn += rlen;
-  if (!crdir)  return do_error(&cmnd,"Invalid Command");             // cmnd not found
+  c->posn += rlen;
+  if (!crdir)  return do_error(c,"Invalid Command");             // cmnd not found
 
-  readpunc(&cmnd);
+  readpunc(c);
 
 
   if (crdir->maxpars)       // read up to 4 following addresses into p[0] (if any)
     {
-     ans = getpx(&cmnd,0);                 //.p, &cmnd.posn);
+     c->npars = getpx(c,0);
 
-     if (ans < 1) return do_error(&cmnd,"Parameters Required");
-     if (ans > crdir->maxpars) return do_error(&cmnd,"Too many Parameters");
-     cmnd.npars = ans;
+     if (c->npars < 1) return do_error(c,"Parameters Required");
+     if (c->npars > crdir->maxpars) return do_error(c,"Too many Parameters");
      
      // verify addresses here - change to allow single start for everything and set end....
 
-     ans = chk_startaddr(&cmnd, crdir);
- 
+     ans = chk_startaddr(c, crdir);
      if (ans) return ans;
     }
     
   // possible name here
 
-  readpunc(&cmnd);
+  readpunc(c);
 
-  if (crdir->name_ex && cmnd.posn < cmnd.maxlen &&  flbuf[cmnd.posn] == '\"')
+  if (crdir->name_ex && c->posn < c->maxlen &&  flbuf[c->posn] == '\"')
    {
-    cmnd.posn++;   // skip quote
-    ans = sscanf(flbuf+cmnd.posn," %32s%n", cmnd.symname,&rlen);     //max 32 char names.
-    if (ans) cmnd.posn += rlen;
+    c->posn++;   // skip quote
+    ans = sscanf(flbuf+c->posn," %32s%n", c->symname,&rlen);     //max 32 char names.
+    if (ans) c->posn += rlen;
     
-    t = strchr(cmnd.symname, '\"');                 // drop trailing quote from symname
+    t = strchr(c->symname, '\"');                 // drop trailing quote from symname
     if (t) *t = 0;
-    else return do_error(&cmnd,"Missing close quote");
+    else return do_error(c,"Missing close quote");
    }
 
   // now read levels
@@ -11531,53 +11595,53 @@ int parse_com(char *flbuf, int lineno)
       
      // read option chars and level markers whilst data left
 
-      while (cmnd.posn < cmnd.maxlen)
+      while (c->posn < c->maxlen)
        {
-        if (!readpunc(&cmnd)) break;         // safety check
+        if (!readpunc(c)) break;         // safety check
      
-        ans = sscanf(flbuf+cmnd.posn,crdir->opts, rdst, &rlen);      // only one char at a time
-        t = flbuf+cmnd.posn;                                               // remember char
+        ans = sscanf(flbuf+c->posn,crdir->opts, rdst, &rlen);      // only one char at a time
+        t = flbuf+c->posn;                                               // remember char
     
-        if (ans <= 0) return do_error(&cmnd,"Illegal Option");        // illegal option char (4)
+        if (ans <= 0) return do_error(c,"Illegal Option");        // illegal option char (4)
    
-        cmnd.posn += 1;                                                    // Not rlen, only single char here
+        c->posn += 1;                                                    // Not rlen, only single char here
     
-        if (!crdir->maxpars) do_opt_letter(&cmnd, rdst[0]);                  // cmd : ABC  style
+        if (!crdir->maxpars) do_opt_letter(c, rdst[0]);                  // cmd : ABC  style
         else
          {
-          if (do_adnl_letter (&cmnd, rdst[0]))  return 1;
+          if (do_adnl_letter (c, rdst[0]))  return 1;
          } 
          
-      }      //  end get more options (colon levels
+      }      //  end get more options (colon levels)
 
    }  // end if options/adnl
 
  
-  c = cmnd.adnl;
+  a = c->adnl;
 
-  while(c)
+  while(a)
    {
-    cmnd.size += sizes(c);                               // set final size
-    if (cmnd.fcom >= C_TABLE && cmnd.fcom <= C_FUNC) c->dcm = 1;  // decimal default
-    c = c->next;
+    c->size += sizes(a);                               // set final size
+    if (c->fcom >= C_TABLE && c->fcom <= C_FUNC) a->dcm = 1;  // decimal default
+    a = a->next;
    }
 
-  c = cmnd.adnl;
+  a = c->adnl;
 
-   if (cmnd.fcom == C_FUNC &&  cmnd.levels  < 2)    // func must always have 2 levels
-   { c->next = (CADT *) mem (0,0,sizeof(CADT));
-     *(c->next) = *c;        // copy entry
-     c->next->next = NULL;
-     cmnd.levels ++;
-     cmnd.size *= 2;             //csize
+   if (c->fcom == C_FUNC &&  c->levels  < 2)    // func must always have 2 levels
+   { a->next = (CADT *) mem (0,0,sizeof(CADT));
+     *(a->next) = *a;        // copy entry
+     a->next->next = NULL;
+     c->levels ++;
+     c->size *= 2;             //csize
    }
 
 
- ans = dirs[cmnd.fcom].setcmd (&cmnd);
+ ans = dirs[c->fcom].setcmd (c);
 
- if (ans) do_error(&cmnd,"Command Failed. Overlaps?");
+ if (ans) do_error(c,"Rejected. Overlaps a previous command?");
 
-freecadt(&(cmnd.adnl));                                 // safety
+freecadt(&(c->adnl));                                 // safety
 show_prog(0);
 return 0;
 }
@@ -11642,7 +11706,7 @@ void getudir (void)
       {
         if (!fgets (flbuf, 255, fldata.fl[3])) break;
 
-        parse_com(flbuf, addr);
+        parse_com(&cmnd, flbuf, addr);
         addr++;
         show_prog(0);
       }
@@ -11736,50 +11800,6 @@ void prt_cmds(CHAIN *z)
 
 
 
-void prt_spf(SXT *sub, int (*prt) (const char *, ...))
-{ 
-   AUTON *n; 
-  // print special func in style of cadt
-      /* special subr function
-               // f 1 <reg1> <size>  <size>    func reg in , out
-               // f 2 <reg1> <reg2>  <size>    tab add, cols, size
-
-               // f 3 <reg1> <size>           variable ?
-               // f 4 <?>     <size1> < size2>  switch between 2 sizes args ?
-      */
-         
-  if (sub->spf >  4  && sub->spf < 13)
-      { // func
-      
-      prt(" : F 1");
-
-      if (sub->sig) prt (" %x",sub->sig->v[4]);
-      n = anames + sub->spf;
- 
-      prt(": %s : %s ", calo[n->sizein], calo[n->sizeout]);
-  
-        
-       // or check for args here ??? No, need the call origin
-      }
-
-   // tab subroutines
- 
-    if (sub->spf > 12  && sub->spf < 15)
-    {
-          prt(" : F 2");
-
-      if (sub->sig) prt (" %x %x",sub->sig->v[4], sub->sig->v[3] );
-      n = anames + sub->spf;
- 
-      prt(" : %s ", calo[n->sizein]);
-    }
-}
-
-
-
-
-
-
 void prt_subs (void)
 {
   SXT *s;
@@ -11858,7 +11878,6 @@ void prt_dirs()
   prt_bnks();
   prt_rbt();
   prt_cmds(&codch);
- // prt_cmds(&auxch);
   prt_cmds(&datch);
   prt_subs();
   prt_syms(); 
@@ -12189,25 +12208,23 @@ void find_banks(void)
   uint faddr, i, bank;
   BANK *b;
 
-  lastbmap = bkmap;                         // for later on...bank 0
+  lastbmap = bkmap;                            // for later on...bank 0
   numbanks = -1;   
   
-  i = 2;                                    // use 2,3,4,5 as temp holders 
-  faddr = 0;                                // fileadd [0] (pc = 0x2000 equiv)
+  i = 2;                                       // use 2,3,4,5 as temp holders 
+  faddr = 0;                                   // fileadd [0] (pc = 0x2000 equiv)
 
-  while (faddr < fldata.fillen && i < 6)           // 4 banks max for now
+  while (faddr < fldata.fillen && i < 6)       // 4 banks max (for now)
     {
      bank = i << 16;   
      b = bkmap+i;
-     b->maxbk = (bank | 0xffff);          // temp bank setup so that g_val (sigs) etc. work
-     b->maxpc = b->maxbk;               // need for signature scan
-     b->minpc = (bank | PCORG);            // must become value from sig 
-     b->bok = 1;                        // temp mark as OK
-
+     b->maxbk = (bank | 0xffff);               // temp bank setup so that g_val (sigs) etc. work
+     b->maxpc = b->maxbk;                      // need for signature scan
+     b->minpc = (bank | PCORG);                // must become value from sig 
+     b->bok = 1;                               // temp mark as OK
+     b->cmd = 0;
      faddr = scan_start(i, faddr);             // test for start jump at or around around faddr
 
-    // b->bok = 0;
-     
      if (b->btype > 0)
       {                                        // found !! 8061 mem map indicates 0xc000 (+a000), but 8065 to ffff
        faddr += 0xe000;                        // assume end of this bank at 0xffff, as a file offset - but might not be !!
@@ -12403,7 +12420,6 @@ void set_banks(void)
   for (i = 0; i < BMAX; i++)
      {
          // maxpc used as flag to check if user entered....
-         
       b = bkmap + i;
       if (b->bok && !b->maxpc) find_filler(b);
      }
@@ -12728,9 +12744,7 @@ int readbin(void)
 //  end = fldata.fillen;
 
   find_banks();
-// do bank order check here.
   x = do_banks();               // auto, may be modded later by command
-
   return x;
 }
 
@@ -13258,8 +13272,8 @@ short dissas (char *fstr)
   wnprtn("\n ----------------------------");
  
   wnprtn(" SAD Version %s (%s)", SADVERSION, SADDATE);
- wnprtn(" ----------------------------");
- wnprtn(0);
+  wnprtn(" ----------------------------");
+  wnprtn(0);
    
   if (readbin() < 0)               // and does init_structs in here
   {

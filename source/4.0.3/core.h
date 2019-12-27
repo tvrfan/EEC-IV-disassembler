@@ -464,8 +464,8 @@ typedef struct             // command holder for cmd parsing
   int   (*setcmd) (CPS*);            // command processor(cmd struct)
   uint  (*prtcmd) (uint, LBK *);     // command printer (ofst,cmd index)
   uint  maxlev   : 5 ;               // max CADT levels (31)
-  uint  maxpars  : 3 ;               // max pars allowed/expected 0-4
-  uint  startpos : 3 ;               // where 'start address' is (1 2 3 4 or none)
+  uint  maxpars  : 3 ;               // max pars allowed/expected 0-7
+  uint  startpos : 3 ;               // where 'start address' is (1 2 3 4 or 0 = none)
   uint  end_ex   : 1 ;               // end address expected
   uint  name_ex  : 1 ;               // name expected/allowed
 
