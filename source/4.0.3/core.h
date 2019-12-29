@@ -243,6 +243,7 @@ uint size   : 8;            // for args and struct sizes
 uint start  : 20;           // start address (inc bank)
 
 uint fcom   : 5;            // command index
+uint acmt   : 4;            // autocomment type (e.g. "not called/ never gets here ?")
 uint newl   : 1;            // newline in printout (requested in CADT chain)
 uint end    : 20;           // end address (inc bank)
 
@@ -460,7 +461,7 @@ typedef struct             // command holder for cmd parsing
  ********************************/
 
  typedef struct drs                  // command definition
-{ const char com[8];                 // command string
+{ //const char com[8];                 // command string
   int   (*setcmd) (CPS*);            // command processor(cmd struct)
   uint  (*prtcmd) (uint, LBK *);     // command printer (ofst,cmd index)
   uint  maxlev   : 5 ;               // max CADT levels (31)
