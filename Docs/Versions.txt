@@ -1,5 +1,19 @@
 
 Version Summary
+
+* version 4.0.3b  interim *
+
+fixes for - 
+
+1. not reading back .msg file as a .dir file correctly.   ('U' option and comment lines)
+2. AND and OR not showing single bit flags ("Bx_Rn = 0" style)
+3. Incorrect showing of 'return' shortcut in psuedo code.
+4. Fix incorrect SYM command when defined with an address range.
+
+
+
+
+
 ** Version 4.0.3 *****************
 
 Fixed  -
