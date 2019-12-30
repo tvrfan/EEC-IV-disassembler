@@ -466,10 +466,9 @@ typedef struct             // command holder for cmd parsing
   uint  (*prtcmd) (uint, LBK *);     // command printer (ofst,cmd index)
   uint  maxlev   : 5 ;               // max CADT levels (31)
   uint  maxpars  : 3 ;               // max pars allowed/expected 0-7
-  uint  startpos : 3 ;               // where 'start address' is (1 2 3 4 or 0 = none)
-  uint  end_ex   : 1 ;               // end address expected
+  uint  sapos   : 3 ;                 // where single addr to be verified
+  uint  appos   : 3 ;                 // where 'start/end' pair is
   uint  name_ex  : 1 ;               // name expected/allowed
-
   uint  ovrsc  : 5 ;                 // overrides by 'score'
   uint  merge  : 1 ;                 // can be merged with same command (adj or olap)
   uint  decdft : 1 ;                 // default to deimal print

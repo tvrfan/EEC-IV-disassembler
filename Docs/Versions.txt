@@ -1,6 +1,12 @@
 
 Version Summary
 
+* version 4.0.3c  interim *
+
+1. Incorrect address range handling for syms and rbase causes them not to appear/work reliably in listing
+2. change word ops for bit flags to byte, e.g. from "B8_R34 ="   to "B0_R35 =" for bits > 7  
+
+
 * version 4.0.3b  interim *
 
 fixes for - 

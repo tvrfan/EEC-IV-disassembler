@@ -196,10 +196,11 @@ wwould need unique 3 letters opx
  *********************
  main command structure -
  params are -
- command string, command processor, command printer, max addnl levels, max addresses/numbers expected,
- start address posn+1, end expected (after start), name expected, override score, merge allowed, default to decimal, options string (scanf)
+ command processor, command printer, max addnl levels, max addresses/numbers expected,
+ single start address posn, pair start end posn,   (7 is 'none' )
+ name expected, override score, merge allowed, default to decimal, options string (scanf)
 
-  merge is with same cmd, override is bitmask
+  merge is with same cmd, override is score, higher wins
 
 ******/
 
@@ -213,29 +214,29 @@ const char *cmds[19] =
 
 DIRS dirs[] = {
 
-{ set_data, pp_dflt,   0, 2, 1, 1, 0, 0, 1, 0, 0},                      // "fill"    ,default fill  -> MUST be zero ix
-{ set_data, pp_wdbl,   2, 2, 1, 1, 1, 2, 1, 1, "%[:PSUX]%n" },           // "byte"    ,group 1,  mergeable, lowest prio
-{ set_data, pp_wdbl,   2, 2, 1, 1, 1, 2, 1, 1, "%[:PSUX]%n" },           // "word"    ,
-{ set_data, pp_wdbl,   2, 2, 1, 1, 1, 2, 1, 1, "%[:PSUX]%n" },        //  "long"    ,
-{ set_data, pp_text,   0, 2, 1, 1, 0, 1, 1, 0, 0  } ,                //  "text"    ,
-{ set_vect, pp_vect,   2, 2, 1, 1, 1, 3, 1, 0, "%[:DKQ]%n"},            // "vect"    ,but must check bank !!
-{ set_args, pp_dflt,  15, 2, 1, 1, 0, 5, 0, 0, "%[:DELNOPSUVWXY]%n" },    // "args"    ,not mergeable without CADT handling....
+{ set_data, pp_dflt,   0, 2, 7, 0, 0, 0, 1, 0, 0},                       // "fill"    ,default fill  -> MUST be zero ix
+{ set_data, pp_wdbl,   2, 2, 7, 0, 1, 2, 1, 1, "%[:PSUX]%n" },           // "byte"    ,group 1,  mergeable, lowest prio
+{ set_data, pp_wdbl,   2, 2, 7, 0, 1, 2, 1, 1, "%[:PSUX]%n" },           // "word"    ,
+{ set_data, pp_wdbl,   2, 2, 7, 0, 1, 2, 1, 1, "%[:PSUX]%n" },           //  "long"    ,
+{ set_data, pp_text,   0, 2, 7, 0, 0, 1, 1, 0, 0  } ,                     //  "text"    ,
+{ set_vect, pp_vect,   2, 2, 7, 0, 1, 3, 1, 0, "%[:DKQ]%n"},              // "vect"    ,but must check bank !!
+{ set_args, pp_dflt,  15, 2, 7, 0, 0, 5, 0, 0, "%[:DELNOPSUVWXY]%n" },    // "args"    ,not mergeable without CADT handling....
 
-{ set_data, pp_stct,   2, 2, 1, 1, 1, 4, 0, 1, "%[:OPSUVWXY]%n" },         //"table"   ,data structures, can override group 1
-{ set_data, pp_stct,   3, 2, 1, 1, 1, 4, 0, 1, "%[:LPSUVWXY]%n" } ,        // "func"    ,NOT mergeable
-{ set_data, pp_stct,  15, 2, 1, 1, 1, 4, 0, 1, "%[:|DLMNOPRSUVWXYQ]%n" },  //"struct"  ,
-{ set_time, pp_timer,  2, 2, 1, 1, 1, 4, 0, 1, "%[:NTUWY]%n" },             //"timer"   ,
+{ set_data, pp_stct,   2, 2, 7, 0, 1, 4, 0, 1, "%[:OPSUVWXY]%n" },         //"table"   ,data structures, can override group 1
+{ set_data, pp_stct,   3, 2, 7, 0, 1, 4, 0, 1, "%[:LPSUVWXY]%n" } ,        // "func"    ,NOT mergeable
+{ set_data, pp_stct,  15, 2, 7, 0, 1, 4, 0, 1, "%[:|DLMNOPRSUVWXYQ]%n" },  //"struct"  ,
+{ set_time, pp_timer,  2, 2, 7, 0, 1, 4, 0, 1, "%[:NTUWY]%n" },             //"timer"   ,
 
-{ set_code, pp_code,   0, 2, 1, 1, 0, 0, 1, 0, 0  } ,                    // "code"    ,separate CODE command chain, mergeable
-{ set_cdih, pp_dmy,    0, 2, 1, 1, 0, 1, 1, 0, 0  } ,                    // "xcode"   ,
+{ set_code, pp_code,   0, 2, 7, 0, 0, 0, 1, 0, 0  } ,                    // "code"    ,separate CODE command chain, mergeable
+{ set_cdih, pp_dmy,    0, 2, 7, 0, 0, 1, 1, 0, 0  } ,                    // "xcode"   ,
 
-{ set_subr, pp_dmy,   15, 1, 1, 0, 1, 0, 0, 0, "%[:DEFLNOPSUVWXY]%n" },   // "subr"    ,others
-{ set_scan, pp_dmy ,   0, 1, 1, 0, 0, 0, 0, 0, 0   },                   //"scan"    ,
-{ set_opts, pp_dmy,    2, 0, 0, 0, 0, 0, 0, 0, "%[:CFGHLMNPS]%n" },       // "opts"    ,change to strings ?
-{ set_rbas, pp_dmy,    0, 4, 3, 1, 0, 0, 0, 0, 0   },                   // "rbase"   ,
+{ set_subr, pp_dmy,   15, 1, 0, 7, 1, 0, 0, 0, "%[:DEFLNOPSUVWXY]%n" },   // "subr"    ,others
+{ set_scan, pp_dmy ,   0, 1, 0, 7, 0, 0, 0, 0, 0   },                   //"scan"    ,
+{ set_opts, pp_dmy,    2, 0, 7, 7, 0, 0, 0, 0, "%[:CFGHLMNPS]%n" },       // "opts"    ,change to strings ?
+{ set_rbas, pp_dmy,    0, 4, 1, 2, 0, 0, 0, 0, 0   },                   // "rbase"   ,
 
-{ set_sym,  pp_dmy,    2, 3, 2, 1, 1, 0, 0, 0, "%[:FTW]%n"    },          // "sym"     ,flags,bit,write
-{ set_bnk,  pp_dmy,    0, 4, 0, 0, 0, 0, 0, 0, 0 }                       // "bank"    ,
+{ set_sym,  pp_dmy,    2, 3, 0, 1, 1, 0, 0, 0, "%[:FTW]%n"    },          // "sym"     ,flags,bit,write
+{ set_bnk,  pp_dmy,    0, 4, 7, 7, 0, 0, 0, 0, 0 }                       // "bank"    ,
 
 };
 
@@ -4307,7 +4308,7 @@ SYT* get_sym(int rw, int add, int pc)
   if (!val_data_addr(add)) return 0;          // not valid address
 
   s = (SYT*) schmem();        // block for search
-  s->addb = add << 4;         // symbol addr + dummy bit
+  s->addb = add << 4;         // symbol addr + dummy bit (0)
   s->start = pc;              // current addr for range check
   
   t = (SYT*) find(x,s);
@@ -4341,8 +4342,8 @@ void fixbitno(int *add, int *bitno)
  if (*bitno > 7)
     {
       i = (*bitno)/8;     // this works for doubles too....     
-      *add += i;
-      i *= 8;          // bits to strip
+      *add += i;          // add extra bytes
+      i *= 8;             // bits to subtract
       (*bitno) -= i;
     }
 }
@@ -7867,7 +7868,7 @@ int chk_mask(inst *c, int v)
   
   // if already flagged as bit word/byte
   if (get_flag(c->opr[2].addr, flags)) return 0;  
- // if (v > 1) return 1;      // no check for ldx (unless flagged)
+  if (v > 1) return 1;      // no check for ldx (unless flagged)
   
   o = c->opr+1;
   mask = o->val;
@@ -7898,6 +7899,31 @@ int chk_mask(inst *c, int v)
   return 1;    
  }
 
+void prt_bitwise(INST *c, uint addr, uint bit)
+{
+  SYT *s;  
+
+  s = get_symbit(1, addr, bit, c->ofst);    // always check write first
+
+  if (s)
+    {
+    pstr ("%s",s->name);   //  print each matched sym name
+    return;
+    }
+  
+  if (bit > 7)
+    {
+      bit  -= 8;
+      addr += 1;
+    }    
+  pstr ("B%d_", bit);            // no name match
+  pstr ("R%x ", addr);
+}
+
+
+
+
+
 void bitwise_replace(const char **tx, INST *c)
 
 // check for bitwise operations - not for 3 operand instructions
@@ -7907,8 +7933,6 @@ void bitwise_replace(const char **tx, INST *c)
 
   int i, ix, k, v, size;
   uint  mask;
-
-  SYT *s; 
 
   ix = c->opcix;
   
@@ -7921,7 +7945,7 @@ void bitwise_replace(const char **tx, INST *c)
 
   if      (opctbl[ix].sigix == 5)  v = 0;
   else if (opctbl[ix].sigix == 9)  v = 1;
- // else if (opctbl[ix].sigix == 12) v = 2;  /drop ldx for now
+  //else if (opctbl[ix].sigix == 12) v = 2;      // not ldx yet
   else return;
   
   if (chk_mask(c, v)) return;
@@ -7943,23 +7967,19 @@ void bitwise_replace(const char **tx, INST *c)
   size = casz[c->opr[1].ssize] * 8;       // number of bits 
  
   k = 0;                                     // first output flag
+
+// as this is only ever for immediates, can dispense with the p_opsc
+// and just print Rx, and allow for Rx+1 for bits > 7.
   
   for (i = 0; i < size; i++)
    {
     if (mask & 1)
       {
        if (k++)  {pchar(';'); p_indl (); }   // new line and indent if not first
-       s = get_symbit(1, c->opr[2].addr, i, c->ofst);    // always check write first
-
-       if (s)  pstr ("%s",s->name);   //  print each matched sym name
-       else
-         {
-          pstr ("B%d_", i);            // no name match
-          p_opsc (c, 2,0);
-         }
-       pstr(" ");  
+       prt_bitwise(c,c->opr[2].addr,i);
        if (ix >= 32 && ix <= 33) pstr("^"); 
-       if (v > 1) pstr ("= %d", (mask & 1)); else pstr ("= %d" ,v);
+      // if (v > 1) pstr ("= %d", (mask & 1)); else
+       pstr ("= %d" ,v);
       }
     mask  = mask >> 1;
    }
@@ -10140,7 +10160,7 @@ int set_sym (CPS *c)
       if (a->enc == 7)
         {        // bit marker 'T'
          bitno = (a->data & 0xf);    // 0-15
-    //     bitno |= 0x100;             // and flag what for ?
+         bitno |= 0x100;             // flag for add_symbit (below)
         }
 
       if (a->ssize & 2)  w = 1;      // write 'W' 
@@ -11304,42 +11324,38 @@ int getstr(CPS *c, const char **s)
 
 
 
-
-
-int chk_startaddr(CPS *c, DIRS* dir)
+int chk_startaddr(CPS *c, DIRS* d)
  {
-   // check ans fixup any address issues (bank etc) 
-   
-  int start, end, ix;
+   // check ans fixup any address issues (bank etc) 3.08
+  int start, end;
 
-  ix = dir->startpos;
-  if (ix <= 0) return 0;          // no addresses to check
-                                  // address pair
-  start = c->p[ix-1];             // so zero is ignored....
+  if (d->sapos < d->maxpars)
+    {  // single address, with or without a start/end pair following  
+    start = c->p[d->sapos]; 
+    if (!numbanks && (start <= 0xffff && start >= PCORG)) start |= 0x80000;
+    c->p[d->sapos] = start;
+   }    
 
-  if (dir->end_ex) end = c->p[ix]; else end = 0;
+
+ if (d->appos < d->maxpars)
+    {        // address pair
+     start = c->p[d->appos];
+     end   = c->p[d->appos+1];
      
-  // autofix single banks to bank 8 except for
-  if (!numbanks && (start <= 0xffff && start >= PCORG)) start |= 0x80000;
+     if (!numbanks && (start <= 0xffff && start >= PCORG)) start |= 0x80000;
 
-  if (!end) 
-    {
-      // if fixed size command (word byte etc) then calc end automatically
-      end = start;
-    }
-
-  if (end <= 0xffff) end |= g_bank(start);      // add start bank
-
-  if (!bankeq(start,end)) do_error(c,"Banks don't match");
-  
-  if ( end < start) do_error(c,"End address < Start");
+     if (!end) end = start;
+     if (end <= 0xffff) end |= g_bank(start);      // add start bank
+     if (!bankeq(start,end))  do_error(c,"Banks don't match");
+     if (end < start)  do_error(c,"End less than Start");
     
-  c->p[ix-1] = start;
-  c->p[ix]   = end;  
-
+     c->p[d->appos] = start;
+     c->p[d->appos+1]   = end;  
+    }
+    
+    
  return 0;      
  }
-
 
 
 int do_adnl_letter (CPS* c, char optl)
@@ -11581,16 +11597,16 @@ int parse_com(CPS *c, char *flbuf, int lineno)
   c->maxlen = strlen(flbuf);    // safety check
 
 
-// ans = sscanf(flbuf, "[\n\r#]");      // alternate method ?
-// if (ans)  flbuf[end] = '\0';
+// ans = sscanf(flbuf, "[\n\r#]%n", &rlen);      // alternate method ?
+// if (ans)  flbuf[rlen] = '\0';
 
   e = flbuf + c->maxlen;
 
   t = strchr(flbuf, '\n');            // check for end of line
-  if (t && t < e) e = t;                // remove it
+  if (t && t < e) e = t;              // remove it
 
   t = strchr(flbuf, '\r');            // check for end of line
-  if (t && t < e) e = t;                 // remove it
+  if (t && t < e) e = t;              // remove it
 
   t = strchr(flbuf, '#');            // stop at comment
   if (t && t < e) e = t;                  // remove any comment
@@ -11617,10 +11633,8 @@ int parse_com(CPS *c, char *flbuf, int lineno)
 
      if (c->npars < 1) return do_error(c,"Parameters Required");
      if (c->npars > d->maxpars) return do_error(c,"Too many Parameters");
-     
-     // verify addresses here - change to allow single start for everything and set end....
 
-     ans = chk_startaddr(c, d);
+     ans = chk_startaddr(c, d);      //verify addresses, single and/or start-end pair
      if (ans) return ans;
     }
     
@@ -11668,7 +11682,7 @@ int parse_com(CPS *c, char *flbuf, int lineno)
 
   while(a)
    {
-    c->size += sizes(a);                               // set final size
+    c->size += sizes(a);                                      // set final size
     if (c->fcom >= C_TABLE && c->fcom <= C_FUNC) a->dcm = 1;  // decimal default
     a = a->next;
    }
@@ -11683,13 +11697,11 @@ int parse_com(CPS *c, char *flbuf, int lineno)
      c->size *= 2;             //csize
    }
 
-
- //ans = dirs[c->fcom].setcmd (c);
- ans = d->setcmd (c);
+ ans = d->setcmd (c);          //do setup procedure
 
  if (ans) do_error(c,"Rejected. Overlaps a previous command?");
 
-freecadt(&(c->adnl));                                 // safety
+freecadt(&(c->adnl));           // safety
 show_prog(0);
 return 0;
 }
@@ -11890,6 +11902,7 @@ void prt_syms (void)
  for (ix = 0; ix < x->num; ix++)
    {
    t = (SYT*) x->ptrs[ix];
+   
    if (!t->noprt)     // not printed as subr or struct
      {
      wnprt("sym %x ", cmdaddr(t->addb >> 4));
@@ -11901,7 +11914,7 @@ void prt_syms (void)
      b = t->addb & 0xf;
      if (b || t->writ) wnprt(" :"); 
        
-     if (b) wnprt("T %d " , b-1);
+     if (b) wnprt("T %d " , (b-1));
      if (t->writ) wnprt("W");
      wnprtn(0) ;
      }

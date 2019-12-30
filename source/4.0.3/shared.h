@@ -29,14 +29,14 @@ typedef unsigned long  ulong;
 
 #define BMAX      16             // maximum bank index
 
-#define SADVERSION "4.0.3b"
+#define SADVERSION "4.0.3c"
 #define SADDATE    "30/12/2019"
 
 // debug defines - when switched on, this causes a LOT of output to _wrn file
 // DBGPRT is kept to make debug code more obvious to view
 // DBG_xxx subrs are also for debug printout and ignored if XDBGX not defined
 
- #define XDBGX
+// #define XDBGX
 
 
 //  file order is (xx.bin, xx_lst.txt, xx_msg.txt, xx.dir, xx.cmt, SAD.ini, xx_dbg.txt)
