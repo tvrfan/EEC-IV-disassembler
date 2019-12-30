@@ -197,7 +197,7 @@ wwould need unique 3 letters opx
  main command structure -
  params are -
  command string, command processor, command printer, max addnl levels, max addresses/numbers expected,
- start address posn, end expected (after start), name expected, override score, merge allowed, default to decimal, options string (scanf)
+ start address posn+1, end expected (after start), name expected, override score, merge allowed, default to decimal, options string (scanf)
 
   merge is with same cmd, override is bitmask
 
@@ -211,36 +211,6 @@ const char *cmds[19] =
 {"fill", "byte", "word", "long", "text", "vect", "args", "table","func","struct",
  "timer", "code", "xcode", "subr", "scan", "opts", "rbase","sym", "bank"};
 
-/* 
-DIRS dirs[] = {
-
-{"fill"    , set_data, pp_dflt,   0, 2, 1, 1, 0, 0, 1, 0, 0},                      // default fill  -> MUST be zero ix
-{"byte"    , set_data, pp_wdbl,   2, 2, 1, 1, 1, 2, 1, 1, "%[:PSX]%n" },           // group 1,  mergeable, lowest prio
-{"word"    , set_data, pp_wdbl,   2, 2, 1, 1, 1, 2, 1, 1, "%[:PSX]%n" },
-{"long"    , set_data, pp_wdbl,   2, 2, 1, 1, 1, 2, 1, 1, "%[:PSX]%n" },
-{"text"    , set_data, pp_text,   0, 2, 1, 1, 0, 1, 1, 0, 0  } ,
-{"vect"    , set_vect, pp_vect,   2, 2, 1, 1, 1, 3, 1, 0, "%[:DKQ]%n"},            // but must check bank !!
-{"args"    , set_args, pp_dflt,  15, 2, 1, 1, 0, 5, 0, 0, "%[:DELNOPSWXY]%n" },    // not mergeable without CADT handling....
-
-{"table"   , set_data, pp_stct,   2, 2, 1, 1, 1, 4, 0, 1, "%[:OPSVWXY]%n" },         //data structures, can override group 1
-{"func"    , set_data, pp_stct,   3, 2, 1, 1, 1, 4, 0, 1, "%[:LPSVWXY]%n" } ,        // NOT mergeable
-{"struct"  , set_data, pp_stct,  15, 2, 1, 1, 1, 4, 0, 1, "%[:|DLMNOPRSVWXYQ]%n" },
-{"timer"   , set_time, pp_timer,  2, 2, 1, 1, 1, 4, 0, 1, "%[:YWNT]%n" },
-
-{"code"    , set_code, pp_code,   0, 2, 1, 1, 0, 0, 1, 0, 0  } ,                    // separate CODE command chain, mergeable
-{"xcode"   , set_cdih, pp_dmy,    0, 2, 1, 1, 0, 1, 1, 0, 0  } ,
-
-{"subr"    , set_subr, pp_dmy,   15, 1, 1, 0, 1, 0, 0, 0, "%[:DEFLNOPSUWXY]%n" },   // others
-{"scan"    , set_scan, pp_dmy ,   0, 1, 1, 0, 0, 0, 0, 0, 0   },
-{"opts"    , set_opts, pp_dmy,    2, 0, 0, 0, 0, 0, 0, 0, "%[:CFGHLMNPS]%n" },       // change to strings ?
-{"rbase"   , set_rbas, pp_dmy,    0, 4, 3, 1, 0, 0, 0, 0, 0   },
-
-{"sym"     , set_sym,  pp_dmy,    2, 3, 1, 0, 1, 0, 0, 0, "%[:FTW]%n"    },          // flags,bit,write
-{"bank"    , set_bnk,  pp_dmy,    0, 4, 0, 1, 1, 0, 0, 0, 0 },
-//{"order"   , set_ordr, pp_dmy,    2, 4, 0, 0, 0, 0, 0, 0, 0 }
-};
- */ 
- 
 DIRS dirs[] = {
 
 { set_data, pp_dflt,   0, 2, 1, 1, 0, 0, 1, 0, 0},                      // "fill"    ,default fill  -> MUST be zero ix
@@ -264,8 +234,8 @@ DIRS dirs[] = {
 { set_opts, pp_dmy,    2, 0, 0, 0, 0, 0, 0, 0, "%[:CFGHLMNPS]%n" },       // "opts"    ,change to strings ?
 { set_rbas, pp_dmy,    0, 4, 3, 1, 0, 0, 0, 0, 0   },                   // "rbase"   ,
 
-{ set_sym,  pp_dmy,    2, 3, 1, 0, 1, 0, 0, 0, "%[:FTW]%n"    },          // "sym"     ,flags,bit,write
-{ set_bnk,  pp_dmy,    0, 4, 0, 1, 1, 0, 0, 0, 0 }                       // "bank"    ,
+{ set_sym,  pp_dmy,    2, 3, 2, 1, 1, 0, 0, 0, "%[:FTW]%n"    },          // "sym"     ,flags,bit,write
+{ set_bnk,  pp_dmy,    0, 4, 0, 0, 0, 0, 0, 0, 0 }                       // "bank"    ,
 
 };
 
@@ -10170,14 +10140,14 @@ int set_sym (CPS *c)
       if (a->enc == 7)
         {        // bit marker 'T'
          bitno = (a->data & 0xf);    // 0-15
-         bitno |= 0x100;             // and flag
+    //     bitno |= 0x100;             // and flag what for ?
         }
 
       if (a->ssize & 2)  w = 1;      // write 'W' 
       a = a->next;
      }
    } 
-   // OK now add symbol to right chain
+   // OK now add symbol to right chain (=w)
 
    if (bitno)
     {
@@ -11339,6 +11309,7 @@ int getstr(CPS *c, const char **s)
 int chk_startaddr(CPS *c, DIRS* dir)
  {
    // check ans fixup any address issues (bank etc) 
+   
   int start, end, ix;
 
   ix = dir->startpos;
