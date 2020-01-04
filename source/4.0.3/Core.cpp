@@ -86,8 +86,8 @@ int eqsym  (CHAIN *,int, void *);   int eqsig  (CHAIN *,int, void *);
 CHAIN jpfch   = {0,0,200,sizeof(JLT),   0,0,0, 0    ,cpjmp  ,cpjmp  };      // jump from
 CHAIN jptch   = {0,0,200,0          ,   0,0,0, 0    ,cpjmp  ,cpjmp  };      // jump to -  REMOTE ptrs (to jpfch)
 
-CHAIN rsymch  = {0,0,200,sizeof(SYT),   0,0,0, fsym ,cpsym  ,eqsym  };      // syms read
-CHAIN wsymch  = {0,0,20 ,sizeof(SYT),   0,0,0, fsym ,cpsym  ,eqsym  };      // syms write
+CHAIN symch  = {0,0,200,sizeof(SYT),   0,0,0, fsym ,cpsym  ,eqsym  };      // syms read
+//CHAIN wsymch  = {0,0,20 ,sizeof(SYT),   0,0,0, fsym ,cpsym  ,eqsym  };      // syms write
 
 CHAIN basech  = {0,0,200,sizeof(RBT),   0,0,0, 0    ,cpbase ,eqbase };      // rbase
 CHAIN sigch   = {0,0, 20,sizeof(SIG),   0,0,0, 0    ,cpsig  ,eqsig  };      // signature
@@ -111,7 +111,7 @@ CHAIN mblk    = {0,0, 50,sizeof(MBL),   0,0,0, fblk  ,0      ,0     };      // C
 
 // CAHIN Pointer array for neater start and tidyup loop routines.
 
-CHAIN *chlist[] = { &jpfch, &jptch , &rsymch, &wsymch, &basech, &sigch,
+CHAIN *chlist[] = { &jpfch, &jptch , &symch,  &basech, &sigch,
                     &codch, &scanch, &emulch, &subch , &sbcnch, &datch, &rgstch, &rgovch, &mblk};
 
 #ifdef XDBGX
@@ -697,7 +697,7 @@ uint  opbit[0x2000];              // opcode start flag - 4 banks of 32 flags
 
 // bit arrays , for RBINV and flags. Allows for 0-0x2000
 uint  rbinv[0x100];               // rbase invalid to speed up rbase searches, most ARE invalid
-uint  flags[0x100];               // if approved for AND OR, then flagged as bit values.
+//uint  flags[0x100];               // if approved for AND OR, then flagged as bit values.
 
 BANK bkmap[BMAX+1];               // bank map - 16 banks +1 for ram/reg data.
 BANK *lastbmap;                   // speedup for mapping
@@ -1580,10 +1580,13 @@ int cpsym (CHAIN *x, int ix, void *d)
  t = (SYT*) d;
 
  ans = s->addb - t->addb;      // address and bitno combined
+ if (ans) return ans;
 
+ ans = s->writ - t->writ;      // and write ??
  if (ans) return ans;
 
  return s->end-t->start;       // address range check
+
 }
 
 
@@ -1787,10 +1790,15 @@ int eqsym (CHAIN *x, int ix, void *d)
  ans = s->addb - t->addb;        // includes bitno
  if (ans) return ans;
  
+  ans = s->writ - t->writ;      // and write ??
+  if (ans) return ans;
+
 // check address range if specified.
  if (t->start >= s->start && t->start <= s->end ) return 0;
   
  return s->end-t->start;
+
+
 
 }
 
@@ -1850,15 +1858,17 @@ int bfindix(CHAIN *x, void *blk, int (*cmp) (CHAIN *x, int ix, void *blk))
 {
   // generic binary chop.
   // send back an INDEX value to allow access to adjacent blocks.
-  // use a compare subr ref'ed by chain struct.
-  // Candidate block is void * and cast to type inside compare subr.
-  // answer (min) is always smaller than or equal to blk
-  // and min+1 is larger.  Answer is therefore INSERT point for new block.
+  // use a compare subr as supplied or default for chain struct.
+  // Candidate block is void* and cast to reqd type inside cmp (compare subroutine).
+  // answer (min) is always min <= blk, or blk is always >= min (= answer)
+  // and min+1 is > blk.   Answer is therefore INSERT point for new block, or FOUND.
 
   int mid, min, max;
 
   if (!cmp) cmp = x->comp;   // use std chain compare subr if not given
 
+  // NB. this loop could work for subsearches too.....
+  
   min = 0;
   max = x->num;
 
@@ -3794,10 +3804,10 @@ while (a && levs < MAXLEVS)
 
    if (a->vaddr) 
      {
-      prt("R");
+      prt("R ");
    //   if (numbanks)
-      prt(" %x", (a->data >> 16) & 0xf);
-      prt(" ");
+   //   prt(" %x", (a->data >> 16) & 0xf);
+ //     prt(" ");
      }
 
    if (a->cnt > 1) prt("O %d ", a->cnt);
@@ -3809,30 +3819,8 @@ while (a && levs < MAXLEVS)
   if (a->foff) prt("D %x ", a->data);
 
   if (a->enc)  prt("E %d %x ", a->enc, a->data & 0xff);
-  else prt(calo[a->ssize]);
-
- /* if (a->ssize > 4) prt("S ");   // 4 used as print marker
-   flg = a->ssize & 3;
-
-    switch (flg)
-     {
-      case 1:
-        prt("Y ");
-        break;
-      case 2:
-
-        else        prt("W ");
-        break;
-      case 3:
-        prt("L ");
-        break;
-        
-      default:
-        break;
-        
-     }
-*/
-
+  else prt(calo[a->ssize]);      // neater than a case statement
+ 
   // print fieldwidth if not zero and not equal to default
   
    if (a->pfw && a->pfw != cafw[a->ssize])  prt("P %x ",a->pfw);
@@ -3841,8 +3829,7 @@ while (a && levs < MAXLEVS)
    if (a->fdat) wflprt("V ", a->fdat, prt);
    if (a->name) prt("N ");
     #ifdef XDBGX  
- //   if (prt == DBGPRT)
- prt ("[R%x] ", a->dreg);
+       prt ("[R%x] ", a->dreg);
     #endif
     }         // noprt
    
@@ -3932,6 +3919,242 @@ void prt_spf(SXT *sub, int (*prt) (const char *, ...))
 
 
 
+
+
+void prt_rbt (void)
+{
+  RBT *r ;
+  short ix;
+
+  for (ix = 0; ix < basech.num; ix++)
+   {
+    r = (RBT*) basech.ptrs[ix];
+
+   if (!r->inv)
+     {
+    wnprt("rbase %x %x" , r->reg , cmdaddr(r->val));
+    if (r->start)  wnprt("  %x %x", cmdaddr(r->start), cmdaddr(r->end));
+    if (r->cmd) wnprt("       # cmd");
+    wnprt("\n");
+    }
+
+   }
+     wnprtn(0);
+}
+
+
+
+
+
+
+
+
+
+
+
+LBK *find_code_cmd (int start, int fcom)
+{
+  LBK *blk;
+
+  blk = (LBK*) chmem(&codch);
+  blk->start = start;
+  blk->fcom =  fcom;
+  blk = (LBK *) find(&codch,blk);
+  return blk;
+}
+
+
+LBK* add_code_cmd (uint start, uint end, uint com)
+ {          // this for user commands only, no called params
+  LBK *n, *z;
+
+  if (anlpass >= ANLPRT)    return NULL;
+  if (icaddrse(&start,&end)) return NULL;
+
+  n = (LBK *) chmem(&codch);
+  n->start = start;
+  n->end   = end;
+  n->fcom  = com & 0x1f;    // max 31 as set
+  if (com & C_CMD) n->cmd = 1;
+
+  z = inscmd(&codch,n);  
+      
+  if (z != n) return 0;                        // fail
+  #ifdef XDBGX  
+  DBGPBKN (n, "Add cmd");   
+  #endif
+  return n;   // successful
+ }
+
+
+
+
+/************************************************
+ *  Symbols
+ ************************************************/
+
+int new_symname (SYT *xsym, const char *fnam)
+ {
+   // replace symbol name
+   // symbols can be NULL named (for autonumbers)
+
+  int z;
+
+  if (xsym->cmd) return 0;          // can't rename if by CMD
+  
+  if (!fnam || !*fnam) 
+    {
+     if (xsym->tsize) mfree(xsym->name, xsym->tsize);
+     xsym->tsize = 0;
+     return 0;
+    }
+
+  z = xsym->tsize;              // old size
+  xsym->tsize = strlen (fnam) + 1;        // include null, strlen does not...
+    
+  if (xsym->tsize > 31) xsym->tsize = 31;    // max storage size
+
+  xsym->name = (char *) mem (xsym->name,z,xsym->tsize);       // get new sym size
+  if (xsym->name)  strncpy (xsym->name, fnam, xsym->tsize);    // and replace it
+  return xsym->tsize;
+ }
+
+
+void fixbitno(int *add, int *bitno)
+{
+ int i;
+
+ if (*bitno > 7)
+    {
+      i = (*bitno)/8;     // this works for doubles too....     
+      *add += i;          // add extra bytes
+      i *= 8;             // bits to subtract
+      (*bitno) -= i;
+    }
+ (*bitno) +=1; 
+}
+
+
+SYT *add_sym (int rw, const char *fnam, int add, int bitno, int start, int end)
+ {
+   // chain for symbols bitno = -1 for no bit
+   
+   SYT *s;
+   int ans,ix;
+
+   if (anlpass >= ANLPRT) return 0;
+
+   // if (bitno > byte size, map into correct address (byte)
+
+   fixbitno(&add,&bitno);  // make into byte
+
+   s = (SYT *) chmem(&symch);
+   s->addb = add << 4;
+   //if (bitno >= 0) 
+   s->addb |= bitno;     // bitno + 1 in fixbitno (zero = none)
+
+   if (rw & 0xf) s->writ = 1;                     // this is a WRITE sym
+
+   if (start)
+    {  
+     s->start  = start;
+     s->end    = end;  
+    } 
+
+   ix = bfindix(&symch, s, 0);
+   ans = symch.equal(&symch, ix, s);              // zero if matches
+
+   if (ans)
+   {
+     new_symname (s, fnam);
+     chinsert(&symch, ix, s);
+     if (rw & C_CMD) s->cmd = 1;                  // by user command
+
+     #ifdef XDBGX
+      DBGPRT("add symbit %x",add);
+      if (fnam) DBGPRT(" %c%s%c " ,'"',fnam, '"');
+      if (s->start)      DBGPRT (" %05x - %05x" , s->start, s->end);
+      if (bitno) DBGPRT (" : T %d", (s->addb & 0xf)-1);
+      if (s->flags) DBGPRT(" flags");
+      if (s->cmd)  DBGPRT(" CMD");
+      
+      DBGPRTN(0);
+     #endif
+    return s;
+   }   // do insert
+
+ return (SYT*) symch.ptrs[ix]; // duplicate
+
+}
+
+
+SYT* get_sym(int rw, int add, int bitno, int pc)
+{
+  // bit symbols only
+// auto check of read if no write found
+
+  SYT *s, *t;
+  int a;       //, ix;
+
+// if (add == 0x30)
+//  {
+//      DBGPRTN("z");
+//  }
+
+  a = nobank(add);
+  if (a < PCORG)  add = a;     // fiddle for register and RAM syms
+
+  if (!val_data_addr(add)) return 0;          // not valid address
+
+  fixbitno(&add,&bitno);
+
+  s = (SYT*) schmem();        // block for search
+  s->addb = add << 4;         // symbol addr + bit
+ if (bitno >= 0) s->addb |= bitno; 
+  s->start = pc;            // current addr for range check
+
+ if (rw) s->writ = 1; 
+// ix = lastschix;   
+   
+  t = (SYT*) find(&symch,s);
+
+  if (!t && s->start)
+   {         // try default (write)
+    s->start = 0;
+    t = (SYT*) find(&symch,s);
+   }
+ 
+   if (!t && rw)
+    {         // try read symbols
+     s->start = pc;  
+     s->writ = 0;          // drop write bit;    
+     t = (SYT*) find(&symch,s);
+     
+     if (!t && s->start)
+      {         // try default read symbol
+       s->start = 0;
+       t = (SYT*) find(&symch,s);
+      }
+    } 
+
+// try no bit ????
+
+
+ 
+  return t;
+}
+
+
+char* get_sym_name(int rw, int add, int pc)
+ {
+  SYT* x;    // whole 'read' symbols only
+  
+  x = get_sym(rw, add, -1, pc);
+  if (x) return x->name;
+  return NULL;
+ }
+
+
 #ifdef XDBGX
 
 void DBG_sbk(const char *t, SBK *s, int p)
@@ -3975,8 +4198,6 @@ void DBG_scans(void)
 } 
 
 
-SYT* get_sym(int , int, int) ;
-
 void DBG_subs (void)
 {
   SXT *s;
@@ -3992,7 +4213,7 @@ void DBG_subs (void)
         s = (SXT*) subch.ptrs[ix];
 
         DBGPRT("sub  %x  ", s->start);
-        x = get_sym(0, s->start,0);    
+        x = get_sym(0, s->start,-1, 0);    
         if (x) {DBGPRT("%c%s%c  ", '\"', x->name, '\"');
                //  if (x->xnum > 1)   DBGPRT(" N%d", x->xnum);
         }
@@ -4007,35 +4228,46 @@ void DBG_subs (void)
    DBGPRTN(0);  
   }
 
-#endif
-
-
-void prt_rbt (void)
+void DBG_syms (void)
 {
-  RBT *r ;
-  short ix;
+ CHAIN *x;
+ SYT *t;
+ int ix, b;
 
-  for (ix = 0; ix < basech.num; ix++)
+ DBGPRTN("# ---------Symbols num = %d", symch.num);
+
+ x = &symch;
+
+ for (ix = 0; ix < x->num; ix++)
    {
-    r = (RBT*) basech.ptrs[ix];
-
-   if (!r->inv)
+   t = (SYT*) x->ptrs[ix];
+   
+   if (!t->noprt)     // not printed as subr or struct
      {
-    wnprt("rbase %x %x" , r->reg , cmdaddr(r->val));
-    if (r->start)  wnprt("  %x %x", cmdaddr(r->start), cmdaddr(r->end));
-    if (r->cmd) wnprt("       # cmd");
-    wnprt("\n");
-    }
+     DBGPRT("sym %x ", t->addb >> 4);
 
+     DBGPRT (" S%x E%x ", t->start, t->end);
+     
+ 
+     if (t->cmd) DBGPRT(" CMD");
+     
+     b = t->addb & 0xf;
+     if (b) DBGPRT(" biT %d" , (b-1));
+
+     if (t->xnum) DBGPRT(" xnum =%d", t->xnum);
+     if (t->writ) DBGPRT(" Write");
+ //    if (t->range)  DBGPRT(" Range");
+     DBGPRT(" size %d", t->tsize);
+     DBGPRT (" \"%s\"",t->name);
+     
+     DBGPRT(" ab [%x]", t->addb);
+     DBGPRTN(0) ;
+     }
    }
-     wnprtn(0);
-}
+  DBGPRTN(0);
 
+ }
 
-
-
-
-#ifdef XDBGX
 
 void DBG_jumps (CHAIN *x, const char *z)
 {
@@ -4150,8 +4382,6 @@ void DBG_banks(void)
 
 
 
-
-
 void DBG_data()
  {
     DBGPRTN("\n\n -- DEBUG INFO --");
@@ -4161,312 +4391,15 @@ void DBG_data()
     DBG_ovr();
     DBG_rgchain();
     DBG_subs();
+    DBG_syms();
     DBG_sigs(&sigch);
  }
+
 
 #endif
 
 
 
-LBK *find_code_cmd (int start, int fcom)
-{
-  LBK *blk;
-
-  blk = (LBK*) chmem(&codch);
-  blk->start = start;
-  blk->fcom =  fcom;
-  blk = (LBK *) find(&codch,blk);
-  return blk;
-}
-
-
-LBK* add_code_cmd (uint start, uint end, uint com)
- {          // this for user commands only, no called params
-  LBK *n, *z;
-
-  if (anlpass >= ANLPRT)    return NULL;
-  if (icaddrse(&start,&end)) return NULL;
-
-  n = (LBK *) chmem(&codch);
-  n->start = start;
-  n->end   = end;
-  n->fcom  = com & 0x1f;    // max 31 as set
-  if (com & C_CMD) n->cmd = 1;
-
-  z = inscmd(&codch,n);  
-      
-  if (z != n) return 0;                        // fail
-  #ifdef XDBGX  
-  DBGPBKN (n, "Add cmd");   
-  #endif
-  return n;   // successful
- }
-
-
-
-
-/************************************************
- *  Symbols
- ************************************************/
-
-int new_symname (SYT *xsym, const char *fnam)
- {
-   // replace symbol name
-   // symbols can be NULL named (for autonumbers)
-
-  int z;
-
-  if (xsym->cmd) return 0;          // can't rename
-  if (!fnam || !*fnam) 
-    {
-      if (xsym->tsize) mfree(xsym->name, xsym->tsize);
-     xsym->tsize = 0;
-     return 0;
-    }
-
-  z = xsym->tsize;              // old size
-  xsym->tsize = strlen (fnam) + 1;        // include null, strlen does not...
-    
-  if (xsym->tsize > 31) xsym->tsize = 31;    // max storage size
-
-  xsym->name = (char *) mem (xsym->name,z,xsym->tsize);       // get new sym size
-  if (xsym->name)  strncpy (xsym->name, fnam, xsym->tsize);    // and replace it
-  return xsym->tsize;
- }
-
-
-// this is long winded, but makes end logic neater....
-
-SYT *add_sym (int rw, const char *fnam, int add, int start, int end)
- {
-   // chain for read or write whole symbols only
-   // Allows null names 
-
-   CHAIN *x;  
-   SYT *s, *z;
-   int ans,ix;
-
-   if (anlpass >= ANLPRT) return 0;
-   if (!*fnam) return 0;                                // cant have null
-   if (rw) x = &wsymch;  else x = &rsymch;
-   
-
-   s = (SYT *) chmem(x);
-   s->addb   = add << 4;           // space for (empty) bit field
-   s->start  = start;
-   s->end    = end;
-   if (rw) s->writ = 1;                  // this is a WRITE sym
-   
-   ix = bfindix(x, s, 0);
-   ans = x->comp(x, ix, s);              // zero if matches
-
- // check for overlap here
-
-   if (ix < x->num)
-    { 
-     z = (SYT *) x->ptrs[ix];         // next block, but may be multiple !!
-     if (s->addb == z->addb) 
-      { 
-          if (s->end > z->start) ans = 0;
-      }
-    }
-
-   if (ans)
-   {
-     new_symname (s, fnam);
-     chinsert(x, ix, s);
-
-     #ifdef XDBGX
-      DBGPRT("add sym %x",add);
-      if (fnam) DBGPRT(" %c%s%c" ,'"',fnam, '"');
-      if (s->start)      DBGPRT (" %05x - %05x" , s->start, s->end);
-      //      if (s->bitno >= 0) DBGPRT (" B%d", s->bitno);
-      
-      DBGPRTN(0);
-     #endif
-    return s;
-   }   // do insert
-
- return (SYT*) x->ptrs[ix]; // duplicate
-
-}
-
-
-SYT* get_sym(int rw, int add, int pc)
-{
-  // read and write symbols whole
-  // auto check of READ if write sym not found
-  CHAIN *x;
-
-  SYT *s, *t;
-  int a;
-
- if (rw) x = &wsymch;  else x = &rsymch;
-  a = nobank(add);
-  if (a < PCORG)  add = a;     // fiddle for register and RAM syms
-
-  if (!val_data_addr(add)) return 0;          // not valid address
-
-  s = (SYT*) schmem();        // block for search
-  s->addb = add << 4;         // symbol addr + dummy bit (0)
-  s->start = pc;              // current addr for range check
-  
-  t = (SYT*) find(x,s);
-
-  if (!t && s->start)
-   {         // try default (write)
-    s->start = 0;
-    t = (SYT*) find(x,s);
-   }
- 
-  if (rw && !t)
-    {
-     s->start = pc;      
-     t = (SYT*) find(&rsymch,s);
-     
-     if (!t && s->start)
-      {         // try default read symbol
-       s->start = 0;
-       t = (SYT*) find(&rsymch,s);
-      }
-    }   
-//   if (t) t->used =1;               // for printout & debug
-
-  return t;
-}
-
-void fixbitno(int *add, int *bitno)
-{
- int i;
-
- if (*bitno > 7)
-    {
-      i = (*bitno)/8;     // this works for doubles too....     
-      *add += i;          // add extra bytes
-      i *= 8;             // bits to subtract
-      (*bitno) -= i;
-    }
-}
-
-
-SYT *add_symbit (int rw, const char *fnam, int add, int bitno, int start, int end)
- {
-   // chain for read or write of BIT symbols only
-  
-   SYT *s, *z;
-   CHAIN *x;
-   int ans,ix;
-
-   if (anlpass >= ANLPRT) return 0;
-
-   // if (bitno > byte size, map into correct address (byte)
-
-   if (rw) x = &wsymch;  else x = &rsymch;
-
-   fixbitno(&add,&bitno);
-
-   s = (SYT *) chmem(x);
-   s->addb = add << 4;
-   s->addb |= (bitno + 1);     // bitno + 1 to show bit
-   s->start = start;
-   s->end = end;
- 
-   if (rw) s->writ = 1;     // this is a WRITE sym
-  
-   ix = bfindix(x, s, 0);
-   ans = x->comp(x, ix, s);              // zero if matches
-
-
- // check for overlap here
-
-   if (ix < x->num)
-    { 
-     z = (SYT *) x->ptrs[ix];         // next block
-     if (s->addb == z->addb) 
-      { 
-          if (s->end > z->start) ans = 0;
-      }
-    }
-
-   if (ans)
-   {
-     new_symname (s, fnam);
-     chinsert(x, ix, s);
-
-     #ifdef XDBGX
-      DBGPRT("add symbit %x",add);
-      if (fnam) DBGPRT(" %c%s%c " ,'"',fnam, '"');
-      if (s->start)      DBGPRT (" %05x - %05x" , s->start, s->end);
-      DBGPRT ("  T %d", (s->addb & 0xf)-1);
-      
-      DBGPRTN(0);
-     #endif
-    return s;
-   }   // do insert
-
- return (SYT*) x->ptrs[ix]; // duplicate
-
-}
-
-SYT* get_symbit(int rw, int add, int bitno, int pc)
-{
-  // bit symbols only
-// auto check of read if no write found
-
-  CHAIN *x;
-  SYT *s, *t;
-  int a;
-
-  if (rw) x = &wsymch;  else x = &rsymch;
- 
-  a = nobank(add);
-  if (a < PCORG)  add = a;     // fiddle for register and RAM syms
-
-  if (!val_data_addr(add)) return 0;          // not valid address
-
-  fixbitno(&add,&bitno);
-
-  s = (SYT*) schmem();        // block for search
-  s->addb = add << 4;         // symbol addr + bit
-  s->addb |= (bitno + 1); 
-  s->start = pc;            // current addr for range check
-
-  
-  t = (SYT*) find(x,s);
-
-  if (!t && s->start)
-   {         // try default (write)
-    s->start = 0;
-    t = (SYT*) find(x,s);
-   }
- 
-   if (!t && rw)
-    {         // try read symbols
-     s->start = pc;      
-     t = (SYT*) find(&rsymch,s);
-     
-     if (!t && s->start)
-      {         // try default read symbol
-       s->start = 0;
-       t = (SYT*) find(&rsymch,s);
-      }
-    } 
- 
-  return t;
-}
-
-// keep read and write separate, as in all but a very few cases (operands)
-// READ symbols are required
-
-
-char* get_sym_name(int rw, int add, int pc)
- {
-  SYT* x;    // whole 'read' symbols only
-  
-  x = get_sym(rw, add, pc);
-  if (x) return x->name;
-  return NULL;
- }
 
 
 
@@ -4490,21 +4423,13 @@ SYT *new_nsym (uint nix, int addr)
   if (!numbanks) c += sprintf(nm+c, "_%x", nobank(addr));       
   else           c += sprintf(nm+c, "_%x", addr);
 
-  xsym = get_sym(0, addr,0);
+  xsym = add_sym(0, nm, addr,-1, 0,0);     // add new (read) symbol
 
-  if (!xsym)
-     {
-      xsym = add_sym(0, nm, addr,0,0);     // add new (read) symbol
-      if (xsym) xsym->xnum = nix;
-     }
-  else
-  {
-    if (!xsym->cmd && nix > xsym->xnum) 
+  if (!xsym->cmd && nix > xsym->xnum) 
     {
       new_symname (xsym, nm);
       xsym->xnum = nix;
     } 
-  }
 
   return xsym;
 }
@@ -4828,7 +4753,7 @@ SBK *add_scan (uint add, int type, SBK *caller)
     {
       if (caller) s->caller = caller;     // new level
       s->substart =  s->start;            // new subr
-      new_nsym(1,s->start);               // add name (autonumber subr)
+      new_nsym(1,s->start);               // add name (autonumber subr) but not subr
     }
 
    if (s->caller && s->start == s->caller->start)  return 0;          // safety check
@@ -6915,7 +6840,8 @@ char* symfromcmt(char *s, int *c)
 
    if (!ans) return NULL;
 
-   // add,bit  with add or add,bit allowed
+   if (ans <= 1) bit = -1; 
+   // add,{bit}  with add or add,bit allowed
 
 
    if (add < PCORG) {}                //add |= RAMBNK;
@@ -6925,9 +6851,10 @@ char* symfromcmt(char *s, int *c)
       add |= 0x80000;                   // default to bank 8
      }
 
-   if (ans > 1) z =  get_symbit (0, add, bit,0);
+//   if (ans > 1)
+ z =  get_sym (0, add, bit,0);
 
-   if (!z)      z = get_sym(0, add,0);
+ //  if (!z)      z = get_sym(0, add,0);
 
    if (z) return z->name;
    return NULL;
@@ -6981,7 +6908,7 @@ CADT *pp_lev (int ofst, CADT *a, int pad, int max)
      val = decode_addr(a, ofst);               // val with decode if nec.  and sign - READS ofst
      if (a->name)
        {
-         sym = get_sym(0, val,ofst);            // READ sym AFTER any decodes - was xval
+         sym = get_sym(0, val,-1,ofst);            // READ sym AFTER any decodes - was xval
        }
 
      if (sym) pstr("%s",sym->name);
@@ -7228,7 +7155,7 @@ uint pp_timer(uint ofst, LBK *x)
   pp_hdr (ofst, cmds[C_TIMR], cnt+casz[a->ssize],0);
   pstr("%2x, ", val);
   val = g_val (xofst, a->ssize);
-  if (a->name) sym = get_sym(0, val,xofst);           // syname AFTER any decodes
+  if (a->name) sym = get_sym(0, val,-1,xofst);           // syname AFTER any decodes
   if (sym) pstr("%s, ",sym->name);
   else pstr("%5x, ",val);
   xofst += casz[a->ssize];
@@ -7240,8 +7167,8 @@ uint pp_timer(uint ofst, LBK *x)
     while (!(i&1) && bit < 16) {i /= 2; bit++;}          // LOOP without bit check !!
     val = g_byte (xofst);
 
-     if (a->name) {sym = get_symbit(0, val,bit,xofst);
-     if (!sym) sym = get_sym(0,val,xofst); }
+     if (a->name) {sym = get_sym(0, val,bit,xofst);
+     if (!sym) sym = get_sym(0,val,-1,xofst); }
     if (sym) pstr("%s, ",sym->name);
     else  pstr(" B%d_%x",bit, val);
     xofst++;
@@ -7311,7 +7238,7 @@ int p_sc (INST *x, int ix)
      if (o->symval)
         {
          // symbol address is in VAL, not addr
-         s = get_sym (o->wsize, o->val, x->ofst);
+         s = get_sym (o->wsize, o->val,-1, x->ofst);
         }
      else 
        { 
@@ -7321,9 +7248,9 @@ int p_sc (INST *x, int ix)
             v = databank(o->addr, x);
  
         if (o->bit)
-            s = get_symbit (o->wsize, v, o->val, x->ofst); 
+            s = get_sym (o->wsize, v, o->val, x->ofst); 
         else
-            s = get_sym (o->wsize, v, x->ofst); 
+            s = get_sym (o->wsize, v, -1, x->ofst); 
        }
 
     if (s) {pstr("%s", s->name); 
@@ -7716,7 +7643,7 @@ void fix_sym_names(const char **tx, INST *c)
     else
        addr = databank(o->addr,c);
 
-    s = get_sym(o->wsize, addr,c->ofst);      // write sym or read sym
+    s = get_sym(o->wsize, addr,-1, c->ofst);      // write sym or read sym
     if (s) o->sym = 1;  // symbol found
    }
  
@@ -7725,7 +7652,7 @@ void fix_sym_names(const char **tx, INST *c)
         o = c->opr+2;
         b = c->opr+3;               // b = bit number entry, get bit/flag name
         b->sym = 0;                 // clear bit name flag
-        s = get_symbit (0, databank(o->addr,c), b->val, c->ofst);  // read sym
+        s = get_sym (0, databank(o->addr,c), b->val, c->ofst);  // read sym
         if (s)
           {
            o->rgf = 0;
@@ -7766,7 +7693,7 @@ void fix_sym_names(const char **tx, INST *c)
         addr = databank(addr, c);                   // need bank for index addition
 
     //    if (c->opr->wsize) s = get_sym(1, addr,c->ofst);   // is this ever true for op[0] ?
-        if (!s) s = get_sym(0, addr,c->ofst);         // and sym for true inx address
+        if (!s) s = get_sym(0, addr,-1,c->ofst);         // and sym for true inx address
 
         c->opr->val = addr;
 
@@ -7794,7 +7721,7 @@ void fix_sym_names(const char **tx, INST *c)
      // actually change this with databank, for multibank displays ??
      // this can be negative, only add databank if > PCORG
             if (numbanks && (int) c->opr->addr > PCORG) c->opr->addr = databank(c->opr->addr,c);
-            s = get_sym(0, databank(c->opr->addr,c),c->ofst); 
+            s = get_sym(0, databank(c->opr->addr,c),-1,c->ofst); 
             if (s) c->opr->sym = 1;
           }
       }
@@ -7820,7 +7747,7 @@ void fix_sym_names(const char **tx, INST *c)
       {
        b = c->opr+1;
        b->val = b->val + c->opr[2].val;                   // should give true address....
-       s = get_sym(0, b->val,c->ofst);
+       s = get_sym(0, b->val,-1,c->ofst);
        if (s)          //opnames[1])
         {
          b->sym = 1;
@@ -7867,8 +7794,7 @@ int chk_mask(inst *c, int v)
   OPS * o;
   
   // if already flagged as bit word/byte
-  if (get_flag(c->opr[2].addr, flags)) return 0;  
-  if (v > 1) return 1;      // no check for ldx (unless flagged)
+  // no, need to FIND symbols, for address range
   
   o = c->opr+1;
   mask = o->val;
@@ -7893,35 +7819,47 @@ int chk_mask(inst *c, int v)
 
   if (bcnt < 4 || ccnt > 2)
    {
-     set_flag(c->opr[2].addr, flags); 
+ //    set_flag(c->opr[2].addr, flags); 
      return 0;  // ok as bit mask
    }
   return 1;    
  }
 
-void prt_bitwise(INST *c, uint addr, uint bit)
+void prt_bitwise(INST *c, SYT *w, SYT *b, int bit)
 {
-  SYT *s;  
+  SYT *s; 
+  uint addr;
 
-  s = get_symbit(1, addr, bit, c->ofst);    // always check write first
+  // does a bit name exist ??
+  addr = c->opr[2].addr;  //stored locally so it can be changed
+
+  s = get_sym(1, addr, bit, c->ofst);
 
   if (s)
     {
-    pstr ("%s",s->name);   //  print each matched sym name
+    pstr ("%s ",s->name);      //  print matched sym bit name
     return;
     }
   
   if (bit > 7)
     {
-      bit  -= 8;
-      addr += 1;
+     if (w && !b)
+      {      // word name exists but not byte name
+        pstr ("B%d_", bit);     //  unchanged bit number
+        pstr ("%s ",w->name);   //  print word name
+        return;
+      } 
+     else  
+      {  // otherwise, either a byte name or no name 
+        bit  -= 8;
+        addr += 1;
+      }
     }    
+    
   pstr ("B%d_", bit);            // no name match
-  pstr ("R%x ", addr);
+  if (b) pstr ("%s ",b->name);   //  print matched byte name 
+  else   pstr ("R%x ", addr);
 }
-
-
-
 
 
 void bitwise_replace(const char **tx, INST *c)
@@ -7932,7 +7870,8 @@ void bitwise_replace(const char **tx, INST *c)
 {
 
   int i, ix, k, v, size;
-  uint  mask;
+  uint  mask, addr;
+  SYT *w, *b;
 
   ix = c->opcix;
   
@@ -7942,11 +7881,30 @@ void bitwise_replace(const char **tx, INST *c)
 
   // check must be AND,OR, XOR
   // works for ldx only if or, and set the flag.
+  // WHAT ABOUT CMP  ??????
 
-  if      (opctbl[ix].sigix == 5)  v = 0;
-  else if (opctbl[ix].sigix == 9)  v = 1;
-  //else if (opctbl[ix].sigix == 12) v = 2;      // not ldx yet
+  // find out if reg is marked as a flags word/byte.
+
+  addr = c->opr[2].addr;
+  
+  if (addr&1) w = get_sym(1,addr-1,-1, c->ofst); // try word name
+  else w = 0;  
+    
+  b = get_sym(1,addr,-1, c->ofst);       // try byte name
+
+  if      (opctbl[ix].sigix == 5)  v = 0;     // AND
+  else if (opctbl[ix].sigix == 9)  v = 1;     // or, XOR
+  
+  else if (opctbl[ix].sigix == 12 || opctbl[ix].sigix == 10)
+      {    // ldx or cmpx
+       v = 0;
+       if (w && w->flags) v = 2;
+       if (b && b->flags) v = 2;
+       if (v != 2) return;
+      }
   else return;
+  
+  // MORE HERE !!
   
   if (chk_mask(c, v)) return;
  
@@ -7967,18 +7925,15 @@ void bitwise_replace(const char **tx, INST *c)
   size = casz[c->opr[1].ssize] * 8;       // number of bits 
  
   k = 0;                                     // first output flag
-
-// as this is only ever for immediates, can dispense with the p_opsc
-// and just print Rx, and allow for Rx+1 for bits > 7.
   
   for (i = 0; i < size; i++)
    {
-    if (mask & 1)
+    if (mask & 1 || v > 1) // would not be mask & 1 for a v=2;
       {
        if (k++)  {pchar(';'); p_indl (); }   // new line and indent if not first
-       prt_bitwise(c,c->opr[2].addr,i);
+       prt_bitwise(c,w,b,i);
        if (ix >= 32 && ix <= 33) pstr("^"); 
-      // if (v > 1) pstr ("= %d", (mask & 1)); else
+       if (v > 1) pstr ("= %d", (mask & 1)); else
        pstr ("= %d" ,v);
       }
     mask  = mask >> 1;
@@ -9621,13 +9576,14 @@ void nop(SBK *s, INST *c)
 
 void bka(SBK *s, INST *c)
  {          // RAM bank swopper 8065 only
+   #ifdef XDBGX
    int bk;
    //   According to Ford book, this only sets PSW, so could be cancelled by a POPP
    //   or PUSHP/POPP save/restore,  so may need a PREV_BANK 
 
    bk = c->opcix - 107;                   // new RAM bank
    //     rambank = bk * 0x100;                 // establish new offset
-   #ifdef XDBGX
+ 
    if (s->scanning) DBGPRTN("New Rambank = %x at %x", bk, s->curaddr);
    #endif
    op_imd(c);                                    // mark operand 1 as immediate
@@ -10113,7 +10069,7 @@ void set_data_vect(LBK *blk)
 int set_data (CPS *c)
 {
   LBK *blk;
-  SYT *s;
+ // SYT *s;
   blk = add_data_cmd (c->p[0], c->p[1], c->fcom|C_CMD,0);  // start,end, cmnd. by cmd
 
   if (!blk) return 2;
@@ -10128,8 +10084,9 @@ int set_data (CPS *c)
        blk->newl = c->newl;                    // split printout (newline)
       }
   if (*c->symname) {
-  s = add_sym(0,c->symname,c->p[0], 0,0);           // +cmd. safe if symname null
-  if (s) s->cmd = 1;
+  //s = 
+  add_sym(C_CMD,c->symname,c->p[0], -1, 0,0);           // +cmd. safe if symname null
+  //if (s) s->cmd = 1;
     }
   set_data_vect(blk);
   return 0;
@@ -10138,13 +10095,14 @@ int set_data (CPS *c)
 
 int set_sym (CPS *c)
 {
-  int bitno,w;
+  int bitno,w, f;
   CADT *a;
-  SYT *s;
+  SYT  *s;
 
-  bitno = 0;
-  w = 0;
-
+  w = 0;           // read or write
+  f = 0;           // flags word
+  bitno = -1;
+  
   if (c->npars < 3)
    {
     c->p[1] = 0;         // default address range to ALL (zeroes) otherwise done by cmd
@@ -10158,9 +10116,9 @@ int set_sym (CPS *c)
     while (a)
      {
       if (a->enc == 7)
-        {        // bit marker 'T'
-         bitno = (a->data & 0xf);    // 0-15
-         bitno |= 0x100;             // flag for add_symbit (below)
+        {        // bit marker 'T' or 'F'
+         if (a->data < 16)  bitno = (a->data & 0xf);    // 0-15
+         else f = 1; 
         }
 
       if (a->ssize & 2)  w = 1;      // write 'W' 
@@ -10169,17 +10127,9 @@ int set_sym (CPS *c)
    } 
    // OK now add symbol to right chain (=w)
 
-   if (bitno)
-    {
-      s = add_symbit(w,c->symname, c->p[0], bitno & 0xf, c->p[1], c->p[2]);
-      set_flag(c->p[0], flags);
-    }
-   else
-    {
-      s = add_sym(w,c->symname, c->p[0], c->p[1], c->p[2]);
-    }
+  s = add_sym(w|C_CMD,c->symname, c->p[0], bitno, c->p[1], c->p[2]);
 
-  if (s) s->cmd = 1;                                // with cmd flag
+  if (s && f) s->flags = 1;          // with flags
   return 0;
 }
 
@@ -10258,7 +10208,7 @@ int set_subr (CPS *c)
 {
   int ix, szin, szout;  
   SXT *xsub;
-  SYT *s;
+//  SYT *s;
   CADT *a, *x;
   SIG *g;
 
@@ -10268,8 +10218,9 @@ int set_subr (CPS *c)
   
   if (*c->symname)
     {
-     s = add_sym(0,c->symname,c->p[0],0,0);
-     if (s) s ->cmd = 1;     // cmd set if sym specified
+     //s = 
+     add_sym(C_CMD,c->symname,c->p[0],-1, 0,0);
+ //    if (s) s ->cmd = 1;     // cmd set if sym specified
     }
  
   a = c->adnl;
@@ -10395,14 +10346,15 @@ int set_time(CPS *c)
  // int val,type,bank;
  // uint xofst;
  // short b, m, sn;
-  SYT *s;
+ // SYT *s;
  // CADT *a;
  // char *z;
 
   blk = add_data_cmd (c->p[0],c->p[1],c->fcom|C_CMD,0);
   cpy_adnl(c,blk);
-  s = add_sym(0,c->symname,c->p[0], 0,0);  // safe for null name
-  if (s) s->cmd = 1;
+  //s = 
+  add_sym(C_CMD,c->symname,c->p[0],-1, 0,0);  // safe for null name
+ // if (s) s->cmd = 1;
 
   /* up to here is same as set_prm...now add names
 
@@ -11206,7 +11158,7 @@ void add_iname(int from, int ofst)
 {
 uint i, x;
 char *z;
-SYT *s;
+//SYT *s;
 
  // ignore_int can be at the end of a jump in multibanks....
 
@@ -11230,8 +11182,9 @@ SYT *s;
  if (find_sig(&intign, ofst))  // this is 'ignore int' signature, use 'ignore' name
     {
       sprintf(z,"Ignore");
-      s = add_sym(0, nm, ofst,0,0);
-      s->cmd = 1;
+      //s = 
+      add_sym(C_CMD, nm, ofst,-1,0,0);
+   //   s->cmd = 1;
       return;
     }
 
@@ -11241,8 +11194,9 @@ SYT *s;
        {
        z += sprintf(z,"%s",inames[i].name);                      // number flag set
        if (inames[i].num) z+=sprintf(z, "%d", from-inames[i].start);
-       s = add_sym(0, nm, ofst,0,0);
-       s->cmd = 1;
+       //s = 
+       add_sym(C_CMD, nm, ofst,-1,0,0);
+      // s->cmd = 1;
        break;    // stop loop once found for single calls
        }
     }
@@ -11371,9 +11325,6 @@ int do_adnl_letter (CPS* c, char optl)
     
    if (!a && optl != ':') return do_error(c,"Missing Colon");
  
-   if (optl >= 'a' && optl <= 'z') optl -= 0x20;  // A is 0x41 A is 0x61
-
-   
    switch(optl)
      {
            // case 'A':                    // AD voltage ?? / RPM/ IOtime....
@@ -11426,7 +11377,15 @@ int do_adnl_letter (CPS* c, char optl)
 
        case 'F' :
 
-         // special subr function
+         // special subr function, or flags for sym
+         
+         if (c->fcom == C_SYM)
+         {
+           a->enc = 7;                // mark it
+           a->data = 0x100; 
+           break;
+         }
+         
          // f 1 <reg1>  : <size> : <size>    func reg in , out
          // f 2 <reg1> <reg2> :  <size>    tab add, cols, size
          // Leave set subr to chew off extra levels for size
@@ -11569,8 +11528,7 @@ void  do_opt_letter (CPS* c, char optl)
     // this is a  cmd: ABCD type (no params)
     
     int j;
-    if (optl >= 'a' && optl <= 'z') optl -= 0x20;  // A is 0x41 A is 0x61
-    
+      
     if (optl >= 'A' && optl <= 'Z')
       {
        j = optl - 'A';                      // convert letter to bit offset
@@ -11597,19 +11555,19 @@ int parse_com(CPS *c, char *flbuf, int lineno)
   c->maxlen = strlen(flbuf);    // safety check
 
 
-// ans = sscanf(flbuf, "[\n\r#]%n", &rlen);      // alternate method ?
+ ans = sscanf(flbuf, "[\r\n#]%n", &rlen);      // alternate method ?
 // if (ans)  flbuf[rlen] = '\0';
 
   e = flbuf + c->maxlen;
 
   t = strchr(flbuf, '\n');            // check for end of line
-  if (t && t < e) e = t;              // remove it
+  if (t && t < e) e = t;              // mark it
 
   t = strchr(flbuf, '\r');            // check for end of line
-  if (t && t < e) e = t;              // remove it
+  if (t && t < e) e = t;              // mark it
 
   t = strchr(flbuf, '#');            // stop at comment
-  if (t && t < e) e = t;                  // remove any comment
+  if (t && t < e) e = t;             // mark it
 
   c->maxlen = e - flbuf;
   c->lineno = lineno;
@@ -11659,9 +11617,14 @@ int parse_com(CPS *c, char *flbuf, int lineno)
   if (d->opts) 
    {        // if no opts, skip this
      // read option chars and level markers whilst data left
+     // from here, all lower case should converted to upper ?
       while (c->posn < c->maxlen)
        {
         if (!readpunc(c)) break;         // safety check
+        
+        t = flbuf+ c->posn;
+        //lower case ?
+        if (*t >= 'a' && *t <= 'z') *t -= 0x20;           // A is 0x41 A is 0x61
      
         ans = sscanf(flbuf+c->posn,d->opts, nm, &rlen);      // only one char at a time
         t = flbuf+c->posn;                                               // remember char
@@ -11709,20 +11672,22 @@ return 0;
 
 void do_preset_syms(void)
  {
-   uint i;
+   uint i, bitno;
    DFSYM *z;
-   SYT *s;
+  // SYT *s;
 
    for (i = 0; i < NC(defsyms); i++)
      {
       z = defsyms+i;
       if (((P8065) && z->p85) || (!(P8065) && z->p81)) 
          {
-          if (z->bit)
-           s = add_symbit(z->wrt,z->symname,z->addr,z->bitno,0,0);
-          else
-           s = add_sym(z->wrt,z->symname,z->addr,0,0);
-          if (s)  s->cmd = 1;
+          if (z->bit) bitno = z->bitno; else bitno =-1;
+              
+           //s = 
+           add_sym(z->wrt|C_CMD,z->symname,z->addr,bitno,0,0);
+//          else
+//           s = add_sym(z->wrt,z->symname,z->addr, -1,0,0);
+     //     if (s)  s->cmd = 1;
          }
       }
   }
@@ -11834,7 +11799,7 @@ void prt_cmds(CHAIN *z)
   
      if (t->name_ex)         // name allowed
       {
-       x = get_sym(0, c->start,0);
+       x = get_sym(0, c->start,-1,0);
        if (x)
         {
          wnprt("  %c%s%c  ", '\"', x->name, '\"');
@@ -11866,7 +11831,7 @@ void prt_subs (void)
 
         wnprt("sub  %x  ", s->start);
     //  wnprt("sub  %x %x  ", s->start, s->end);
-        x = get_sym(0, s->start,0);    
+        x = get_sym(0, s->start,-1,0);    
         if (x)
           {
            wnprt("%c%s%c  ", '\"', x->name, '\"');
@@ -11887,40 +11852,33 @@ void prt_subs (void)
 
 void prt_syms (void)
 {
- CHAIN *x;
  SYT *t;
- int i,ix, b;
+ int ix, b;
 
  wnprtn("# ------------ Symbol list ----");
 #ifdef XDBGX  
-   DBGPRTN("# num syms = %d", rsymch.num);
+   DBGPRTN("# num syms = %d", symch.num);
 #endif
- for (i = 0; i < 2; i++)
-  { 
-   if (i) x = &rsymch; else x = &wsymch;
 
- for (ix = 0; ix < x->num; ix++)
+ for (ix = 0; ix < symch.num; ix++)
    {
-   t = (SYT*) x->ptrs[ix];
+   t = (SYT*) symch.ptrs[ix];
    
    if (!t->noprt)     // not printed as subr or struct
      {
      wnprt("sym %x ", cmdaddr(t->addb >> 4));
-
      if (t->start)  wnprt (" %x %x ", cmdaddr(t->start), cmdaddr(t->end));
-     
      wnprt(" \"%s\"",t->name);
 
      b = t->addb & 0xf;
-     if (b || t->writ) wnprt(" :"); 
+     if (b || t->writ || t->flags) wnprt(" :"); 
        
-     if (b) wnprt("T %d " , (b-1));
-     if (t->writ) wnprt("W");
+     if (b) wnprt("T %d" , (b-1));
+     if (t->writ)  wnprt(" W");
+     if (t->flags) wnprt(" F");
      wnprtn(0) ;
      }
    }
-  wnprtn(0);
- }
   wnprtn(0);
  }
 

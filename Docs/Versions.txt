@@ -1,6 +1,14 @@
 
 Version Summary
 
+* version 4.0.3d  interim *
+
+1. Yet more fixes for symbols.  Change code for 'find symbol' internally to make consistent 
+2. Added an 'F' option for symbols to indicate a 'flag' byte so that ldb (and ldw) will show individual bit names
+   as OR and AND do.  
+
+
+
 * version 4.0.3c  interim *
 
 1. Incorrect address range handling for syms and rbase causes them not to appear/work reliably in listing

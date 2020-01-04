@@ -87,7 +87,10 @@ common declarations for 'core' code modules (disassembly)
 #define C_SUBR   13     // non print
 #define C_SCAN   14
 
+#define C_SYM    17
+
 #define C_CMD    32      // by command (can't change or merge)
+
 
 // jump and scan request types (and can have C_CMD for user commanded)
 
@@ -217,19 +220,21 @@ typedef struct
 // use separate chains, but keep flags for write and bit for ease of logic
 // to make comparsions faster and simpler in chain, addb is combination
 // of address, bitno, and size  4|16|4  bank, address, bitno/size.
+// bitno is max of 7 as split by byte in insert and find.
 
 typedef struct
 {
 
  char   *name;
  uint    addb;           // actual sym address + bitno 4|16|4 bank|address|bitno + 1
- uint    start;          // valid only between start and end (0 for all)
+ uint    start;          // valid only between start and end (0 for all) (bit flag??)
  uint    end;
 
  uint   noprt  : 1 ;    // printed by one of other outputs (prt_xx), suppress sym print
  uint   cmd    : 1 ;    // set by dir cmd, do not overwrite
- uint   xnum   : 5 ;    // autonumber symbol type if > 0  (31)
+ uint   xnum   : 5 ;    // autonumber symbol type if > 0  (31 max, for subrs)
  uint   writ   : 1 ;    // write symbol if set (read if not)
+ uint   flags  : 1 ;    // this sym has bitnames declared also
  uint   tsize  : 6 ;    // size of symbol name (for mallocs and free)
 
  } SYT;
