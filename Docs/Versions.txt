@@ -1,6 +1,33 @@
 
 Version Summary
 
+** Version 4.0.4 *****************
+
+1. Changed vector list validation YET AGAIN after discovering another couple of bins which don't work.
+   added a simpler, but new rule to validate whether list is real.
+
+2. Added extra scan pass to check for 'code holes' which may have been missed.   Example is where
+   binary does a 'remote' push, such as R34=79f9;   and a push(R34); somewhere else, not obviously connected.
+
+3. Added extra check where an indexed data reference actually points to a code location, but the register value
+   cannot be calculated.  If the pointer is within 16 bytes of a 'hole' in the code, then data pointer is moved
+   to the 'hole'.
+
+   example in A9L where reference has [R56+2a2e] but code covers 2a15 to 2a31.   R56 is 4,6, or 8  (num cylinders)
+   so data ref is moved automatically to 2a32 (+4).
+
+4. Added extra checks for data overlapping code and faulty references.
+
+
+
+
+
+
+
+
+
+
+
 * version 4.0.3d  interim *
 
 1. Yet more fixes for symbols.  Change code for 'find symbol' internally to make consistent 
