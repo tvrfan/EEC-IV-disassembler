@@ -1,6 +1,20 @@
 
 Version Summary
 
+** Version 4.0.5 *****************
+
+Bugs.
+
+1. Fixed listing output bug where fixed register pointers (rbase) not showing the second register with 3 operand opcodes (ad3w etc.)
+2. Fixed bug which caused some tables to be missed entirely.  Still doesn't get every table, but better than 4.04
+
+Changes/Additions
+
+2. Improve detection of 1D and 2D (function and table) end points.
+3. Add data analysis of 2D (table) structs to correct row and column sizes.   Not perfect, but better
+ 
+
+
 ** Version 4.0.4 *****************
 
 1. Changed vector list validation YET AGAIN after discovering another couple of bins which don't work.
@@ -17,15 +31,6 @@ Version Summary
    so data ref is moved automatically to 2a32 (+4).
 
 4. Added extra checks for data overlapping code and faulty references.
-
-
-
-
-
-
-
-
-
 
 
 * version 4.0.3d  interim *
