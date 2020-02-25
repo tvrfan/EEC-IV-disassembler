@@ -12,7 +12,7 @@ Latest Version is 4.0.5
 
 Docs subdirectory
 
-SAD.pdf		disassembler documentation (NB. not updated for version 4 yet)
+SAD.pdf		disassembler documentation and user manual
 
 SADWIN.pdf	Windows Wrapper documentation
 
