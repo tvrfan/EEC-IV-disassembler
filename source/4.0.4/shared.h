@@ -18,6 +18,8 @@
 
 #define _XSHARX_H 1
 
+#include  <stdio.h>
+
 typedef unsigned char  uchar;
 typedef unsigned short ushort;
 typedef unsigned int   uint;
