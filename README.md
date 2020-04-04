@@ -61,13 +61,18 @@ If no sad.ini present, then everything must be in same directory as SAD
 
 Source Subdirectory
 
-Contains sources and headers to build SAD.
+Contains sources and headers to build SAD.  Last few versions are available.
 I have used CodeBlocks and Codelite as compilers/IDE, should be able to use any common compiler/linker.
-Not sorted out a makefile, it's a straight compile of the 3 .cpp files. 
+Not sorted out a makefile, it's a straight compile and link of the 3 .cpp files. 
 
-Added separate Subdir SADWin containing source, for the simple Win32API graphic interface for SAD (binfile select,
-viewing various files and config.
+Separate Subdirectory SADWin containing the source for the Win32API graphic interface for SAD (binfile select,
+viewing various files and config)
 
+----------------------------------
 
+Daily Subdirectory
  
+
+early releases of SAD versions for testing - probably stable, but not guaranteed.
+
 
