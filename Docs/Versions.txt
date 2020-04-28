@@ -24,6 +24,8 @@ plus many minor bug fixes.
 
 will add a new pdf manual for these changes soon.
 
+Special thanks to jsa for all his testing and feedback
+
 
 ** Version 4.0.5 *****************
 
