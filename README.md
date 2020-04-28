@@ -16,7 +16,7 @@ SAD.pdf		disassembler documentation and user manual
 
 SADWIN.pdf	Windows Wrapper documentation
 
-Version.txt	Short description of bugs fixed and changes made
+Version.txt	Short description of bugs fixed and changes made by version
 
 -------------------------------------------------
 

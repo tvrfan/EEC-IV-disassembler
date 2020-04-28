@@ -1,6 +1,30 @@
 
 Version Summary
 
+--- Added 'daily' subdirectory for latest test versions ---
+
+** Version 4.0.6x (in Daily - ongoing changes, but should be stable) *****************
+
+Main changes -
+
+1.  Added many more error checks, error and warning reports to command processing, to give better user feedback (some commands failed silently before)
+2.  Added a new 'global level' options to command structure.
+3.  Added alternate layout options for subroutine arguments and structures.
+4.  Layout improvments, including lining up columns with symbol names.
+5.  Longer symbol names supported (up to 63 chars)
+6.  New style of comments 'special sequences' to control comment layouts.
+
+7.  Fixes for several symbol name issues.
+8.  Fixes for symbol names which don't appear in the listings. 
+9.  Added extra checks and fixes for non-standard bank ordering and detection in multibanks.
+10. Added new options command which uses meaningful text names instead of letters.
+11. changed code for warnings raised (thanks dantob)
+
+plus many minor bug fixes.
+
+will add a new pdf manual for these changes soon.
+
+
 ** Version 4.0.5 *****************
 
 Bugs.
