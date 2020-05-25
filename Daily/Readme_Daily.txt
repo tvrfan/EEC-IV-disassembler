@@ -46,8 +46,6 @@ There are still things outstanding.
   c. More work to be done to try to sort out an ELSE and perhaps a WHILE (for loops)
   d. The pseudo code can also show "if ( 0 > 0)" sometimes, when SAD cannot find which instruction last set the condition code (typically over a subroutine call).
   e. Print Layout - Layout options have been added (see below) which probably have some quirks to be ironed out...
-  f. still some variation in comments and the exact specing of newline separators etween blocks.
-
 
 
 New command items -
