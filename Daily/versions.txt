@@ -1,0 +1,15 @@
+
+
+4.0.6M   (24/05/20)
+
+fixed - specifying arguments with SUB command were replaced with emulation derived ones.
+fixed - put back auto symbol names for detected arguments, but only if WORD.
+fixed - regression error with comments, SAD adding newlines in wrong place for block comments
+fixed - comments not handled correctly for last item in some data structure layouts.
+
+added - symbols in comments now show as "Bx_name" if "name" found but not bit number.
+
+NEW COMMAND STRUCTURES (Readme.txt)
+
+NEW COMMENT SEQUENCES (Readme.txt)  
+
