@@ -42,9 +42,9 @@ There are still things outstanding.
 
 4. other bugs.
   a. There is still a strange bug to do with one subr call not finding arguments.  This does not happen very often, but is not solved as yet.
-  b. Conditional jumps and psuedo code - I think I have those sorted now, but there is still a question mark on some JC/JNC jumps.
+  b. Conditional jumps and psuedo code - I think I have those sorted now, but there is still a question mark on some JC/JNC jumps.         - Hopefully fixed in 'N'
   c. More work to be done to try to sort out an ELSE and perhaps a WHILE (for loops)
-  d. The pseudo code can also show "if ( 0 > 0)" sometimes, when SAD cannot find which instruction last set the condition code (typically over a subroutine call).
+  d. The pseudo code can also show "if ( 0 > 0)" sometimes, when SAD cannot find which instruction last set the condition code (typically over a subroutine call). - Fixed in 'N', and new command added
   e. Print Layout - Layout options have been added (see below) which probably have some quirks to be ironed out...
 
 
@@ -75,8 +75,7 @@ F - (moved from data items) Subroutine has special function.
 Other changes -
 
 the F option - moved to global options and now has text strings to define the lookup type, and conforms to the following AMENDED syntax.
-This change was made as it became evident that the spec for the sizes is the same as the arguments, and so can easily be confused....
-
+This change was made as it became evident that the spec for the sizes is the same as the arguments, and so can easily be confused.
 
 F string par1 par2
 

@@ -11,5 +11,34 @@ added - symbols in comments now show as "Bx_name" if "name" found but not bit nu
 
 NEW COMMAND STRUCTURES (Readme.txt)
 
-NEW COMMENT SEQUENCES (Readme.txt)  
+NEW COMMENT SEQUENCES (Readme.txt) 
 
+ 
+
+4.0.6N
+
+1.  Changed logic around {} brackets and 'if' pseudo code statements.
+    You will see more curly brackets - likely will change this again to get improved structure.
+
+2.  3 operand Opcodes with a defined 'rbase' register - changed to show a fixed address.
+    e.g. R32 = R4 + Rfe changed to  R32 = R4 + 3214 style.
+
+3.  Add a 'pswset' command.  This allows user definition of all conditional jumps, as to where the 
+    condition flags are set (the PSW flags).  This fixes the problem of 'if (0=0) goto' where SAD cannot
+    resolve the setting opcode (i.e. typically around subroutine calls.)
+    Syntax is  PSWSET <address> <address>, where first address is the jump, and second address is the PSW setter.
+
+4.  Add a '=' char for data items to define a subroutine answer. This is in the format "= <address>" and then
+    size and sign options work just as in data items. Can appear anywhere in data items list (between colons).
+    Printout format is then  "X = subr()";   Some options not valid with = (R, P etc)
+
+5.  Removed some autocomments (e.g. "signed") in preparation for reworking OVF cond jumps etc.
+
+6.  Fixed bracket problem with 'early return' (a jump to a return opcode).
+
+7.  Where a conditional jump occurs immediataly after a subroutine call, the psuedo code printout is now of the style
+    "if (subr() = 0) goto" as a default placeholder.  (overridden by PSWSET)
+
+8.  Fixed incorrect logic with some "if (Rx = 0)" where the compare is  CMP R0, Rx;
+
+9.  Added  "if (true)" and "if (false)" for code 'skipped over' by a cmp (R0, 0); and a conditional. 
