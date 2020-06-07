@@ -42,3 +42,27 @@ NEW COMMENT SEQUENCES (Readme.txt)
 8.  Fixed incorrect logic with some "if (Rx = 0)" where the compare is  CMP R0, Rx;
 
 9.  Added  "if (true)" and "if (false)" for code 'skipped over' by a cmp (R0, 0); and a conditional. 
+
+
+
+
+4.0.6P (.15)
+
+1.  Fix - Comments not appearing on first line with subroutine when in args mode.
+
+2.  Fix - Crash in 0FAB binary, may be in others too.
+
+3.  Fix - ad3w can falsely create an rbase register.
+
+4.  Fix - JC and JNC not stopping at CLC or STC instructions.
+
+5.  Fix - Incorrect replacement of jump with 'return'. 
+
+6.  Replaced "if(subr())" with latest opcode of *subroutine* which sets PSW
+
+7.  Replaced the autocomments for overflow and carry back to  if (Rx > 0xffff) as relevant to previous opcode(s)
+
+Not fixed yet.
+1.  popp() yet. Will await all these changes first
+2.  Rbases in case 2. above (406n)
+
