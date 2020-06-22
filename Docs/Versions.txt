@@ -1,7 +1,7 @@
 
 Version Summary
 
---- Added 'daily' subdirectory for latest test versions ---
+--- NB. Use 'daily' subdirectory for latest test versions ---
 
 ** Version 4.0.6 *********
 
@@ -27,13 +27,13 @@ Main changes -
 
 16. Added new pdf manual and separate command definition for version 4.0.6.
 
-Special thanks to jsa for all his testing and feedback with 4.0.6
+Special thanks to jsa for all his testing and feedback with versions 4.x
 
 
 
 ** Version 4.0.5 *****************
 
-Bugs.
+Fixed.
 
 1. Fixed listing output bug where fixed register pointers (rbase) not showing the second register with 3 operand opcodes (ad3w etc.)
 2. Fixed bug which caused some tables to be missed entirely.  Still doesn't get every table, but better than 4.04
@@ -42,190 +42,66 @@ Changes/Additions
 
 2. Improve detection of 1D and 2D (function and table) end points.
 3. Add data analysis of 2D (table) structs to correct row and column sizes.   Not perfect, but better
- 
+
 
 
 ** Version 4.0.4 *****************
 
-1. Changed vector list validation YET AGAIN after discovering another couple of bins which don't work.
-   added a simpler, but new rule to validate whether list is real.
+1. Changed vector list validation after discovering another couple of bins which don't work correctly.
 
 2. Added extra scan pass to check for 'code holes' which may have been missed.   Example is where
    binary does a 'remote' push, such as R34=79f9;   and a push(R34); somewhere else, not obviously connected.
 
 3. Added extra check where an indexed data reference actually points to a code location, but the register value
    cannot be calculated.  If the pointer is within 16 bytes of a 'hole' in the code, then data pointer is moved
-   to the 'hole'.
-
-   example in A9L where reference has [R56+2a2e] but code covers 2a15 to 2a31.   R56 is 4,6, or 8  (num cylinders)
+   to the 'hole'.  Example in A9L where reference has [R56+2a2e] but code covers 2a15 to 2a31. R56 is 4,6, or 8  (num cylinders)
    so data ref is moved automatically to 2a32 (+4).
 
-4. Added extra checks for data overlapping code and faulty references.
-
-
-* version 4.0.3d  interim *
-
-1. Yet more fixes for symbols.  Change code for 'find symbol' internally to make consistent 
-2. Added an 'F' option for symbols to indicate a 'flag' byte so that ldb (and ldw) will show individual bit names
-   as OR and AND do.  
-
-
-
-* version 4.0.3c  interim *
-
-1. Incorrect address range handling for syms and rbase causes them not to appear/work reliably in listing
-2. change word ops for bit flags to byte, e.g. from "B8_R34 ="   to "B0_R35 =" for bits > 7  
-
-
-* version 4.0.3b  interim *
-
-fixes for - 
-
-1. not reading back .msg file as a .dir file correctly.   ('U' option and comment lines)
-2. AND and OR not showing single bit flags ("Bx_Rn = 0" style)
-3. Incorrect showing of 'return' shortcut in psuedo code.
-4. Fix incorrect SYM command when defined with an address range.
-
-
+4.  Added extra checks for data overlapping code and faulty references.
+5.  Symbols.  Change code for 'find symbol' internally to make consistent 
+6.  Added an 'F' option for symbols to indicate a 'flag' byte so that ldb (and ldw) will show individual bit names   as OR and AND do.  
+7.  Incorrect address range handling for syms and rbase causes them not to appear/work reliably in listing
+8.  change word ops for bit flags to byte, e.g. from "B8_R34 ="   to "B0_R35 =" for bits > 7  
+9.  fixed not reading back .msg file as a .dir file correctly.   ('U' option and comment lines)
+10. fixed AND and OR not showing single bit flags ("Bx_Rn = 0" style)
+11. Incorrect showing of 'return' shortcut in psuedo code.
+12. Fix incorrect SYM command when defined with an address range.
 
 
 
 ** Version 4.0.3 *****************
 
+Version 4 onwards automatically handle VARIABLE ARGUMENTS in subroutines.  This required some big changes, which broke other things..........
+
 Fixed  -
 
-1. Symbol names not found for some indexed opcodes.
+1. Fixed - Symbol names not found for some indexed opcodes.
 (note that there are some rules implied to stop small offsets being interpreted as special
 registers - i.e. less than 0x20). This rule may need to be changed for some cases.
 
-2. Bug in vect list sometimes not picking up last pointer item in list.
+2. Fixed vect list sometimes not picking up last pointer item in list.
 
 3. Change autonumbered names to <name><address> style instead of <name><sequence number>
 make command options and layout more regular
 
 4. Some rbase (register base pointers) not being detected and missed off.
-
 5. Fix data offset not appearing/working for some commands.
-
 6. Print bank commands with comment so don't get processed (more work here)
-
-
 7. User specified subroutines now work - note change in command structure.  
+8. Doesn't always expand tables (2D lookups) to their full size
 
-NOTE - changed special function commands to -
-
-:F 1 32 : UY : UY
-for 1d lookups (functions) where -
-32 is register holding start address
-first UY in Input size and sign (can be UY, SY, UW, SW)
-second UY is output size and sign
-
-:F 2 32 34 : UY
-For 2D lookups (tables) where -
-32 is register holding start address
-34 is register holding number of columns
-UY is output size and sign (can be UY, SY, UW, SW but no word tables found yet)
-
-Any additional data arguments can be added at the end, for example
-
-sub  2ecf  "SUYLuTEST"   : F 1 36: UY : SY : E 4 f0 N : UWN
-
-is valid and is processed such that the first part "F 1 36: UY : SY" is treated as the special function,
-(e.g. a 1D lookup address in reg 36 unsigned byte in, signed byte out, and the "E 4 f0 N : UWN" specifies
-that the subroutine has 2 word arguments (= 4 bytes), the first is an encoded address type 4 based from register
-0xF0 and the second is a word, and both may have symbols(names).
-
-and sub 3456  "Getaddr"  : E 4 f0 N : UWN  would have same meaning but without the lookup.
-
-- - - - - - - -
-
-Issues remaining -
-
-1. Not sorted out problem with cal console (d006, e006 etc as posted with EARS.bin)
-
-2. bank (and order) commands to sort out
-
-3. missing code blocks (can be fixed by adding 'scan xxxxx' for now)
-
-4. some tables have missed end rows (can fix with a TAB command)
-
-5. data analysis to try to get layout of some of the data structures automatically. 
+10. Fixed problem with incorrect number of arguments (CARD and others)
+11. Fixed problem with listing displaying incorrect number/symbol in indexed opcodes
+12. Fixed 'NULL' symbol with word commands
+13. Added more code to correctly size arguments.    
+14. Fixed crash when commands overlap - now gives error message
+15. Fixed a path problem for Windows which causes no processing to occur 
+16. Fixed symbol name not being resolved for multibank indirects and indexed opcodes
 
 
-** Version 4.0.2 *****************
+** Version 3.08 (and previous) *****************
+NB> No automatic detection of variable arguments !!
 
-Automatically handles VARIABLE ARGUMENTS.
-
-Issues.
-
-Doesn't always expand tables (2D lookups) to their full size
-
-May miss code blocks which are called via a 'remote' push.
-This is where code sets a register remotely form the call.
-E.g. A9L has a LDX, R34, 79f9; and a PUSH(R34); elsewhere,
-so 79f9 is missed. Add a  'scan 79f9' comand in the directive file to sort this.   
-
-Cannot always determine correct order of banks in file for mutlibanks.
-ADDED
-
-TEST > for indirect and indexed opcodes,  added bank number, where it's certain
-that the reference is to an absolute address.
-
-
-FIXES
-
-1. TEMP  - sub command will ignore any extra parameters (symbol name should work)
-2. TEMP  - removed and ignore bank commands - not normally required anyway
-
-3. Fixed problem with incorrect number of arguments (CARD and others)
-4. Fixed problem with listing displaying incorrect number/symbol in indexed opcodes
-5. Fixed 'NULL' symbol with word commands
-6. Added more code to correctly size arguments.    
-7. Fixed crash when commands overlap - now gives error message
-8. Fixed a path problem for Windows which causes no processing to occur 
-9. Fixed symbol name not being resolved for multibank indirects and indexed opcodes
-
-May still not always get correct size of arguments 
-
-
-
-** Version 4.0.1 *****************
-
-Automatically handles VARIABLE ARGUMENTS.
-
-Issues.
-
-Doesn't always expand tables (2D lookups) to their full size
-
-May miss code blocks which are called via a 'remote' push.
-This is where code sets a register remotely form the call.
-E.g. A9L has a LDX, R34, 79f9; and a PUSH(R34); elsewhere,
-so 79f9 is missed. Add a  'scan 79f9' comand in the directive file to sort this.   
-
-May not always get correct size of arguments shows 2 bytes instead of one word,
-but encoded addresses work (as far as I can tell) 
-
-Cannot always determine correct order of banks in file for mutlibanks.
-
-Added SADwin as separate subdirectory, with its source code
-
-- - - - -
-
-2 quick fixes so far, kept version as 4.0.1
-
-1. change SUB command to ignore any extra parameters (works same as SYM for now)
-2. Fix platform problem causing incorrect emulation, and so wrong number of arguments
-   in some subroutines (64 bit linux to 32 bit Windows)
-
-
-... I'm sure there's more bugs to find ! .......
-
-
-- - - - -
-(no version 3.09)
-- - - - -
-
-** Version 3.08 *****************
 
 Fixed  - Incorrect data structure boundary check sometimes causes fail to print next structure correctly. (e.g.table and function)
 
@@ -247,13 +123,6 @@ Tidy up incorrect printout when 'filler' area is not 0xff, which happens in some
 
 Allow operand prints in comment lines with \1 \2 \3 
 
-
-** Version 3.07 *****************
-
-** NOT FULLY TESTED ** INTERIM RELEASE **
-
-Reorder/Tidy opcode internal tables - last phase (I hope)
-
 Fixed -  Fail to pick up a PUSH(addr) in the initial code block as a jump to rest of code (LA3)
 Fixed -  Error in analysis of indexed PUSH(Rxx + ADDR) can cause a data address to be incorrectly interpreted as code.
 Fixed -  Error in processing of function and table lookup subroutines gives inconsistent results for signed vs. unsigned structures. (AGAIN!!)
@@ -263,13 +132,6 @@ Fixed -  Fixed inconsistent output order of newlines with comment blocks
 Change - Hold mechanism (for subroutine arguments) to a more efficient chain setup.
 Added -  Handling of bins which use altstack (R22) for their background task list e.g. BWAK3N2.bin  (needs more testing, but seems to work)
 Added -  optional address ranges for commands RBASE and SYMbol. See documentation for correct syntax.   
-
-Improve print handling of R0 in conditional jumps (not quite right yet...)
-
-Still doesn't always get subroutine arguments right !! 
-
-
-** Version 3.06 *****************
 
 Fixed - ADDC with folowing JC/JNC not including carry flag in comment
 Fixed - JNVT sometimes prints as "if (CY)" should be "if (OVT)"
