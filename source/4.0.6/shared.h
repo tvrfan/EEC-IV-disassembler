@@ -14,6 +14,17 @@
 *  and "__MINGW64__" for 64 Windows builds -- NOT IMPLEMENTED YET
 **************************************************************************/ 
 
+#include  <stdio.h>
+#include  <stdlib.h>
+#include  <ctype.h>
+#include  <fcntl.h>
+#include  <sys/stat.h>
+#include  <stdarg.h>
+#include  <string.h>
+#include  <math.h>
+
+
+
 #ifndef _XSHARX_H
 
 #define _XSHARX_H 1
@@ -24,34 +35,13 @@ typedef unsigned int   uint;
 typedef unsigned long  ulong;
 
 
-/*
-#if defined __linux__ || defined __MINGW64__
-
- typedef unsigned long  ulong;
- typedef long plong;
-
-#endif      
-
-#if defined __MINGW32__ 
-
- //typedef unsigned double  ulong;
- typedef double plong;    
-
-#endif
-*/
-
-
-
-
-
-
 // True banks may be anywhere 0-15,although only 0,1,8,9 used
 // Bank 16 is used for RAM data, sized at 0x2000 bytes
 
 #define BMAX      16             // maximum bank index
 
-#define SADVERSION "4.0.2"
-#define SADDATE    "17/12/2019"
+#define SADVERSION "4.0.6"      // more error fixes
+#define SADDATE    "22 Jun 2020"
 
 // debug defines - when switched on, this causes a LOT of output to _wrn file
 // DBGPRT is kept to make debug code more obvious to view
@@ -59,17 +49,18 @@ typedef unsigned long  ulong;
 
 // #define XDBGX
 
+#define NC(x)  sizeof(x)/sizeof(x[0])     // no of cells in struct 'x'
+
 
 //  file order is (xx.bin, xx_lst.txt, xx_msg.txt, xx.dir, xx.cmt, SAD.ini, xx_dbg.txt)
-
 
 typedef struct
 {
  FILE *fl[7];          // file handles
- uint fillen;           // length of main binary file
+ uint fillen;          // length of main binary file
  int error;            // file read error
 
- char bare[64];       // bare file name (root binary name)
+ char bare[64];        // bare file name (root binary name)
  char path[254];       // path of root binary name
  char dpath[256];      // default path (SAD progam/exe location)
  char fn[7][256];      // full file names with path
@@ -93,50 +84,19 @@ typedef struct                 // indexed by REAL bank id (0-16)
  uchar  *fbuf;                // bin file data pointer for bank
  uint   *opbt;                // bit array pointer.
  
- int     filstrt;             // start FILE OFFSET. ( = real offset - PCORG can be -ve)
- int     filend;              // end   FILE OFFSET. 
- uint     minpc;               // min PC (normally PCORG)
- uint     maxpc;               // end PC (= max PC allowed (where fill starts)
- uint     maxbk;               // where bank really ends
- uint    bok   : 1 ;          // this bank is valid to use
- uint    cmd   : 1 ;          // set by command
- int    dbnk   : 5 ;          // destination bank (setup only...also temp 8065 marker)
- uint    btype : 3 ;          // bank type (code start or not) only ever 1 or 2
+ int   filstrt;               // start FILE OFFSET. ( = real offset - PCORG can be -ve)
+ int   filend;                // end   FILE OFFSET. 
+ uint  minpc;                 // min PC (normally PCORG)
+ uint  maxpc;                 // end PC (= max PC allowed (where fill starts)
+ uint  maxbk;                 // where bank really ends
+ uint  bok      : 1 ;         // this bank is valid to use (and found flag)
+ uint  cmd      : 1 ;         // set by command, only used in set_bnk
+ uint  cbnk     : 1 ;         // code start bank (=8)
+ uint  P65      : 1 ;         // this is an 8065 cpu
+ uint  bkmask   : 4 ;         // dest banks as bitmask
+ uint  dbank    : 4 ;         // dest bank as number
  }  BANK;
 
-
-// define letters as bitmask of a 'int' (32 bit)
-
-#define A  0x1
-#define B  0x2
-#define C  0x4
-#define D  0x8
-#define E  0x10
-#define F  0x20
-#define G  0x40
-#define H  0x80
-#define I  0x100
-#define J  0x200
-#define K  0x400
-#define L  0x800
-#define M  0x1000
-#define N  0x2000
-#define O  0x4000
-#define P  0x8000
-#define Q  0x10000
-#define R  0x20000
-#define S  0x40000
-#define T  0x80000
-#define U  0x100000
-#define V  0x200000
-#define W  0x400000
-#define X  0x800000
-#define Y  0x1000000
-#define Z  0x2000000
-
-
-
-// 6 spare
 
 #endif
 

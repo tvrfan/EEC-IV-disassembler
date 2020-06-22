@@ -12,7 +12,7 @@
 
 #include "core.h"
 
-#define NSGV      16                 // num sig values, but sig code allows for 32
+
 
 
 // OPCODE WORD (top nibble)
@@ -120,27 +120,6 @@ then following patts can match in ANY ORDER.
 
 *************************/
 
-
-typedef struct xsig
-{
- struct xptn *ptn;      // pointer to signature pattern
- uint  start;           // start address of sig found
- uint  end;             // end of signature - only really used to stop multiple pattern matches and overlaps
- uint  done   : 1 ;     // processed marker - for debug really
- uint  skp    : 4 ;     // skipped opcodes at front
-// uint  vflag  : 4 ;     // special values
- uint  v[NSGV];         // 16 saved values
-} SIG;
-
-
-typedef struct xptn
-{
- uint  *sig;                                   // actual sig pattern
- const char *name;                             // name of pattern
- void  (*pr_sig) (SIG *, SBK*);                // sig processor or zero if none
- uint size  : 16;                                   // no of instructions in pattern
- uint vflag  : 4;
-} PAT;
 
 
 #endif

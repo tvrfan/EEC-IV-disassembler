@@ -3,28 +3,32 @@ Version Summary
 
 --- Added 'daily' subdirectory for latest test versions ---
 
-** Version 4.0.6x (in Daily - ongoing changes, but should be stable) *****************
+** Version 4.0.6 *********
 
 Main changes -
 
-1.  Added many more error checks, error and warning reports to command processing, to give better user feedback (some commands failed silently before)
+1.  Added many more error checks, error and warning reports to command processing to give better user feedback (commands failed silently before)
 2.  Added a new 'global level' options to command structure.
-3.  Added alternate layout options for subroutine arguments and structures.
-4.  Layout improvments, including lining up columns with symbol names.
-5.  Longer symbol names supported (up to 63 chars)
-6.  New style of comments 'special sequences' to control comment layouts.
+3.  Added alternate layout options for subroutine arguments and structures (in global level).
+4.  Moved special function and terminator commands to global level.
+5.  Changed special purpose subroutines commands to make them more obvious
+6.  Print layout improvements, including lining up columns with symbol names.
+7.  Longer symbol names supported (up to 63 chars)
+8.  New style of comment 'special sequences' to control comment layouts.
 
-7.  Fixes for several symbol name issues.
-8.  Fixes for symbol names which don't appear in the listings. 
-9.  Added extra checks and fixes for non-standard bank ordering and detection in multibanks.
-10. Added new options command which uses meaningful text names instead of letters.
-11. changed code for warnings raised (thanks dantob)
+9.  Fixes for several symbol name issues.
+10. Fixes for symbol names which don't appear in the listings. 
+11. Extra checks and fixes for non-standard bank ordering and auto detection in multibank bins.
+12. Replaced options command with 'setopts' which uses meaningful text strings instead of letters.
+13. changed code for cppcheck warnings raised (thanks dantob)
+14. Fixes for ignored arguments in user commands.
 
-plus many minor bug fixes.
+15. Many minor bug fixes, mostly print layout. (honestly, I've lost track of these smaller ones)
 
-will add a new pdf manual for these changes soon.
+16. Added new pdf manual and separate command definition for version 4.0.6.
 
-Special thanks to jsa for all his testing and feedback
+Special thanks to jsa for all his testing and feedback with 4.0.6
+
 
 
 ** Version 4.0.5 *****************

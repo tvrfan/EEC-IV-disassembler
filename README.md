@@ -6,13 +6,14 @@ NOTE - this code is intended to help understand only how each EEC works, not as 
 
 Split into separate subdirectories.
 
-Latest Version is 4.0.5
+Latest Version is 4.0.6
 
 -------------------------------------------------
 
 Docs subdirectory
 
-SAD.pdf		disassembler documentation and user manual
+SAD_to_4.0.6.pdf		disassembler documentation and user manual BEFORE 4.0.6
+
 
 SADWIN.pdf	Windows Wrapper documentation
 

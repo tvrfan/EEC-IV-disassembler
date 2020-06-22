@@ -21,6 +21,12 @@ int    g_byte    (uint);
 int    g_word    (uint);
 
 
+#ifdef XDBGX
+int DBGPRT( int, const char* fmt, ...);
+#endif
+
+
+
 extern OPC   opctbl[];
 extern uchar opcind[];
 extern BANK  bkmap[];
@@ -28,7 +34,7 @@ extern int   cmdopts;
 extern int   anlpass;
 extern int   datbnk;
 
-extern CHAIN sigch;
+extern CHAIN chsig;
 extern int casz[];
 
 int bgv[NSGV];             // backup signature values
@@ -46,10 +52,12 @@ uint initial[] =
 uint ignint[] = {0x80001014};                        // single ret or reti
 
 
+/* doesn't work for URAL !!!
 uint vect3[] = {                               // generic - push followed by ret (closely).  experiment !!
 0x400f6000,                                    // skip up to 6 opcodes, to a ret
 0x80001014 
 };
+*/
 
 // this may now be covered by a vect3 ?
 
@@ -290,6 +298,22 @@ uint enc13 [] = { // encoded addresses type 3 and 1 (A9L etc)
 };
 
 
+
+uint rbse [] = {       // rbase array code
+
+0x8000300c,  0x100f0, 0x20018,                     // ldw   R18,f0
+0x8000400c,  0x0,     0x30020, 0x5001a,            // ldb   R1a,[0+2020];
+0x8000300c,  0x60014, 0x7001c,                     // ldw   R1c,[R14++]
+0x8000300d,  0x20018, 0x7001c,                     // stw   R1c,[R18++]
+0x80003012,  0x5001a, 0x800f7,                     // djnz  R1a,d477
+};
+
+
+
+
+
+
+
 // process subroutine for sigs
 
 void fnplu  (SIG*, SBK*);
@@ -297,6 +321,7 @@ void tbplu  (SIG*, SBK*);
 void encdx  (SIG*, SBK*);
 void ptimep (SIG*, SBK*);
 void avcf   (SIG*, SBK*);
+void rbasp  (SIG*, SBK*);
 
 // *****  PATS are sign,name, sigproc, size.
 
@@ -305,7 +330,18 @@ void avcf   (SIG*, SBK*);
 // these three specifically called
 PAT hdr    = {initial, "INIT"   , 0 , NC(initial) ,0 };         // initial jump
 PAT intign = {ignint,  "IGNINT" , 0 , NC(ignint)  ,0 };         // ignore interrupt
-PAT vc3    = {vect3,   "vect3"  , 0 , NC(vect3)   ,0 };
+//PAT vc3    = {vect3,   "vect3"  , 0 , NC(vect3)   ,0 };
+
+
+// prescan sigs
+
+PAT rbase =  {rbse,    "RBASE",  rbasp,  NC(rbse),   0};      //, 0, 0,  rbasp,  sdumx };    // rbase lookup
+
+PAT *prepats[] = {&rbase};          
+
+
+
+
 
 
 PAT tint   = {ttrps,   "istrp"  , 0 , NC(ttrps)   ,0 };    // table interpolate (for signed/unsigned checks)
@@ -317,8 +353,8 @@ PAT *apats[] = {&tint};
 
 // scanned with code scans if  PSIGS  set
 
-PAT avcl = {avct,   "AVCT" , avcf   , NC(avct)  ,0 };      // altstack vector list
-PAT timr = {times,  "TIMER", ptimep , NC(times) ,0 };     // timer list
+PAT avcl = {avct,   "AVCT" , avcf   , NC(avct)  ,0 };    // altstack vector list
+PAT timr = {times,  "TIMER", ptimep , NC(times) ,0 };    // timer list
 PAT fnlp = {fnlu,   "FnLU" , fnplu  , NC(fnlu)  ,0 };    // func lookup - byte or word
 PAT tblp = {tbl2,   "TBL2" , tbplu  , NC(tbl2)  ,0 };    // table lookup, later multibank
 PAT tblx = {tblu,   "TBLU" , tbplu  , NC(tblu)  ,0 };    // table lookup, early
@@ -466,7 +502,7 @@ int do_jumpsig (int inx, int foff)
          joff = negval (g_word(foff+1), 0x8000) + 3;
 
       joff+=foff;                                    // gets bank from foffset
-      if (joff < 0 || joff >= maxadd(foff)) joff = 0;
+      if (joff >= maxadd(foff)) joff = 0;
       if (inx > 75 && inx < 80) joff = 0;                             // Don't keep if a ret
      }
      
@@ -848,7 +884,7 @@ SIG* find_sig (PAT *ptn, int xofst)
 
   if (ofst < minadd(ofst)  || ofst >= max)  return 0;
 
-  z = (SIG *) chmem(&sigch);            // use insert candidate directly....
+  z = (SIG *) chmem(&chsig);            // use insert candidate directly....
   z->ptn = ptn;
 
   // check for redundant opcodes at front
@@ -968,7 +1004,7 @@ SIG* scan_sigs (int ofst)
  return s;
 }
 
-/*
+
 void prescan_sigs (void)
 {
  // scan whole binary file (exclude fill areas) for signatures first.
@@ -982,7 +1018,10 @@ void prescan_sigs (void)
   if (PMANL) return;
   if (!(PSIG)) return;
 
- // wnprt("\n -- Scan whole bin for init sigs --\n");
+  #ifdef XDBGX
+   DBGPRT(1,0);
+   DBGPRT(1," -- Scan whole bin for pre sigs --");
+  #endif
 
   for (i = 0; i < BMAX; i++)
    {
@@ -1006,9 +1045,11 @@ void prescan_sigs (void)
        }
    }
 
-// wnprt("\n -- END Scan whole bin--\n");
+ #ifdef XDBGX
+   DBGPRT(2," -- End Scan whole bin --");
+  #endif
 }
-*/
+
 
 
 

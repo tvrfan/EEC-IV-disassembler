@@ -1,0 +1,20 @@
+
+
+
+4.0.7.1  (22 June 2020)
+
+Complete rework of internal bank structure layout.
+
+1. Fixed display of RAM addresses in multibanks to always show bank.
+2. Fixed bank location error with 'short bank' file layouts (e.g. RZAS range)
+3. Improved bank location to handle more .bin file layout problems automatically.
+3. Added support for later "StepD" 8065 with extra address mode.
+4. Widened allowed address range in each bank to support specialist chips.
+4. Reworked pseudo code for contional jumps for Carry (JC/JNC),  Overflow (JV/JNV)
+  
+
+NB. overflow is still probably wrong for some cases - awaiting more feedback.
+
+
+4.0.6 released as stable (was 4.0.6P)
+
