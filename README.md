@@ -12,7 +12,9 @@ Latest Version is 4.0.6
 
 Docs subdirectory
 
-SAD_to_4.0.6.pdf		disassembler documentation and user manual BEFORE 4.0.6
+SAD_user_manual_to_4.0.6.pdf		disassembler documentation and user manual BEFORE 4.0.6
+SAD_user_manual_4.0.6_onwards.pdf	disassembler documentation and user manual
+SAD_commands_definition.pdf		complete command definition, and comments file definition.
 
 
 SADWIN.pdf	Windows Wrapper documentation
@@ -63,8 +65,8 @@ If no sad.ini present, then everything must be in same directory as SAD
 Source Subdirectory
 
 Contains sources and headers to build SAD.  Last few versions are available.
-I have used CodeBlocks and Codelite as compilers/IDE, should be able to use any common compiler/linker.
-Not sorted out a makefile, it's a straight compile and link of the 3 .cpp files. 
+I have used CodeBlocks and Codelite as compilers/IDE, should be able to use any common 'C' compiler/linker.
+Not sorted out a makefile, it's a straight compile and link of the .cpp files. 
 
 Separate Subdirectory SADWin containing the source for the Win32API graphic interface for SAD (binfile select,
 viewing various files and config)
