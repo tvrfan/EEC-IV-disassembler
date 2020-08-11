@@ -41,3 +41,10 @@ There are still things/bugs outstanding.
 4. Conditional jumps psuedo code - there is still some debate about the best way to represent some jumps in sensible way - JC/JNC, JV/JNV.  These are likely to change.
 
 5. Print Layout options may still have some quirks to be ironed out...
+
+
+A note about address representation.
+
+After reworking banks in 4.0.7, SAD now shows all addresses below 0x400 without a bank number, as they are registers in CPU, and all other addresses as having a bank.
+For single banks, no bank numbers are shown anywhere.
+This might look strange, as some bins have RAM at 10400, which means that 0x3ff - 0x10400 is actually contiguous, but doesn't look like it
