@@ -39,3 +39,15 @@ NB. overflow (JV/JNV) is still probably wrong pseudeo code for some cases - awai
 10. Fix problem with comments not always appearing correctly in extended data print
 11. Change option 'X' (flip between hex and decimal) to more consistent  "print radiX"  as 'X n' where n is 2, 10 or 16 (binary, decimal, hex) 
 12. Fix problem when subroutine declared by user and arguments then not calculated correctly. 
+
+
+4.0.7.3 (18 Aug 2020)
+
+1. Fixed  Incorrect print of Signed byte in HEX or BIN modes in struct printouts.
+2. Fixed  Fail to pick up sym name in some indirect ops 
+3. Fixed  Fails to identify some accessed data in listing. (did show as default = '??')
+4. Fixed  Defining a subroutine (i.e. SUB xxxx in DIR file) can stop some code being correctly identified.
+5. Fixed  SAD does not correctly check data overlap with args command - can lead to incorrect args printout.
+6. Revert some 'auto-bits' rules for some bitwise operands - was too wide. User options 'F' and 'N' with SYM commands covers these. 
+7. Revert to 'short form' operands as in "A += B" style. Did cause problem in 'if ( )' prints
+
