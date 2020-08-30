@@ -7,20 +7,22 @@ NOTE - this code is intended to help understand only how each EEC works, not as 
 Split into separate subdirectories.
 
 Latest Stable Version      is 4.0.6
+
 Latest Development Version is 4.0.7.3
 
 -------------------------------------------------
 
 Docs subdirectory
 
-SAD_user_manual_to_4.0.6.pdf		disassembler documentation and user manual BEFORE 4.0.6
-SAD_user_manual_4.0.6_onwards.pdf	disassembler documentation and user manual
+SAD_user_manual_to_4.0.6.pdf		disassembler documentation and user manual BEFORE 4.0.6.
+
+SAD_user_manual_4.0.6_onwards.pdf	disassembler documentation and user manual.
+
 SAD_commands_definition.pdf		complete command definition, and comments file definition.
 
+SADWIN.pdf	Windows Wrapper documentation.
 
-SADWIN.pdf	Windows Wrapper documentation
-
-Version.txt	Short description of bugs fixed and changes made by version
+Version.txt	Short description of bugs fixed and changes made for each version.
 
 -------------------------------------------------
 
@@ -76,7 +78,8 @@ viewing various files and config)
 
 Development Subdirectory
  
-
 early releases of SAD versions for testing - probably stable, but not guaranteed.
+
+Version.txt	Short description of bugs fixed and changes made for each version
 
 
