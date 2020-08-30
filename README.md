@@ -73,7 +73,7 @@ viewing various files and config)
 
 ----------------------------------
 
-Daily Subdirectory
+Development Subdirectory
  
 
 early releases of SAD versions for testing - probably stable, but not guaranteed.
