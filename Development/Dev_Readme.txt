@@ -30,9 +30,10 @@ The command 'pswset' has been added to specify where the 'source' for the condit
 
 
 
-3. Data structures not being found.   Where an address is referenced directly, then this is always found.  (same for an RBASE+offset)
+3. Data structures not being found.   Where an address is referenced directly, then this is always found.  Same for an [RBASE+offset].  
    Where a 'set' of structures are referenced by [Register+base_addr], SAD will typically only see the first one at base-addr.  This is because there is no easy way to know the possible value ranges of the register.
-   Loops which access lists of items are similar, only the first few will be identified.  Vector (pointer) lists do work as they are verified in a different way.
+   Loops which access lists of items are similar, only the first few will be identified.  Vector (pointer) lists do work as they are verified in a different way. Some are missed entirely, an example being where 
+   a register is assigned an address which is pushed onto the stack and used later.
 
 
 4. Conditional jumps psuedo code - there is still some debate about the best way to represent some jumps in sensible way - JC/JNC, JV/JNV.  These are likely to change.

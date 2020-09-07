@@ -51,3 +51,12 @@ NB. overflow (JV/JNV) is still probably wrong pseudeo code for some cases - awai
 6. Revert some 'auto-bits' rules for some bitwise operands - was too wide. User options 'F' and 'N' with SYM commands covers these. 
 7. Revert to 'short form' operands as in "A += B" style. Did cause problem in 'if ( )' prints
 
+4.0.7.4 (8 Sept 2020)
+
+1. Fixed   - incorrect auto assignment and subsequent print of rbase registers.
+2. Fixed   - display of 'Bx_RN' style prints with an3b
+3. Added   - alignment of comments with structure of differing size lines (e.g. with '|' instead of ':') 
+4. Added   - simple wrap check for comments, will wrap whole word from nearest space. 
+5. Changed - an3b and an3w will now spread bit names over multiple lines for clearer display.
+6. Added   - Support for split comments using "\|" to match multiple line opcodes (an3b, orb, etc) (in 5. above)
+7. Restore - extra checks for data and code 'holes' (removed for testing, and not put back properly in .3)
