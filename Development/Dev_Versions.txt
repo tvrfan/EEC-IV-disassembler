@@ -60,3 +60,26 @@ NB. overflow (JV/JNV) is still probably wrong pseudeo code for some cases - awai
 5. Changed - an3b and an3w will now spread bit names over multiple lines for clearer display.
 6. Added   - Support for split comments using "\|" to match multiple line opcodes (an3b, orb, etc) (in 5. above)
 7. Restore - extra checks for data and code 'holes' (removed for testing, and not put back properly in .3)
+
+4.0.7.5 (12 Sept 2020)
+
+1. Fixed   - possible crash with long symbol names.
+2. Fixed   - "}" Brackets in wrong place with bit names
+3. Fixed   - Split comments not handled correctly with an3b, an3w
+4. Fixed   - Split comments wrongly adds extra spaces if "\|" sequence is at end of comment
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
