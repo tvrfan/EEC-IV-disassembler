@@ -61,7 +61,9 @@ NB. overflow (JV/JNV) is still probably wrong pseudeo code for some cases - awai
 6. Added   - Support for split comments using "\|" to match multiple line opcodes (an3b, orb, etc) (in 5. above)
 7. Restore - extra checks for data and code 'holes' (removed for testing, and not put back properly in .3)
 
-4.0.7.5 (12 Sept 2020)
+4.0.7.5 Removed due to screw up with processing of the '#' character 
+
+4.0.7.6 (13 Sept 2020)
 
 1. Fixed   - possible crash with long symbol names.
 2. Fixed   - "}" Brackets in wrong place with bit names
