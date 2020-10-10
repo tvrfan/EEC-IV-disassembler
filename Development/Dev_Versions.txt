@@ -71,7 +71,15 @@ NB. overflow (JV/JNV) is still probably wrong pseudeo code for some cases - awai
 4. Fixed   - Split comments wrongly adds extra spaces if "\|" sequence is at end of comment
 5. Changed - Symbol Names can now be up to 96 characters.
 
+4.0.7.7 (11 Oct 2020)
 
+Fixed    - Extra spaces printed in some comment lines.
+Fixed    - Extra quotes in name and leading spaces after a quote confuses command processing
+Fixed    - Faulty printout of bitwise code for some AD3W opcodes (when they should be ADD) 
+Fixed    - Overlap of some functions and tables not detected, leading to faulty printout
+Fixed    - Incorrect bank calculated for some opcodes, leading to wrong or missing symbols (Multibanks)
+Improved - Sizes of subroutine arguments better (i.e. word or byte) after bugs found. Still not perfect.
+Added    - better detection of single 'fill' bytes, now printed as 'fill' instead of '???'
 
 
 

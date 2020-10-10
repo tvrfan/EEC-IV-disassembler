@@ -8,8 +8,6 @@ Split into separate subdirectories.
 
 Latest Stable Version      is 4.0.6
 
-Latest Development Version is 4.0.7.3
-
 -------------------------------------------------
 
 Docs subdirectory
