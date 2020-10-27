@@ -82,8 +82,13 @@ Improved - Sizes of subroutine arguments better (i.e. word or byte) after bugs f
 Added    - better detection of single 'fill' bytes, now printed as 'fill' instead of '???'
 
 
+4.0.7.8 (28 Oct 2020)
 
+Fixed -  Missing symbols when processed in 'not SYM' commands (i.e. WORD 3234 3235 "MyName" not handled correctly, but SYM 3234 "MyName" was).
+         May still be incorrect for multibank argument symbols.
 
+NB. This is an interim release - made some big internal changes to code, which should not be visible to users (I hope !). 
+Trying to improve subroutine arguments, for recognition of size, symbols and other features (encoded works, but not always, offsets do not).
 
 
 
