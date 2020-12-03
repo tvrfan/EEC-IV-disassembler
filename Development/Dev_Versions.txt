@@ -90,10 +90,11 @@ Fixed -  Missing symbols when processed in 'not SYM' commands (i.e. WORD 3234 32
 NB. This is an interim release - made some big internal changes to code, which should not be visible to users (I hope !). 
 Trying to improve subroutine arguments, for recognition of size, symbols and other features (encoded works, but not always, offsets do not).
 
+4.0.7.9 (4 Dec 2020)
 
+Fixed - Bank detect not picking up banks correctly in some binaries - changed detect algorithm
 
-
-
+Changed internal bank handling so that addresses without bank ca be recognised, so symbol names are resolved for subroutine arguments. 
 
 
 
