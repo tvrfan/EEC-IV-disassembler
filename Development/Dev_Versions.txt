@@ -93,9 +93,18 @@ Trying to improve subroutine arguments, for recognition of size, symbols and oth
 4.0.7.9 (4 Dec 2020)
 
 Fixed - Bank detect not picking up banks correctly in some binaries - changed detect algorithm
+Changed internal bank handling so that addresses without bank can be recognised, so symbol names are better resolved for subroutine arguments. 
 
-Changed internal bank handling so that addresses without bank ca be recognised, so symbol names are resolved for subroutine arguments. 
+4.0.7.10 (12 Dec 2020)
+
+Fixed - Possible crash with corrupt or non-806x binaries.
+Fixed - 'catch22' where non-detect of banks could not be overriden with user commands.  More error checks added here too.
+Fixed - Incorrect bank processing for sym names in multibanks.
+
+Changed - default to adding bank 1 in multibanks for addresses with no bank.  (NB. This cannot work in all cases, only where use is obviously an address)
 
 
 
+
+  
 
