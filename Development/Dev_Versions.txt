@@ -103,6 +103,13 @@ Fixed - Incorrect bank processing for sym names in multibanks.
 
 Changed - default to adding bank 1 in multibanks for addresses with no bank.  (NB. This cannot work in all cases, only where use is obviously an address)
 
+4.0.7.11 (21 Dec 2020)
+
+Fixed - Comments get pushed up to start of bank (multibanks only).
+Fixed - Bit-wise opcodes not displaying symbols above bit 7 for CLRW (incorrectly set as byte)
+Fixed - 'W' flag with symbols not working if set in upper byte.
+Fixed - According to Ford manuals, the 'odd address' word mode for 8065 CPU does not apply for registers below R20.
+Fixed - internal change to ranges indexing for symbols and rbases, it was possible to 'lose' a symbol entirely.
 
 
 
