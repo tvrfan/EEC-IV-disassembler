@@ -49,6 +49,9 @@ Fixed - According to Ford manuals, the 'odd address' word mode for 8065 CPU does
 Fixed - internal change to ranges indexing for symbols and rbases, it was possible to 'lose' a symbol entirely.
 
 
+4.0.7.12 (24 Dec 2020)
 
-  
+Fixed - Regression errors with comments layout from version .11.
+Fixed - Regression errors with rbase and syms after .11 changes
+
 
