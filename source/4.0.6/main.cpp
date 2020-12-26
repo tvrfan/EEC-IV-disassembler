@@ -6,6 +6,10 @@
 #include <string.h>                // linux
 #include "shared.h"
 
+#ifdef __ANDROID__
+#include "android/log.h"
+#endif
+
 int    get_config(char **);
 void   shutdwn   (void);
 void   startup   (void);
