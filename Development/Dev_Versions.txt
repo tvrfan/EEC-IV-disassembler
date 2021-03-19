@@ -54,4 +54,22 @@ Fixed - internal change to ranges indexing for symbols and rbases, it was possib
 Fixed - Regression errors with comments layout from version .11.
 Fixed - Regression errors with rbase and syms after .11 changes
 
+4.0.7.13 (20 March 2021)
+
+Fixed - additional data printout of bank (i.e. : K <n>)  shows (bank + 1).
+Fixed - additional command input required :k <bank+1>  e.g. :K 9 instead of : k 8
+Fixed - immediate push did not resolve bank address printout correctly in multibanks.
+
+comment changes - removed '\P' sequence in comments.
+                  added '\M' = next tab, like word processors
+                  added \R<ch><num>  = runout char 'ch' num times, and \R<num> = runout 'space' num times
+                  added \SW<add> to find write symbol instead of read sym
+
+Temporarily removed autocomments (may move to _msg file to help keep clarity of printouts)
+
+
+
+
+
+
 
