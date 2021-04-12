@@ -67,8 +67,9 @@ comment changes - removed '\P' sequence in comments.
 
 Temporarily removed autocomments (may move to _msg file to help keep clarity of printouts)
 
+4.0.7.14 (20 March 2021)
 
-
+Changed - ALL odd addressed word ops change bank. (SFRs were ignored)
 
 
 
