@@ -4420,7 +4420,7 @@ int score_row_match(uint *start, uint rowsize)
 
     int a,b, score;
 
-
+// perhaps this should be DOWNWARDS ??
  
        for (i = 0; i < rowsize; i++)       // compare this row to the 'base'
           {
@@ -5251,7 +5251,7 @@ void scan_gaps(void)
         cb = get_aux_cmd(start, 0);
         if (!cb || cb->fcom != C_XCODE)
          {  //  not XCODE
-          if (d->stdat > end || d->psh) 
+          if (d && (d->stdat > end || d->psh)) 
             {
              DBGPRT(1,"No data - Code scan ");
              scan_sgap(start);
