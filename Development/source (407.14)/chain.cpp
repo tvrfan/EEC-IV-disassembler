@@ -5251,7 +5251,7 @@ void scan_gaps(void)
         cb = get_aux_cmd(start, 0);
         if (!cb || cb->fcom != C_XCODE)
          {  //  not XCODE
-          if (d->stdat > end || d->psh) 
+          if (d && (d->stdat > end || d->psh)) 
             {
              DBGPRT(1,"No data - Code scan ");
              scan_sgap(start);
