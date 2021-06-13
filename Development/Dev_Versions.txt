@@ -67,9 +67,16 @@ comment changes - removed '\P' sequence in comments.
 
 Temporarily removed autocomments (may move to _msg file to help keep clarity of printouts)
 
-4.0.7.14 (20 March 2021)
+4.0.7.14 (20 March 2021)  {removed exe}
 
-Changed - ALL odd addressed word ops change bank. (SFRs were ignored)
+4.0.7.15 (14 June 2021)
+
+Fixed - Bug with immediate byte shown as word (LDZBW, LDSBW, ML2B, ML3B, etc.)
+Fixed - infinite loop in internal data tracking (before printout) 
+
+Changed - temporarily removed auto code and data detection from 'gaps' as it doesn't work properly.
+Changed - ALL odd addressed word ops change bank. (SFRs were ignored before)
+
 
 
 
