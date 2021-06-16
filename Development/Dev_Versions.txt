@@ -77,7 +77,8 @@ Fixed - infinite loop in internal data tracking (before printout)
 Changed - temporarily removed auto code and data detection from 'gaps' as it doesn't work properly.
 Changed - ALL odd addressed word ops change bank. (SFRs were ignored before)
 
+4.0.7.16 (16 June 2021)
 
-
+Fix print bug which shows wrong value for STW (probably only happens in test bins) 
 
 
