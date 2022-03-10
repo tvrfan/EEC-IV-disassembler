@@ -1488,7 +1488,7 @@ uint val_input_bank(uint addr)
   uint bk;
   // registers always OK.
   // uses internal bank, already +1
-  if (nobank(addr) < max_reg()) return 1;
+  if (nobank(addr) <= max_reg()) return 1;
 
   bk = addr >> 16;
 
