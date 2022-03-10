@@ -81,4 +81,6 @@ Changed - ALL odd addressed word ops change bank. (SFRs were ignored before)
 
 Fix print bug which shows wrong value for STW (probably only happens in test bins) 
 
+10 March - minor fix, so not upped version number. Fix incorrect read of symbols at 0x3ff returning "invalid bank" 
+
 
