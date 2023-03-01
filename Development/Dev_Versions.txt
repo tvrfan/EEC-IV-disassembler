@@ -83,4 +83,34 @@ Fix print bug which shows wrong value for STW (probably only happens in test bin
 
 10 March - minor fix, so not upped version number. Fix incorrect read of symbols at 0x3ff returning "invalid bank" 
 
+-------------------------------------------------------------
+
+4.0.8  (01 Mar 2023)
+
+After a HUGE gap, during which I was trying to write a new neater, much more elegant version (which so far I can't get to work...)
+I decide to go back to the last working version and start over.
+
+Fixed - Inconsistent handling of addresses (bank prefixes) in multibanks across symbols, comments, commands.
+
+NB. I expect probable regression errors as I have changed the whole address verification to use same routine...
+so let me know any you find, with examples please, as tvrfan99@gmail.com 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
