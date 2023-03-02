@@ -3465,6 +3465,31 @@ R/W    Write = 0 Read = 1
 }
 
 
+uint fix_bare_addr(uint addr)
+{
+  // force single bank addrs to bank 9,
+  // add databank if there isn't one
+  // this is internal so no bank addition
+
+  uint x;
+  x = nobank(addr);
+
+  // < 0x400 is a register, no bank
+  if (x <= max_reg()) return x;
+
+  // single banks always 9 (databank)
+  if (!numbanks)      return x | basepars.datbnk;
+
+  // no bank and multibank, default to databank - is this right ??
+
+  if (!g_bank(addr))  return x | basepars.datbnk;
+
+  return addr;
+
+}
+
+
+
 SYM* get_sym(uint rw, uint add, uint bitno, uint pc)
 {
 
@@ -3473,7 +3498,7 @@ SYM* get_sym(uint rw, uint add, uint bitno, uint pc)
 
   uint adds[4];
 
-  //  add = fix_input_addr(add);
+  add = fix_bare_addr(add);
 
   s = (SYM*) chmem(&chsym,1);     // block for search
 

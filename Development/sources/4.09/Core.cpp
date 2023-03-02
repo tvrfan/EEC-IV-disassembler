@@ -351,42 +351,6 @@ DIRS dirs[23] = {
 };
 
 
-/*   original
-
-DIRS dirs[23] = {
-
-// these go in cmd chain
-{ set_data, pp_dflt,  2, 7, 0, 0,    0,  0, 1,   1, 0,   0,           0    },               // fill  (default) MUST be entry zero
-{ set_data, pp_wdbl,  2, 7, 0, 1,    1,  0, 1,   1, 0,   0,           "PSUXV" },            // byte
-{ set_data, pp_wdbl,  2, 7, 0, 1,    1,  0, 2,   1, 0,   0,           "PSUXV" },            // word
-{ set_data, pp_wdbl,  2, 7, 0, 1,    1,  0, 2,   0, 0,   0,           "PSUXV" },            // triple
-{ set_data, pp_wdbl,  2, 7, 0, 1,    1,  0, 3,   0, 0,   0,           "PSUXV" },            // long
-{ set_data, pp_text,  2, 7, 0, 0,    0,  0, 1,   1, 0,   0,           0  } ,                // text
-{ set_vect, pp_vect,  2, 7, 0, 1,    1,  0, 2,   0, 0,   0,           "DKQ"},               // vect
-{ set_tab,  pp_stct,  2, 7, 0, 1,    1,  1, 0,   0, 0,   0,           "OPSUVWXY" },         // table
-{ set_func, pp_stct,  2, 7, 0, 1,    2,  2, 0,   0, 0,   0,           "LPSUVWXY" } ,        // func
-{ set_stct, pp_stct,  2, 7, 0, 1,    15, 1, 0,   0, 0,   "QAC",       "DELNOPRSUVWXY|" },   // struct
-{ set_time, pp_timer, 2, 7, 0, 1,    2,  0, 0,   0, 0,   0,           "NTUWY" },            // timer
-{ set_code, pp_code,  2, 7, 0, 0,    0,  0, 0,   1, 0,   0,           0  } ,                // code
-
-//these go in aux chain
-{ set_args, pp_dflt,  2, 7, 0, 0,    15, 1, 0,   0, 0,   0,           "DELNOPSUVWXY|" },    // args
-{ set_cdih, pp_dmy,   2, 7, 0, 0,    0,  0, 0,   1, 0,   0,           0  } ,                // xcode
-
-
-{ set_subr, pp_dmy,   1, 0, 7, 1,    15, 0, 0,   0, 0,   "ACF",       "DELNOPSUVWXY|=" },   // subr
-{ set_scan, pp_dmy ,  1, 0, 7, 0,    0,  0, 0,   0, 0,   0,           0   },                // scan
-{ set_rbas, pp_dmy,   4, 1, 2, 0,    0,  0, 0,   0, 0,   0,           0   },                // rbase
-
-{ set_sym,  pp_dmy,   3, 0, 1, 1,    1,  0, 0,   0, 0,   0,           "BFITWN"    },        // sym
-{ set_bnk,  pp_dmy,   4, 7, 7, 0,    0,  0, 0,   0, 0,   0,           0 },                  // bank
-
-{ set_opts, pp_dmy,   0, 7, 7, 0,    1,  0, 0,   0, 1,   0,           0 },                  // set options (external strings array)
-{ clr_opts, pp_dmy,   0, 7, 7, 0,    1,  0, 0,   0, 1,   0,           0 },                  // clear options
-{ set_psw,  pp_dmy,   2, 0, 7, 0,    0,  0, 0,   0, 0,   0,           0 },                  // psw setter for '0=0' jumps
-{ set_lay,  pp_dmy,   3, 7, 7, 0,    0,  0, 0,   0, 0,   0,           0 }                   // layout for prints
-};
-*/
 
 /**********************
  * opcode index to opcode definition table
@@ -4909,6 +4873,14 @@ void scan_blk(SBK *s, INST *c)
          #ifdef XDBGX
          DBGPRT(1,"Ignore Scan %x", s->start);
          #endif
+
+
+
+
+         // BUT could do fnplu or tbplu here !!!
+
+
+
          return;
         }
 
@@ -7243,7 +7215,7 @@ void fix_sym_names(const char **tx, INST *c)
         if (addr < 0) addr = -addr;                // effective wrap around ? never true.......
 
 //        o->addr = o->val + c->opr->addr;                 // add [0] to get true address
-        o->addr = databank(addr, c);                  // need bank for index addition
+        o->addr = databank(addr, c);                       // need bank for index addition
 
         o->rgf = 0;
         o->sym = 0;
@@ -9493,7 +9465,7 @@ void skj(SBK *s, INST *c)
 
     if (s->scanning)
       {
-       do_sjsubr(s, c, J_STAT);
+       do_sjsubr(s, c, J_COND);
        return;
       }
 
@@ -9620,6 +9592,11 @@ void bka(SBK *s, INST *c)
  }
 
 
+
+
+
+
+
 void do_code (SBK *s, INST *c)
 
 {
@@ -9714,6 +9691,35 @@ void do_code (SBK *s, INST *c)
 
   opl = opctbl + indx;
 
+
+
+
+
+ //------------
+
+  if (indx == 80 && s->scanning)
+   {         // skip
+     // if opcode = skip, check that next opcode is only a single byte (i.e. no operands)
+     // otherwise skip MUST be an invalid opcode. Others make no sense also (index >= 106 , ret, skip, etc)
+     // assumes this is not a single data byte (very unlikely)
+     // check operands for SFRs later on.
+
+    const OPC *n;
+    uint ix;
+
+    ix = opcind[g_byte(xofst+1)];
+
+    n = opctbl + ix;
+
+    if (ix >= 106 || ix == 80 || n->sigix == 20 || n->nops)
+     {
+      #ifdef XDBGX
+          if (anlpass) DBGPRT(0,"[Skip] + %s !INV!", n->name);
+       #endif
+      indx = 0;
+     }
+   }
+
   if (!indx)
      {
        s->inv = 1;
@@ -9727,6 +9733,8 @@ void do_code (SBK *s, INST *c)
 
        return;
      }
+
+//------------
 
   c->opcsub = x & 3;                               // this is valid only for multimode opcodes
   c->opcix = indx;                                 // opcode index
@@ -9781,9 +9789,9 @@ uint pp_code (uint ofst, LBK *k)
   INST *c;
  // JMP *j;
 
-//if (ofst == 0x9211f)
+//if (ofst == 0x9250f)
 //{                         //xdt2
-//DBGPRT(1,0);
+//DBGPRT(0,0);
 //}
 
 
@@ -10081,7 +10089,9 @@ uint fix_input_addr_bank(CPS *c, int ix)
 
    rlen = c->pf[ix] & HXRL;     //read length
 
-   if (rlen < 4) return 0;        //ok, register.
+   if (c->p[ix] <= max_reg()) return 0;        //register
+
+//   if (rlen < 4) return 0;        //ok, register.  WRONG!! original was max reg
 
    if (!numbanks)
      {
@@ -10092,7 +10102,6 @@ uint fix_input_addr_bank(CPS *c, int ix)
      {          // multibank
        if (rlen < 5) return 1;    // must have bank
        c->p[ix] +=  0x10000;
-        //   (*n) &= 0xfffff;     // kill all flags
      }
    return 0;
  }
@@ -11434,6 +11443,7 @@ int getpx(CPS *c, int ix, int limit)
   while (ix < limit)
    {
        //allow a '-' ?? for 'D'
+            readpunc(c);
      if (!gethex(c->cmpos,&n, &rlen)) break;
 
 
@@ -11441,8 +11451,7 @@ int getpx(CPS *c, int ix, int limit)
      c->pf[ix] = rlen;
      c->cmpos += (rlen & HXRL);
      ans++;
- //    while (!chkpunc(c,0) && c->cmpos < c->cmend) c->cmpos++;
-     readpunc(c);
+
     ix++;
    }
 
@@ -11467,6 +11476,7 @@ int getpd(CPS *c, int ix, int limit)
 
   while(ix < limit)
    {
+           readpunc(c);
      if (sscanf(c->cmpos, "%d%n", c->p+ix, &rlen) > 0)
        {
     //    if (chkpunc(c, rlen)) break;
@@ -11474,7 +11484,7 @@ int getpd(CPS *c, int ix, int limit)
         ans++;
         }
      else break;
-    readpunc(c);
+
     ix++;
    }
 
@@ -14438,7 +14448,7 @@ void main()
 
  check_dtk_links();
 
- scan_gaps();                 // BEFORE data, so only code, tabs,vects,funcs
+ //scan_gaps();                 // BEFORE data, so only code, tabs,vects,funcs
 
  turn_dtk_into_data();        // add data found fom dtk
 
