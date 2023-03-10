@@ -3,7 +3,7 @@ Development versions information.
 
 The development subdir contains the latest test versions.  These should be stable to use, but may have odd bugs.
 
-.exe are Windows build (32 bit) and .amd64 are linux 64 bit builds (gcc)
+.exe are Windows build (32 bit, built with CodeLite) and linux (64 bit) are in 'Linux_64' subdirectory (built with gcc)
 
 
 Dev_Versions.txt lists changes between these dev versions here only.   Full release info in /Docs/Versions.txt 

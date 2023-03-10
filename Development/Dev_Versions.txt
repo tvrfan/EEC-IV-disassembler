@@ -88,7 +88,7 @@ Fix print bug which shows wrong value for STW (probably only happens in test bin
 4.08  (01 Mar 2023)
 
 After a HUGE gap, during which I was trying to write a new much neater, much more elegant version (which I can't get to work !)
-I decide to go back to the last working version and start over.
+I decide to go back to the last working version and start over. Changed to simpler version numbering.
 
 Fixed - Inconsistent handling of addresses (bank prefixes) in multibanks across symbols, comments, commands.
 
