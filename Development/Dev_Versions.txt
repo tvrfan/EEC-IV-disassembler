@@ -85,7 +85,7 @@ Fix print bug which shows wrong value for STW (probably only happens in test bin
 
 -------------------------------------------------------------
 
-4.0.8  (01 Mar 2023)
+4.08  (01 Mar 2023)
 
 After a HUGE gap, during which I was trying to write a new much neater, much more elegant version (which I can't get to work !)
 I decide to go back to the last working version and start over.
@@ -98,7 +98,7 @@ so let me know any you find, with examples please, as tvrfan99@gmail.com
 OOPS! I also left on the 'gap detect' from v 4.06 which does work for functions but not so well for tables, and it does produce some
 false matches.
 
-4.0.9
+4.09
 
 1. Fix regression errors causing symbol names not to be matched correctly in various places in code printout (my error from changes in 4.08)
 
@@ -106,11 +106,13 @@ false matches.
 
 3. Turn off 'gap detect' again as it causes some strange behaviour and user commands to be ignored -to be investigated.
 
+(4.10 removed due to stupid error in address validation)
 
+4.11 (10 mar 23)
 
+1. Revert change to 'skip' opcode, which seems to cause several issues
 
-
-
+2. change address validation to match other common tools (I hope)
 
 
 

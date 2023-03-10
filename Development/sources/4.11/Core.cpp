@@ -10108,7 +10108,8 @@ uint fix_input_addr_bank(CPS *c, int ix)
    if (!numbanks)
      {
 
-       if (bk != 8) return 1;    // only bank 8 allowed
+       if (c->p[ix] > 0xffff && bk != 8) return 1;    // only bank 8 allowed
+
        c->p[ix] = nobank(c->p[ix]) | basepars.datbnk;                  // single bank force 8
      }
    else
