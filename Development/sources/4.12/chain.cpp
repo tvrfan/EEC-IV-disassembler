@@ -7,7 +7,7 @@ extern DIRS dirs[];
 
 extern BASP basepars;            // min and max ram register address (for checking)
 extern BANK bkmap[];
-extern OPC opctbl[]; 
+extern OPC opctbl[];
 
 extern int anlpass;
 extern int cmdopts;
@@ -47,7 +47,7 @@ int cellsize(ADT *);
 
 uint get_signmask(uint);
 
-uint fix_addr_bank(uint);
+uint fix_input_addr(uint);
 
 int new_symname (SYM *, const char *);
 
@@ -64,18 +64,18 @@ uint val_stack_reg(uint);
 #ifdef XDBGX
 
 extern  int DBGrecurse;
-extern  int DBGnumops;  
-   
+extern  int DBGnumops;
+
 extern  int DBGmcalls;             // malloc calls
 extern  int DBGmrels;              // malloc releases
 extern  int DBGmaxalloc;           //  TEMP for malloc tracing
 extern  int DBGcuralloc;
 
-extern const char *jtxt[];  
-  uint DBGPRT (uint, const char *, ...);  
-  void DBGPRTFGS(int ,LBK *,LBK *);  
+extern const char *jtxt[];
+  uint DBGPRT (uint, const char *, ...);
+  void DBGPRTFGS(int ,LBK *,LBK *);
   void DBGPBK(int, LBK *, const char *, ...);
-  
+
 #endif
 
 void *shuffle[16];                // for chain reorganises (and deletes), a block of void pointers
@@ -112,7 +112,7 @@ int cpdtk  (CHAIN *,uint, void *);   int cpdtka (CHAIN *,uint, void *);
 CHAIN chjpf   = {0,0,200,sizeof(JMP),   0,0,0,0,0, 0    ,cpjmp  };      // jump, indexed by 'from'
 CHAIN chjpt   = {0,0,200,0          ,   0,0,0,0,0, 0    ,cpjmp  };      // jump, indexed by 'to' [REMOTE]
 
-CHAIN chsym   = {0,0,200,sizeof(SYM),   0,0,0,0,0, fsym ,cpsym  };      // symbols 
+CHAIN chsym   = {0,0,200,sizeof(SYM),   0,0,0,0,0, fsym ,cpsym  };      // symbols
 
 CHAIN chbase  = {0,0,200,sizeof(RBT),   0,0,0,0,0, 0    ,cpbase };      // rbases
 CHAIN chsig   = {0,0, 20,sizeof(SIG),   0,0,0,0,0, 0    ,cpsig  };      // signatures
@@ -159,7 +159,7 @@ CHAIN *chindex[] = { &chjpf, &chjpt , &chsym,  &chbase, &chsig,
 #ifdef XDBGX
 // names for chains for debug prtouts, and debug block printers...
 
-  const char *chntxt[] = {"jump from", "jump to", "symbol", "rbase", "sign", "cmd", "aux",  
+  const char *chntxt[] = {"jump from", "jump to", "symbol", "rbase", "sign", "cmd", "aux",
                             "scan", "emulscan", "subscan", "subroutines", "adnl data", "adnl cmd", "adnl ans", "regstat",
                             "spf" , "psw"     , "dtrack" , "dtrack r", "dtrackd ofst", "dtrackd start"     , "monblk"};
 
@@ -266,7 +266,7 @@ void adpch(CHAIN *x)
       x->ptrs[i] = z;
       z += x->esize;
      }
-     
+
    logblk(n, msz);
 
  }
@@ -280,7 +280,7 @@ void* chmem(CHAIN *x, uint ix)
   void *ptr;
   uint num;
 
-  num = x->num + ix;     
+  num = x->num + ix;
 
   if (!x->esize) return NULL;              // can't have memory on a remote chain...
 
@@ -567,7 +567,7 @@ int cpadt (CHAIN *x, uint ix, void *d)
 
 // ans = (long) s->fid - (long) t->fid;
 
-// ans = 
+// ans =
 
 // if (ans) return ans;
 
@@ -599,7 +599,7 @@ int cpscan (CHAIN *x, uint ix, void *d)
 
  if (t->substart) ans = s->substart - t->substart;
 // if (ans) return ans;
- 
+
 return ans;
 }
 
@@ -664,7 +664,7 @@ int cpdtk (CHAIN *x, uint ix, void *d)
 
 /*
 if ( x == &chdtkr)
-  { 
+  {
     ans = s->?
 */
 
@@ -701,21 +701,21 @@ if ( x == &chdtkr)
  if (ans) return ans;
 
  if (t->rreg)
- ans = s->rreg - t->rreg; 
+ ans = s->rreg - t->rreg;
  if (ans) return ans;
 
  if (t->ofst)
 ans = s->ofst - t->ofst;
 
  return ans;
-} 
+}
 
 
 
  if (x == &chdtkr)
    { // index by register and offset, not unique ?
 
-    ans = s->reg1 - t->reg1; 
+    ans = s->reg1 - t->reg1;
     if (ans) return ans;
 
 //    ans = s->start - t->start;
@@ -728,7 +728,7 @@ ans = s->ofst - t->ofst;
     ans = s->ofst - t->ofst;
 
 
-} 
+}
 
  return ans;
 }
@@ -750,7 +750,7 @@ int cpdtka (CHAIN *x, uint ix, void *d)
   {       //key first
    ans = s->fk - t->fk;
    if (ans) return ans;
-  
+
       //ofst first.
   ans = s->stdat - t->stdat;
  return ans;
@@ -837,9 +837,9 @@ int eqsig (CHAIN *x, uint ix, void *d)
 
 int eqcmd (CHAIN *x, uint ix, void *d)
 {
- // make sure candidate block falls within 
+ // make sure candidate block falls within
  // indiexed block start and end.
- 
+
  LBK *b, *t;
 
  if (ix >= x->num) return -1;
@@ -972,7 +972,7 @@ uint find_olap(CHAIN *x, uint ix, void *newb, uint up)     //upwards
  // is overlapped or adjacent, where [ix].end > d.start.
 
  // If d.end is specified, find the MAXIMUM ix where d.end is
- // is overlapped or adjacent, where [ix].end > d.end. 
+ // is overlapped or adjacent, where [ix].end > d.end.
  // for LBK structs (data and code).
 
   LBK *b, *t;
@@ -990,7 +990,7 @@ uint find_olap(CHAIN *x, uint ix, void *newb, uint up)     //upwards
   if (up)
      {
       // get to maximum matching block, overlap or adjacent
-      // t->start always <= b->start 
+      // t->start always <= b->start
       while (ix < x->num)
           {
            if (t->end <= (b->start-1)) break;
@@ -1055,7 +1055,7 @@ int inschk(CHAIN *x, int ix, LBK *newb)
     {                                 // scan range of possible overlaps
      if (max >= x->num) break;
      if (min >= x->num) break;         // safety for deleted items - perhaps should restart............
-    
+
      chkf = olchk(x, min, newb);      // check chained block for overlap
 
      if (chkf)
@@ -1218,11 +1218,11 @@ LBK* inscmd(CHAIN *x, LBK *blk)
   // check for exact match
   if (ix < x->num && k->start == blk->start && k->end == blk->end && k->fcom == blk->fcom)
     {
-      if (!k->sys) x->lasterr = E_DUPL;
-     // ans = 0;  
+      if (!k->sys) x->lasterr = E_DUPL; else x->lasterr = 0;
+     // ans = 0;
        return 0;       //no insert
     }
-    
+
   ans = inschk(x,ix,blk);              // found - is insert allowed ?
 //this may CHANGE IX !!!
 
@@ -1290,23 +1290,23 @@ LBK* add_cmd(uint start, uint end, uint com, uint from)
 
    chcmd.lasterr = E_INVA;           // set "invalid address"
    tcom = com & 0x1f;                // drop any extra flags
-   
+
    if (end < start) end = start;             // safety
 
    //only code at 0x2000 in each bank
    if (nobank(start) == 0x2000 && tcom != C_CODE) return NULL;
 
 
-   if  (tcom == C_DFLT)
-    {  // special for fill cmd
-     if (start > maxbkadd (start)) return NULL; 
+   if  (tcom == C_DFLT || tcom == C_TEXT)
+    {  // special for fill and text cmd
+     if (start > maxbkadd (start)) return NULL;
      if (end   > maxbkadd (end))   return NULL;
     }
-   else 
-    { 
+   else
+    {
      if (!val_rom_addr(start)) return NULL;
      if (!val_rom_addr(end))   return NULL;
-    } 
+    }
 
    if (g_bank(start))
      {
@@ -1323,18 +1323,21 @@ LBK* add_cmd(uint start, uint end, uint com, uint from)
 
 
    if ((tcom == C_WORD || tcom == C_LONG || tcom == C_VECT) && (start & 1))
-    {  
+    {
       // must start on even address
-      chcmd.lasterr = 4; 
+      chcmd.lasterr = 4;
       #ifdef XDBGX
          DBGPRT(0,"FAIL add cmd");
          DBGPRT(0, " %x ODD Boundary from %x", start, from);
    DBGPRT(1,0);
    #endif
 
-              
-      return NULL;  
+
+      return NULL;
     }
+
+ //  chcmd.lasterr = 0;      //done in insert
+
 
    b = (LBK *) chmem(&chcmd,0);
    b->start = start;
@@ -1431,7 +1434,7 @@ RBT *add_rbase(uint reg, uint addr, uint rstart, uint rend)
 
   if (reg  & 1)              return 0;          // can't have odd registers
   if (!val_general_reg(reg)) return 0;          // not any special regs
-  if (addr > maxbkadd(addr)) return 0;          // anywhere in address range 
+  if (addr > maxbkadd(addr)) return 0;          // anywhere in address range
 
   if (rstart && !val_rom_addr(rstart)) return 0;  // range must be within ROM - NO !!
 
@@ -1446,20 +1449,20 @@ RBT *add_rbase(uint reg, uint addr, uint rstart, uint rend)
 
   // check for overlap here
 
-  z = (RBT *) chbase.ptrs[ix];         // chain block found, nearest below 
+  z = (RBT *) chbase.ptrs[ix];         // chain block found, nearest below
 
-  // ranges - can be within existing range, or outside as a new one 
+  // ranges - can be within existing range, or outside as a new one
   // check for overlaps CHANGE <= and >= to < and >  FROM OLCHK COMMANDS
 
   if (ix < chbase.num)
-    {  
+    {
      int err;
 
      err = 0;
 
      if (x->rstart < z->rstart && x->rend   >= z->rstart && x->rend   <= z->rend) err = 1;   //overlaps rstart
      if (x->rend   > z->rend   && x->rstart >= z->rstart && x->rstart <= z->rend) err = 1;   // overlap rear
-    
+
      if (err)
       {
        chbase.lasterr = E_OVRG;          // overlap ranges
@@ -1471,7 +1474,7 @@ RBT *add_rbase(uint reg, uint addr, uint rstart, uint rend)
         DBGPRT(1,0);
        #endif
        return 0;
-      } 
+      }
     }
 
 
@@ -1514,7 +1517,7 @@ RBT* get_rbt(uint reg, uint pc)
     {
      x = (RBT*) chbase.ptrs[ix];
      if (!x->cmd && get_flag(reg, rbinv)) return NULL;    // already marked as invalid, not user
-     if (x->inv) return NULL; 
+     if (x->inv) return NULL;
      if (x->reg == r->reg && r->rstart >= x->rstart && r->rstart <= x->rend) return x;          //   match
     }
 
@@ -1659,11 +1662,11 @@ return NULL;
 }
 
 
-uint set_adt_fkey(uint ofst, uint seq) 
+uint set_adt_fkey(uint ofst, uint seq)
  {
   uint fkey;
 
-  fkey   = (ofst << 8);           // sequence is 1-254 
+  fkey   = (ofst << 8);           // sequence is 1-254
   // check seq limits,  0 is new sequence start
   if (seq > MAXSEQ) seq = MAXSEQ;
 
@@ -1691,7 +1694,7 @@ ADT* add_adt (CHAIN *x, uint ofst, uint seq)
   a->fend   = 7;               // single byte default
 
   if (!seq) seq = 1;           // starts at 1
-  a->fkey   = set_adt_fkey(ofst, seq); 
+  a->fkey   = set_adt_fkey(ofst, seq);
 
   // check if it exists already
 
@@ -1699,7 +1702,7 @@ ADT* add_adt (CHAIN *x, uint ofst, uint seq)
 
   if (seq > MAXSEQ)
     {        // add new block with next avail seqno
-      ADT *z;      
+      ADT *z;
       a->fkey = set_adt_fkey(ofst, 1);     // default safety
       z = (ADT*) x->ptrs[ix];
 
@@ -1711,7 +1714,7 @@ ADT* add_adt (CHAIN *x, uint ofst, uint seq)
            if ((z->fkey & 0xff) >= MAXSEQ) return NULL;  // max seq no reached
            a->fkey = z->fkey+1;
          }
-       } 
+       }
     }
 
    ans = chadnl.comp(x,ix, a);
@@ -1747,15 +1750,15 @@ LBK *get_cmd (uint start, uint fcom)
 
   // if command SPANs this address, will not always be selected.
 
-//  while (ix < chcmd.num) 
-//    { 
+//  while (ix < chcmd.num)
+//    {
    //  blk = (LBK*) chcmd.ptrs[ix];
 //     if (p->end < start) return NULL;
 
 
 
   //    if (p->start <= start && p->end >= start) return start = 0;
-    //            } 
+    //            }
       //        if (start) DBGPRT(1,"push %x from %x",start, d->ofst);
         //     }
 
@@ -1878,17 +1881,17 @@ ADT *get_adnlk(CHAIN *x, uint fk)
  ADT *a;
  uint ix;
 
-// speedup shortcut 
+// speedup shortcut
 
- ix = x->lastix + 1;       
- 
+ ix = x->lastix + 1;
+
  if (ix < x->num)
    {  // if valid lastix - speedup trick for get_next
     a = (ADT*) x->ptrs[ix];
-    
+
     if (a->fkey == fk)
       {  // next item in sequence
-       x->lastix = ix;         // last valid 
+       x->lastix = ix;         // last valid
        return a;
       }
    }
@@ -1896,7 +1899,7 @@ ADT *get_adnlk(CHAIN *x, uint fk)
  // otherwise, just look for it
 
  a = (ADT*) chmem(x,1);
- a->fkey = fk; 
+ a->fkey = fk;
 
  ix = bfindix(x, a);
  if (!cpadt(x,ix,a)) return (ADT*) x->ptrs[ix];
@@ -1916,13 +1919,13 @@ ADT *get_adnl(CHAIN *x, uint ofst, uint seq)
 
 ADT *get_next_adnl(CHAIN *x, ADT *b)
 {
- 
+
  if (!b) return NULL;
  if ((b->fkey & 0xff) >= MAXSEQ) return NULL;
- return get_adnlk(x, b->fkey+1); 
+ return get_adnlk(x, b->fkey+1);
 
 }
-  
+
 
 void free_adnl(CHAIN *x, void *fid)
  {
@@ -1979,7 +1982,7 @@ if (ix < chdtk.num)
  {
   s = (TRK*) chdtk.ptrs[ix];
   if (ofst == s-> ofst) return s;
- } 
+ }
 
 chdtk.lastix = chdtk.num;   //invalidate if not found
 return NULL;             //(DTKD*) x->ptrs[ix];
@@ -2004,7 +2007,7 @@ if (ix < x->num)
   s = (DTD*) x->ptrs[ix];
   if (ofst && s->fk == ofst) return s;
   else if (start == s->stdat) return s;
- } 
+ }
 
 
 // x->lastix = x->num;   //invalidate if not found
@@ -2030,14 +2033,14 @@ DTD *get_next_dtkd(DTD *d)
 // NB> can't use dtka as it tests stdat as well...
 
 // ix = chdtko.lastix + 1;
- 
+
 // if (ix < chdtko.num)
 //   {  // if valid lastix - speedup trick for get_next
  //   a = (DTD*) chdtko.ptrs[ix];
-    
+
  //   if (a->fk == d->fk)
   //    {  // next item in sequence
-  //     chdtko.lastix = ix;         // last valid 
+  //     chdtko.lastix = ix;         // last valid
  //      return a;
 //      }
 //   }
@@ -2045,14 +2048,17 @@ DTD *get_next_dtkd(DTD *d)
  // otherwise, just look for it
 
  a = (DTD*) chmem(&chdtko,2);
- a->fk = d->fk; 
+ a->fk = d->fk;
  if (d->stdat) a->stdat = d->stdat+1;
 
  ix = bfindix(&chdtko, a);
+
+ if (ix >= chdtko.num) return NULL;   // not found
+
    a = (DTD*) chdtko.ptrs[ix];
    if (a->fk == d->fk)
       {  // next item in sequence
-       chdtko.lastix = ix;         // last valid 
+       chdtko.lastix = ix;         // last valid
        return a;
       }
 
@@ -2083,11 +2089,11 @@ DTD* add_dtkd (TRK *k, INST *c, int start)
   a->bsze = bytes(opctbl[c->opcix].rfend1);
 
  //if (c->opcsub == 1)  a->reg = c->opr[c->wop].addr;
- 
+
  //if (c->opcsub == 2)  a->reg = c->opr[4].addr;
 
   if (c->opcsub == 3) a->off = c->opr[0].addr;
-  
+
 
   if (get_cmd(start,C_CODE)) a->olp = 1;
 
@@ -2098,7 +2104,7 @@ DTD* add_dtkd (TRK *k, INST *c, int start)
     {
      if (c->opr[4].addr == 0) a->opcsub = 1;    // R0, make an imd
   //   if (c->opr[4].rbs) a->hq = 1;            // not valid here !!
-    } 
+    }
 
  // a->bsze  = k->bsze;
  // a->modes = (1 << k->opcsub);
@@ -2106,14 +2112,14 @@ DTD* add_dtkd (TRK *k, INST *c, int start)
 
 
 
- 
+
   ix = bfindix(&chdtko,a);
 
   ans = chdtko.comp(&chdtko,ix, a);
 
 // before insert, check for same fk and calc gap
 
- if (ix > 0 && ix < chdtko.num) 
+ if (ix > 0 && ix < chdtko.num)
    {
      x = (DTD*) chdtko.ptrs[ix-1];
 
@@ -2142,7 +2148,7 @@ DTD* add_dtkd (TRK *k, INST *c, int start)
 
 
 
- 
+
 
 
 
@@ -2170,7 +2176,7 @@ TRK* add_dtk(SBK *s,INST *c)
   // would need to sort out qualifying ops (LDX, AD2B, imd etc) here
   // normally, source would be [1] which is only mutliple mode, except for stx
 
-  //  ([2] = [1]), but not always........ 
+  //  ([2] = [1]), but not always........
 
  /*Signature index value for like instructions - MAX 63
  0  special   1  clr    2  neg/cpl   3 shift l   4 shift R   5 and
@@ -2246,7 +2252,7 @@ TRK* add_dtk(SBK *s,INST *c)
            }
 
          if (c->sigix == 12)       // || c->sigix == 6)
-           {   // ldx 
+           {   // ldx
             start = o->addr;
             break;
            }
@@ -2295,31 +2301,31 @@ TRK* add_dtk(SBK *s,INST *c)
         x->rgvl[4] = c->opr[4].val;
 
         start = o->addr;  // combined address
- 
+
         start = databank(start,c);
-      
+
         break;
 
     }
 
 
-// if (val_rom_addr(start)) ans = 1;   
+// if (val_rom_addr(start)) ans = 1;
 //indexed, check special reg, but zero is OK
 //if (x->reg1 && x->opcsub == 3 && is_special_reg(x->reg1)) return 0;           //inx
 
 // not for print, but may need these for loops
-if (start && is_special_reg(start)) return 0; 
-/// if (start <= max_reg()) return 0; 
+if (start && is_special_reg(start)) return 0;
+/// if (start <= max_reg()) return 0;
 
 if (!c->opcsub && !ans) return 0;
 
 
 
 
-if (x->ofst == 0x9342a)
-{
-DBGPRT(1,0);
-}
+//if (x->ofst == 0x9342a)
+//{
+//DBGPRT(1,0);
+//}
 
   ix = bfindix(&chdtk, x);
   ans = cpdtk(&chdtk,ix, x);
@@ -2342,7 +2348,7 @@ if (val_rom_addr(start))
      add_dtkd(x,c,start);          // and start address
     }
 
- //    ix = bfindix(&chdtkr, x);        // find for register index 
+ //    ix = bfindix(&chdtkr, x);        // find for register index
  //    chinsert(&chdtkr, ix, x);           // inser224e: 07,30               incw  R30              R30++;                            # incr ptr to save addresst reg chain
    //  ix = bfindix(&chdtkd, x);        // find for data index can't do this ?? search dtdkd may work....
   //   chinsert(&chdtkd, ix, x);           // insert data chain
@@ -2357,7 +2363,7 @@ if (val_rom_addr(start))
        x = (TRK*) chdtk.ptrs[ix];
        add_dtkd(x,c,start);
       }
-    }  
+    }
 
  if (!ans) return 0;
 return x;
@@ -2389,7 +2395,7 @@ return x;
       {
        o = c->opr+1;
 
-    //   if (val_rom_addr(o->addr))  addr = o->addr ; 
+    //   if (val_rom_addr(o->addr))  addr = o->addr ;
 
     //   if (c->wop == 1) addr = o->addr;
 
@@ -2404,7 +2410,7 @@ return x;
               addr = 0;
              }
            }
-         }  
+         }
        }
     }         /
 
@@ -2454,7 +2460,7 @@ return x;
 
   if (addr)
      {            // addr must be val_rom_addr
-//      k = 
+//      k =
 //add_data_cmd (addr,  addr+cnv[o->ssize].bytes-1, cnv[o->ssize].datcmd, c->ofst);       // add data entry
  //     if (k)
  //      {    // add offset and type for later checks
@@ -2490,7 +2496,7 @@ void fcmd(void *x)
   free_adnl (&chadnl,x);         //&(k->adnl));
 }
 
-  
+
 int adtchnsize(CHAIN *x, uint ofst, uint seq, uint nl)
 {
  // continue from seq to next newline if nl
@@ -2557,7 +2563,7 @@ int fwdadds(JMP *j, uint *from, uint *to)
   if (!j->jtype) return 1;
   if (j->bswp)   return 1;
   if (j->jtype == J_SUB) return 1;      // ignore subr and return jumps
-  
+
   if (j->retn) return 1;             // TEST !!
 
   if (j->back)
@@ -2718,7 +2724,7 @@ void do_jumps (void)
 
      //assume brackets OK for all conds except backwards jumps
 
-     if (f->jtype == J_COND && !f->back)   //f->bkt = 1; 
+     if (f->jtype == J_COND && !f->back)   //f->bkt = 1;
       {
        f->obkt = 1;         //assume bkts OK at first
        f->cbkt = 1;
@@ -2752,16 +2758,16 @@ void do_jumps (void)
    //         f->bkt = 0;         // later !!
       //      f->cbkt = 0;
     //        f->done = 1;
-   //      } 
+   //      }
 
      if (f->jtype == J_COND && !f->back) // && !f->done)
         { // only for conditional jumps (as base)
           // try to sort out heirarchy for whether brackets can be used
           // fromaddr is unique, but toaddr is not
           // in order of FROM...
-    
+
 //findix instead ??
-      
+
            zx = ix+1;                                  // next jump
       //     t = (JMP*) chjpf.ptrs[zx];
 
@@ -2777,14 +2783,14 @@ void do_jumps (void)
                  if (t->toaddr < f->fromaddr) t->obkt = 0;
              //   }
 
-    /*   skip these for now...  
+    /*   skip these for now...
               //  check for 'else' and 'or' etc.
               tend   = t->fromaddr + t->size;           // end of jump
               tstart = t->fromaddr - t->cmpcnt;
 
               if (t->jtype == J_STAT && tend == f->toaddr && tstart > fend && !t->back)
                {
-                t->jelse = 1;          //type = J_ELSE;  
+                t->jelse = 1;          //type = J_ELSE;
                t->cbkt = 1;
                f->cbkt = 0;
          //    if (
@@ -2804,7 +2810,7 @@ void do_jumps (void)
           //   if (t->fromaddr > f->toaddr)  break;      moved up
 
             }  //end while (inside->outside)
-        
+
 
 
 
@@ -2814,7 +2820,7 @@ void do_jumps (void)
 
 //          if (f->jtype == J_COND && !f->back && !f->bswp && !f->uci && !f->uco) f->cbkt = 1;      // conditional, forwards, clean.
 
-        }  
+        }
     }
 
 
@@ -2827,7 +2833,7 @@ void do_jumps (void)
  // f = (JMP*) chmem(&chjpf,0);
  // f->fromaddr = 0x92000;             //first/initial from jump
  // ix = bfindix(&chjpf, f);
- // f = (JMP*) chjpf.ptrs[ix];  
+ // f = (JMP*) chjpf.ptrs[ix];
 
  // initofst = f->toaddr;
 
@@ -2859,7 +2865,7 @@ excnt = 0;
      if (f->back && !f->retn && !f->bswp && (f->jtype == J_STAT || f->jtype == J_COND)
    //      && f->toaddr != initofst
           && excnt < 256 && excnt > 0)
-       { 
+       {
 
 
 //technically ALL backward jumps not ret or loopstop should qualify for a loop check, including
@@ -2876,7 +2882,7 @@ excnt = 0;
        //find toaddr in from chain, for any contained jumps..................or go backwards....
 
 
-if (f->jtype == J_COND) f->exloop = 1;     // conditional IS already an exit 
+if (f->jtype == J_COND) f->exloop = 1;     // conditional IS already an exit
 
 //DBGPRT(1,0);
 
@@ -2888,13 +2894,13 @@ if (f->jtype == J_COND) f->exloop = 1;     // conditional IS already an exit
 
 
            zx = ix-1;                                  // prev jump
- 
+
            while (zx > 0)
-             { 
+             {
               t = (JMP*) chjpf.ptrs[zx];
               if (t->fromaddr < f->toaddr) break;     // outside bounds for backwards jump
 
- 
+
 
               // t->fromaddr ALWAYS < f->fromaddr AND >= f->toaddr to get here
 
@@ -2904,7 +2910,7 @@ if (f->jtype == J_COND) f->exloop = 1;     // conditional IS already an exit
              //        {
             //          t->subloop = 1;
            //          }
-          //      } 
+          //      }
             //but exit jumps could be here too...........................
           //    else
                 {  //std jump
@@ -2935,7 +2941,7 @@ DBGPRT(1,0);
 
 
 LBK* add_aux_cmd (uint start, uint end, uint com, uint from)
- {          
+ {
   LBK *n;
 
   if (anlpass >= ANLPRT)    return NULL;
@@ -2958,18 +2964,18 @@ LBK* add_aux_cmd (uint start, uint end, uint com, uint from)
 
   if (end < start) end = start;
 
-  // check start and end within bounds
+  // check start and end within bounds - no, need full range
 
-  chaux.lasterr = E_INVA;       // invalid address
+ // chaux.lasterr = E_INVA;       // invalid address
 
-  if (!val_rom_addr(start)) return NULL;
+ // if (!val_rom_addr(start)) return NULL;
 
-  if  ((com &0x1f) == C_XCODE)
-   {  // special for xcode
-    if (end > maxbkadd (end)) return NULL;
-   }
-  else
-  if (!val_rom_addr(end))   return NULL;
+ // if  ((com &0x1f) == C_XCODE)
+ //  {  // special for xcode
+ //   if (end > maxbkadd (end)) return NULL;
+ //  }
+//  else
+//  if (!val_rom_addr(end))   return NULL;
 
   n = (LBK *) chmem(&chaux,0);
   n->start = start;
@@ -2977,7 +2983,7 @@ LBK* add_aux_cmd (uint start, uint end, uint com, uint from)
   n->fcom  = com & 0x1f;    // max 31 as set
   if (com & C_CMD) n->cmd = 1;
   if (com & C_SYS) n->sys = 1;
-  
+
   n = inscmd(&chaux,n);            //is this reqd with only aux cmds ? (xcode and args)
 
   if (chaux.lasterr) return 0;                        // fail
@@ -3040,7 +3046,7 @@ SUB * add_subr (uint addr)
 
 
 
- 
+
  SBK *add_scan (uint add, int type, SBK *caller)
 {
 
@@ -3096,7 +3102,7 @@ SUB * add_subr (uint addr)
       DBGPRT(0,"XCODE bans scan %x", add);
       DBGPRT(1,0);
       #endif
-      chscan.lasterr = E_XCOD;      
+      chscan.lasterr = E_XCOD;
       return 0;
      }
 
@@ -3146,7 +3152,7 @@ SUB * add_subr (uint addr)
     {                                     // match - duplicate
      SBK *t;
      t = (SBK*) chscan.ptrs[ix];          // block which matches
- 
+
      if (s->caller && t->caller == 0)
        {   // was a user or system added scan,and now has caller
         *t = *s;       // replace
@@ -3188,14 +3194,14 @@ SUB * add_subr (uint addr)
     DBGPRT  (0," scan %05x %s", s->start, jtxt[s->type]);
     if (s->substart)  DBGPRT (0," sub %x", s->substart);
     if (s->caller) DBGPRT(0, " caller %x", s->caller->start);
-    
+
     if (!ans)
     {      //dupl
 //    if (!s->stop) DBGPRT(0," Not");
     if (s->stop) DBGPRT(0, " Scanned");
     if (s->args) DBGPRT(0," ARGS!");
     if (s->chscan) DBGPRT(0," CHAIN");
-    } 
+    }
     DBGPRT(1,0);
    #endif
  return s;
@@ -3284,7 +3290,7 @@ else sign = 0;
       (*fstart) -= i;
 
       if (fend)
-       { 
+       {
         (*fend) -= i;
         (*fend) |= sign;   //keep sign
        }
@@ -3295,7 +3301,7 @@ uint symadd(SYM *s, uint rw, uint add, uint fstart, uint fend)
  {
   // make composite address for syms
   // this groups in order of bit+write+ranges first, then bit+write,
-  // then read+ranges, then read.  then bits, .   
+  // then read+ranges, then read.  then bits, .
 
   uint ans;
 
@@ -3319,14 +3325,14 @@ SYM *add_sym (const char *fnam, uint rw, uint add, uint fstart, uint fend, uint 
 
 /* this needs to be more clever...............
 strategy is to be
-20   | 1 |    3   | 0 | 1 
-addr | nb|  bitno |   | R/W 
+20   | 1 |    3   | 0 | 1
+addr | nb|  bitno |   | R/W
 
 addr 20 bits with bank+1  addr adjusted to BYTE
 nb = no bit  (or bit 8)
 bitno (0-7)
 R/W    Write = 0 Read = 1
- dropped - NG     Range -> range = 0 No range = 1 
+ dropped - NG     Range -> range = 0 No range = 1
 */
 
 
@@ -3357,12 +3363,12 @@ R/W    Write = 0 Read = 1
 
  if (ix < chsym.num)
    {
-   // eqsym checks for EXACT match, not for overlaps.   
+   // eqsym checks for EXACT match, not for overlaps.
    // check for overlap here
    // must check x->end does not overlap next block....
    // start MUST be > than end of previous block...
 
-/* ranges - can be within existing range, or outside as a new one 
+/* ranges - can be within existing range, or outside as a new one
   // check for overlaps CHANGE <= and >= to < and >  FROM OLCHK COMMANDS
 
    if (s->rstart <= t->rstart && s->rend >= t->rend)  OK
@@ -3377,7 +3383,7 @@ R/W    Write = 0 Read = 1
 
      if (s->rstart < t->rstart && s->rend   >= t->rstart && s->rend   <= t->rend) err = 1;   //overlaps rstart
      if (s->rend   > t->rend   && s->rstart >= t->rstart && s->rstart <= t->rend) err = 1;   // overlap rear
-    
+
 //  if (ix < chsym.num && start)
 
   //  {
@@ -3412,9 +3418,9 @@ R/W    Write = 0 Read = 1
      if (rw & C_CMD) s->cmd = 1;                  // by user command
      if (rw & C_SYS)
         {
-          s->sys = 1;                  // autogenerated flag  
+          s->sys = 1;                  // autogenerated flag
           s->xnum = 1;                 // stop overwrites by autoname
-        }  
+        }
 
      chinsert(&chsym, ix, s);
      chsym.lasterr = 0;
@@ -3440,7 +3446,7 @@ R/W    Write = 0 Read = 1
       if (fnam) DBGPRT(0," %c%s%c " ,'"',fnam, '"');
      DBGPRT(0," with ");
       if (fnam) DBGPRT(0," %c%s%c " ,'"',t->name, '"');
-      DBGPRT(1,0);   
+      DBGPRT(1,0);
 
      #endif
 
@@ -3453,10 +3459,36 @@ R/W    Write = 0 Read = 1
    s = (SYM*) chsym.ptrs[ix];
    chsym.lasterr = E_DUPL;
  }
- 
+
  return s;
 
 }
+
+/*
+uint fix_bare_addr(uint addr)
+{
+  // force single bank addrs to bank 9,
+  // add databank if there isn't one
+  // this is internal so NO BANK ADDITION
+
+  uint x;
+  x = nobank(addr);
+
+  // < 0x400 is a register, no bank
+
+  if (x <= max_reg()) return x;
+
+  // single banks always 9 (databank)
+  if (!numbanks)      return x | basepars.datbnk;
+
+  // no bank and multibank, default to databank - is this right ??
+
+  if (!g_bank(addr))  return x | basepars.datbnk;
+
+  return addr;
+
+}
+*/
 
 
 SYM* get_sym(uint rw, uint add, uint bitno, uint pc)
@@ -3467,7 +3499,7 @@ SYM* get_sym(uint rw, uint add, uint bitno, uint pc)
 
   uint adds[4];
 
-  add = fix_addr_bank(add);
+  //add = fix_bare_addr(add); //should not be necessary
 
   s = (SYM*) chmem(&chsym,1);     // block for search
 
@@ -3480,7 +3512,7 @@ SYM* get_sym(uint rw, uint add, uint bitno, uint pc)
 
   tries = 1;
 
-   //if bitno set, try without 
+   //if bitno set, try without
 
   if (bitno < 32)  adds[tries++] = (adds[0] & 0xfffffff0) | 8;    //remove bit (read or write)
 
@@ -3597,7 +3629,7 @@ void scan_dc_olaps(void)
 
                 for (j = 0; j < 64; j++)
                   {
-                   if (1)       //(!get_opdata(d->start+j)) 
+                   if (1)       //(!get_opdata(d->start+j))
                      {      // gap found
                       if (!ofst) ofst = j;
                       size++;
@@ -3626,7 +3658,7 @@ void scan_dc_olaps(void)
                       #endif
                     }
                   #ifdef XDBGX
-                    else 
+                    else
                     DBGPRT(1,"move data to %x-%x", d->start, d->end);
                   #endif
           //        set_opdatar(d->start, d->end);     // and mark it
@@ -3678,7 +3710,7 @@ void scan_sgap(uint addr)
   x = add_scan(addr, J_STAT | C_GAP,0);
   if (!x) return;
 
- // x->gapscan = 1;              //set here for 
+ // x->gapscan = 1;              //set here for
   scan_blk(x, &cinst);
 
   if (!x->inv)
@@ -3711,7 +3743,7 @@ void scan_sgap(uint addr)
          }
     ix++;
    }
-  } 
+  }
 
  }
 
@@ -3789,7 +3821,7 @@ int ans;
   else
   if (j->jtype && j->fromaddr >= j->toaddr)
      {
-      j->back = 1;   
+      j->back = 1;
      }
 
   // insert into the two jump chains
@@ -3930,7 +3962,7 @@ int find_tjump (uint ofst)
 
  ans = 0;
  ix = get_tjmp_ix(ofst);   // find first 'to' jump
- 
+
  while (ix < chjpt.num)
   {
    j = (JMP*) chjpt.ptrs[ix];
@@ -3952,7 +3984,7 @@ JMP * find_fjump (uint ofst, int *x)
   // (j=1) for code reverse
 
   JMP *j;
- 
+
   if (anlpass < ANLPRT) return 0;
 
   *x = 0;
@@ -4063,7 +4095,7 @@ return dflt;
 void scan_loopdata(void)
 {
   // try to find data structs from access loops...........
-  // may add more later on ...... simple first. 
+  // may add more later on ...... simple first.
 
   uint ix,jx,sx;         //,i;
   uint  tinc, reg, ofst, xofst;
@@ -4115,12 +4147,12 @@ if (j->back && !j->retn && (j->jtype == J_STAT || j->jtype == J_COND))
 
    //      #ifdef XDBGX
     //     DBGPRT(1,"found %x", k->ofst);
-   //      #endif  
+   //      #endif
          ix++;
 
         }
       if (tinc)
-        {     //need register 
+        {     //need register
 
        #ifdef XDBGX
          DBGPRT(0,"\nBJUMP %x-%x", j->fromaddr,j->toaddr);
@@ -4128,7 +4160,7 @@ if (j->back && !j->retn && (j->jtype == J_STAT || j->jtype == J_COND))
 
          #ifdef XDBGX
          DBGPRT(1," found INC %d for R%x", tinc, reg);
-         #endif  
+         #endif
 
 // find orig ldx for register first................
 
@@ -4159,7 +4191,7 @@ if (j->back && !j->retn && (j->jtype == J_STAT || j->jtype == J_COND))
 else {
    #ifdef XDBGX
          DBGPRT(1," ofst = 0");
-         #endif  
+         #endif
 }
         }
 
@@ -4187,10 +4219,10 @@ else {
  }
 
    //  OPCODE chaser
-      ofst = find_opcode(0, j->toaddr, &x); 
+      ofst = find_opcode(0, j->toaddr, &x);
   while (ofst && ofst < j->fromaddr)
          {
-          ofst = find_opcode(1, ofst, &x); 
+          ofst = find_opcode(1, ofst, &x);
 
 //if (ofst == 0x823b6)
 //{
@@ -4216,11 +4248,11 @@ void *find(CHAIN *x, void *b)
 
 
           if (ofst)
-            { 
+            {
               do_one_opcode(ofst);
             }
 
- 
+
        #ifdef XDBGX
          DBGPRT(0,"BLoop %x", ofst);
          if (!ofst) DBGPRT(1,0);
@@ -4244,7 +4276,7 @@ void *find(CHAIN *x, void *b)
 // init block here
 //  #ifdef XDBGX
  //        DBGPRT(1,"BLoop %x", j->toaddr);
- // #endif       
+ // #endif
 
 
 
@@ -4334,7 +4366,7 @@ else
  {
    sval = g_byte(start);
    if (sval == 0xff) size = 1;
-   else  
+   else
    if (sval == 0x7f) size = 9;
 }
 
@@ -4379,7 +4411,7 @@ DBGPRT(1,"found func size %d", size);
  uint mtype[32];                      // temp for now whilst testing
  int  vald   [32];               // value difference
 
-uint do_patt_template(uint start, uint rowsize) 
+uint do_patt_template(uint start, uint rowsize)
  {
    uint i, addr;
    int a,b;
@@ -4402,7 +4434,7 @@ uint do_patt_template(uint start, uint rowsize)
       //  else if ((c-b) == (b-a))  mtype[i] |= 32;       //value difference match
 
       if (__builtin_popcount(a) == 1 && __builtin_popcount(b) == 1 ) mtype[i] |= 2;  // && __builtin_popcount(c) == 1 bit mask positive
-      if (__builtin_popcount(a) == 7 && __builtin_popcount(b) == 7 ) mtype[i] |= 16;  // && __builtin_popcount(c) == 7 bit mask negative 
+      if (__builtin_popcount(a) == 7 && __builtin_popcount(b) == 7 ) mtype[i] |= 16;  // && __builtin_popcount(c) == 7 bit mask negative
       if (a < b )  mtype [i] |= 4;        // && b < c increment
       if (a > b )  mtype [i] |= 8;        // && b > c decrement
     }
@@ -4421,7 +4453,7 @@ int score_row_match(uint *start, uint rowsize)
     int a,b, score;
 
 // perhaps this should be DOWNWARDS ??
- 
+
        for (i = 0; i < rowsize; i++)       // compare this row to the 'base'
           {
               //what about words ??
@@ -4434,10 +4466,10 @@ int score_row_match(uint *start, uint rowsize)
 
         //   if (mtype[i] & 32)
 
-           if ((a-b) == vald[i])  {score += 5;  m++; }       //  matched by value difference 
+           if ((a-b) == vald[i])  {score += 5;  m++; }       //  matched by value difference
 
            if ((mtype[i] & 1) && a == b)  {score += 5;  m++; }       // match by value
-         
+
            if ((mtype[i] & 4) && a < b )  {score += 2;   m++; }     // increment
 
            if ((mtype[i] & 8) && a > b )  {score += 2;   m++; }     // decrement
@@ -4451,14 +4483,14 @@ int score_row_match(uint *start, uint rowsize)
 //others ??    Word ?? constant difference ?? all valid
 
           }
- 
+
 
      #ifdef XDBGX
 //       if (score >0)
  DBGPRT(1,"sz %d, score %d m %d (%x-%x)", rowsize, score, m, *start, *start+rowsize);
      #endif
 
-*start = addr+rowsize ;  
+*start = addr+rowsize ;
   return score;
 
 }
@@ -4472,9 +4504,9 @@ int score_row_match(uint *start, uint rowsize)
 uint do_data_patt (uint *start, uint *end)    //uint gap
 {
   uint addr, rowsize, rownum;
-  uint highest, ansrow;  
+  uint highest, ansrow;
 
-// int tscore[32];                  // can be negative -total struct score 
+// int tscore[32];                  // can be negative -total struct score
 
 //  uint mtype[32];                  // temp for now whilst testing
 //  int vl   [32];               // value difference
@@ -4515,7 +4547,7 @@ uint do_data_patt (uint *start, uint *end)    //uint gap
 
 //all byte ??   this needs expansion to words.
 
- memset(rscore,0, sizeof(rscore)); 
+ memset(rscore,0, sizeof(rscore));
 // memset(tscore,0, sizeof(tscore));
 
 */
@@ -4530,10 +4562,10 @@ highest = *start + 1;
 for (rowsize = 2; rowsize < 32; rowsize++)
 {
 
-if (rowsize == 16 && *start == 0x92286)
-{
-DBGPRT(1,0);
-}
+//if (rowsize == 16 && *start == 0x92286)
+//{
+//DBGPRT(1,0);
+//}
 
 
 
@@ -4541,9 +4573,14 @@ DBGPRT(1,0);
    do_patt_template(*start,rowsize);
 
    for (rownum = 0;  rownum < rowsize; rownum++)
+   {
+    #ifdef XDBGX
    DBGPRT(0," %x", mtype[rownum]);
-
+   #endif
+   }
+   #ifdef XDBGX
  DBGPRT (1,0);
+ #endif
 
    addr = *start;
    rownum = 0;
@@ -4554,15 +4591,15 @@ DBGPRT(1,0);
 
 while (rownum < 16)
   {
-   addr = *start+(rowsize*rownum);              //no point scoring first row....... 
+   addr = *start+(rowsize*rownum);              //no point scoring first row.......
 
  //  DBGPRT(0,"rownum = %d size %d start %x ", rownum, rowsize, addr);
    score[rownum] = score_row_match(&addr, rowsize);
 
-  // if (score[rownum] > 0)   DBGPRT(1,"OK %d", score[rownum]); else 
+  // if (score[rownum] > 0)   DBGPRT(1,"OK %d", score[rownum]); else
   // DBGPRT(1,"ABANDON %d", score[rownum]);
 
- if (score[rownum] <= 0) break; 
+ if (score[rownum] <= 0) break;
    rownum++;
 
 // check addr if highest   match for end address
@@ -4574,7 +4611,9 @@ addr += rowsize;
 
   if (addr > *end)
      {
+           #ifdef XDBGX
       DBGPRT(1,"beyond end");
+      #endif
       addr = 0;
       break;
      }
@@ -4586,26 +4625,36 @@ if (addr > highest)
   {
    highest = addr;
    ansrow = rowsize;
+     #ifdef XDBGX
    DBGPRT(1,"highest addr = %x for size %x",highest, ansrow);
+   #endif
   }
 
 }
 
 }
 
-if (highest == *end) { DBGPRT (1, "matches end ! size %d" ,ansrow );highest = 0;}
+if (highest == *end) {
+      #ifdef XDBGX
+    DBGPRT (1, "matches end ! size %d" ,ansrow );
+    #endif
+    highest = 0;}
 
 if (highest == *end-1)
   {
     addr = g_byte(highest+1);
     if (addr == 0xff)
 
- {DBGPRT (1, "matches end with term size %d", ansrow); ansrow |= 0x1000; highest = 0;}
+ {
+       #ifdef XDBGX
+       DBGPRT (1, "matches end with term size %d", ansrow); ansrow |= 0x1000;
+       #endif
+        highest = 0;}
   }
 
- 
 
-//if (match) break;    //break from above.... 
+
+//if (match) break;    //break from above....
 
 
 
@@ -4614,7 +4663,7 @@ if (highest)
 { /// no perfect match
    // ansrow has best fit     = rowsize;
   *end = highest;
-  
+
 }
 
 
@@ -4632,11 +4681,11 @@ return ansrow;
    addr = start + (gap * row);  // 16 rows ??          // 512 bytes max
 
    if (addr > maxpcadd(start)) break;
- 
+
 //   for (j = start+gap; j < term; j+=gap)      // (start+127)-gap; j+=gap)       // row by row until 128 max not big enough !!
   //   {
     //    if (j > term) break;
-         
+
         for (i = 0; i < gap; i++)       // compare this row to the 'base'
           {
               //what about words ??
@@ -4647,7 +4696,7 @@ return ansrow;
            if (mtype[i] & 32)
              {
                val = a-b;                                         // value difference.
-               if (val == vl[i])  rscore[row][gap] += 5;   else rscore[row][gap] -= 5;       //  matched by value difference 
+               if (val == vl[i])  rscore[row][gap] += 5;   else rscore[row][gap] -= 5;       //  matched by value difference
              }
 
            if (mtype[i] & 1)
@@ -4671,7 +4720,7 @@ return ansrow;
            }
 
            if (mtype[i] & 16)
-           {  
+           {
  //           val = __builtin_popcount(b);
    //         if (val != 7) mtype[i] &= 0xef;         //drop type 16          //bit mask
      //       else
@@ -4680,7 +4729,7 @@ return ansrow;
 //others ??    Word ?? constant difference ?? all valid
 
           }
-    
+
        #ifdef XDBGX
        DBGPRT(1,"row %d gap %d, score %d", row, gap, score);
        #endif
@@ -4699,7 +4748,7 @@ return ansrow;
   {
    b = a*j;
 
-rscore[a][j] /= b; 
+rscore[a][j] /= b;
 
    if (rscore[a][j] > val)
    { val = b;
@@ -4717,7 +4766,7 @@ rscore[a][j] /= b;
 #ifdef XDBGX
 DBGPRT(1,"end analysis at %x", end+1);
 DBGPRT(1,"highest score is %d for row %d gap %d", a, row, gap & 0xfff);
-#endif 
+#endif
 return 1;
 }
 
@@ -4790,11 +4839,11 @@ uint find_imd_dtk(uint jx, uint forb)
 
        if (forb)
           { if ((x->start[0] - addr) > 256) break;
-          }   
+          }
        else  if ((addr - x->start[0]) > 256) break;   // gap too big
 
 
-       if (x->opcsub == 1)      //imd) 
+       if (x->opcsub == 1)      //imd)
          {
           ans = x->start[0];
           break;
@@ -4809,7 +4858,7 @@ return ans;
 
 /*
 void sniff_loop(uint ix)
- 
+
 {
   DTK *x;
   uint start, end;
@@ -4847,10 +4896,10 @@ void add_unique(uint *x, uint val, uint max)
 
    for (j = 1; j <= x[0]; j++) if (val == x[j]) break;
 
-   if (j > x[0] && j < max) 
+   if (j > x[0] && j < max)
        {
         x[0]++;
-        x[x[0]] = val; 
+        x[x[0]] = val;
 
        }
 }
@@ -4903,31 +4952,36 @@ void discover_struct(uint start, uint end)
     {
            d = (DTD *) chdtkd.ptrs[jx];
            if (d->stdat > end) break;
-           if (d->opcsub == 1)   // d->modes & 2) 
+           if (d->opcsub == 1)   // d->modes & 2)
              {        //immediate
               add_unique(adds,d->stdat,NC(adds));
              }
            jx++;
        }
- 
 
-// debug     
+
+// debug
+ #ifdef XDBGX
         DBGPRT(1,"start = %x", start);
-        
+        #endif
+
           jx = 1;
 
           while (jx <= adds[0])
            {
+               #ifdef XDBGX
             DBGPRT(1," imd = %x", adds[jx]);
+            #endif
             jx++;
            }
-
+#ifdef XDBGX
         DBGPRT(1,"possible end = %x", end);
+        #endif
 
 
 
 // end of temp debug
- 
+
     k = get_dtk(s->fk);            //for debug print
 
     jx = 1;
@@ -4936,7 +4990,9 @@ void discover_struct(uint start, uint end)
             if (adds[jx] > start && adds[jx] < end)
               {
                end = adds[jx]-1;
+               #ifdef XDBGX
                DBGPRT(1,"next imd = %x", adds[jx]);
+               #endif
                break;
               }
             jx++;
@@ -4956,10 +5012,11 @@ type = 0;
       d = (DTD *) chdtkd.ptrs[jx];
       if (d->stdat > end) break;        // finished, maybe
 
-
+#ifdef XDBGX
       DBGPRT(1,"%x from %x,%d, %d, %d) ", d->stdat, d->fk, d->opcsub, d->bsze, d->gap);
+      #endif
       if (d->opcsub == 2)      // d->modes & 4)
-        { // indirect, check gap 
+        { // indirect, check gap
           if (d->gap ) gap |= (1 << d->gap);
 
    //       add_unique(szes,d->bsze,NC(szes));
@@ -4976,8 +5033,8 @@ type = 0;
              {
               if (d->bsze > szes[row])
                 {
-                  if ((row & 1) && szes[row-1] > 1) szes[row] = 0; 
-                  else szes[row] = d->bsze; 
+                  if ((row & 1) && szes[row-1] > 1) szes[row] = 0;
+                  else szes[row] = d->bsze;
                 }
              }
 
@@ -4993,7 +5050,7 @@ type = 0;
 
 
 
-
+#ifdef XDBGX
  DBGPRT(0,"sizes");
  for (row = 0; row < 32; row++)
    DBGPRT(0," %d",szes[row]);
@@ -5004,7 +5061,7 @@ type = 0;
 
  DBGPRT(1,"gap = %x", gap);
  DBGPRT(1,"type = %d", type);
-
+#endif
 
    if (end < start)  return;
 
@@ -5017,8 +5074,8 @@ type = 0;
        // if s-> mattches....
      add_cmd(start,end, s->bsze,0);
      return;
-    } 
- 
+    }
+
 
          #ifdef XDBGX
  DBGPRT(1,"*** investigate %x to %x", start,end);
@@ -5043,12 +5100,21 @@ type = 0;
        if (row > 2 && row < 32)
          {
           a->cnt = row;
-          if (kx) { x->term = 1;  DBGPRT(1,"with terminator");} 
-         } 
-else DBGPRT(1,"reject rowsize = %x", row);
+          if (kx) { x->term = 1;
+ #ifdef XDBGX
+  DBGPRT(1,"with terminator");
+  #endif
+  }
+         }
+else
+{
+ #ifdef XDBGX
+    DBGPRT(1,"reject rowsize = %x", row);
+    #endif
+}
     }
 
-     
+
     }
 
   get_dtkd(&chdtkd,0, start); //may not match, use lastix for nearest after start
@@ -5091,7 +5157,7 @@ else DBGPRT(1,"reject rowsize = %x", row);
              }
             else
              {
-    //          if (d->stdat > start)     start = d->stdat; 
+    //          if (d->stdat > start)     start = d->stdat;
               #ifdef XDBGX
                DBGPRT(1,"imd %x (%x,%d) from %x", start, d->fk, d->opcsub,k->ofst);
               #endif
@@ -5138,9 +5204,9 @@ void turn_gapscans_into_code (void)
 
    for (ix = 0; ix < chsgap.num; ix++)
    {
-    s = (SBK*) chsgap.ptrs[ix]; 
+    s = (SBK*) chsgap.ptrs[ix];
     if (s && s->stop)
-      { 
+      {
        add_cmd (s->start,s->nextaddr,C_CODE,0);
       }
    }            // for loop
@@ -5184,10 +5250,10 @@ for (ix = 0; ix  < chdtkd.num; ix++)
       jx++;
      }
 
-    // no previous instances 
+    // no previous instances
 
     jx = ix+1;
- 
+
     while (jx < chdtkd.num)
      {
       x = (DTD*) chdtkd.ptrs[jx];
@@ -5197,7 +5263,7 @@ for (ix = 0; ix  < chdtkd.num; ix++)
       jx++;
       }
     ix = jx-1;      // skip forward entries
-  
+
 }
 
 }
@@ -5247,23 +5313,29 @@ void scan_gaps(void)
     //code scan if no data found in this gap
 
     if (s->fcom == C_CODE && n->fcom == C_CODE)
-       { // could be code -> code 
+       { // could be code -> code
         cb = get_aux_cmd(start, 0);
         if (!cb || cb->fcom != C_XCODE)
          {  //  not XCODE
-          if (d && (d->stdat > end || d->psh)) 
+          if (d && (d->stdat > end || d->psh))
             {
+                #ifdef XDBGX
              DBGPRT(1,"No data - Code scan ");
+             #endif
              scan_sgap(start);
-             turn_gapscans_into_code ();  
+             turn_gapscans_into_code ();
 
 //but this skips some stuff, so must probably go back and refind the start point..........
              get_cmd(start,0);
-             if (chcmd.lastix < chcmd.num) ix = chcmd.lastix-1; 
-       
+             if (chcmd.lastix < chcmd.num) ix = chcmd.lastix-1;
+
              continue;
             }
-         } else  DBGPRT(1,"XCODE set");
+         } else  {
+               #ifdef XDBGX
+               DBGPRT(1,"XCODE set");
+               #endif
+         }
        }
 
     // not code, so look for data structs
@@ -5273,7 +5345,7 @@ void scan_gaps(void)
         {  // bigger than byte, not tables, use up to first data item.
          uint flag;
          i = start;
-         if (d && d->stdat < end) xend = d->stdat-1; else xend = end;      
+         if (d && d->stdat < end) xend = d->stdat-1; else xend = end;
          flag = 0;
 
          while (i <= xend)
@@ -5292,11 +5364,11 @@ void scan_gaps(void)
            {
             cb = add_cmd(start, xend,0,0);      // fill
             if (!chcmd.lasterr) continue;   // new command OK
-           } 
+           }
         }
-      
-    // not code, not fill, check data, look for structs 
- 
+
+    // not code, not fill, check data, look for structs
+
     discover_struct(start,end);
 
   }
@@ -5365,7 +5437,7 @@ data -> data gaps only
       }
 
     if ((n->start - s->end) > 2)
-      {       
+      {
 
          #ifdef XDBGX
            DBGPRT(0,"\nDATA GAP %x-%x", start, end);
@@ -5380,7 +5452,7 @@ data -> data gaps only
          {       // a valid block
           c = (LBK*) chcode.ptrs[jx];
 
-          if (c->start > start) 
+          if (c->start > start)
             {
               // possible gap before code block
            if (c->start <= n->start && c->end >= n->end)
@@ -5390,11 +5462,11 @@ data -> data gaps only
     #ifdef XDBGX
            DBGPRT(0,"\n*** delete data entry ? %x-%x o%d[%x %x]", n->start, n->end, n->opcsub, c->start, c->end);
            #endif
-// and go back ?? 
+// and go back ??
 }
-             
+
            if (c->start < end && c->end  >= end)
-             {  //overlaps end 
+             {  //overlaps end
            //   end = c->start-1;      //if (xofst) end = xofst-1;         //still not right.....................
            #ifdef XDBGX
            DBGPRT(0,"\n Mod gap to %x-%x (1)   code[%x %x]", start, c->start-1 , c->start, c->end);
@@ -5407,7 +5479,7 @@ data -> data gaps only
 else DBGPRT(0,"\n Catch 1 %x %x", c->start, c->end  );
           }
 
-         if (c->start <= start) 
+         if (c->start <= start)
             {
               // overlaps start of gap
             if (c->end < end)
@@ -5421,7 +5493,7 @@ else DBGPRT(0,"\n Catch 1 %x %x", c->start, c->end  );
           }
 
       } }
-    ix++; 
+    ix++;
    }
 }
 
@@ -5432,7 +5504,7 @@ else DBGPRT(0,"\n Catch 1 %x %x", c->start, c->end  );
          {
            #ifdef XDBGX
            DBGPRT(0,"\n******* DATA GAP %x-%x ", addr, end);
-           DBGPBK(0,s,"Pre"); 
+           DBGPBK(0,s,"Pre");
         #endif
 
     x = (DTK*) chmem(&chdtk,0);
@@ -5456,8 +5528,8 @@ if (x) {
     #ifdef XDBGX
        DBGPRT(0,"DTK %x R%x @%x", x->start, x->rreg, x->ofst);
        if (x->inc) DBGPRT(0," INC");     // implies list already
-       if (x->imd) DBGPRT(0," IMD");     // direct 
-       if (x->imd) DBGPRT(0," INX");     // list or struct 
+       if (x->imd) DBGPRT(0," IMD");     // direct
+       if (x->imd) DBGPRT(0," INX");     // list or struct
     #endif
 
 // if it's an INC already, chances are it's a loop -- need to find the loop !!!!
@@ -5465,8 +5537,8 @@ if (x) {
   //  if (x->inc) sniff_loop(jx);
 
 }}
- // if (x->imd) sniff_structs();    or inx then investigate struct ?? 
- // if (x->inx) sniff_structs();    or inx then investigate struct ?? 
+ // if (x->imd) sniff_structs();    or inx then investigate struct ??
+ // if (x->inx) sniff_structs();    or inx then investigate struct ??
 /// do_data_pat(s->end+1, n->start-1);
 
 
@@ -5488,8 +5560,8 @@ if (x) {
                DBGPRT(0," Prev %x R%x @%x ", x->start, x->rreg, x->ofst);
 
                 if (x->inc) DBGPRT(0," INC");     //implies list already
-                if (x->imd) DBGPRT(0," IMD");     // and look fro another.... 
-                if (x->imd) DBGPRT(0," INX");     // list or struct 
+                if (x->imd) DBGPRT(0," IMD");     // and look fro another....
+                if (x->imd) DBGPRT(0," INX");     // list or struct
 
                #endif
 
@@ -5511,10 +5583,10 @@ if (x) {
                        #ifdef XDBGX
                        DBGPRT(0," Prev IMD %x R%x @%x", z->start, z->rreg, z->ofst);
                 if (z->inc) DBGPRT(0," INC");     //implies list already
-                if (z->imd) DBGPRT(0," IMD");     // and look fro another.... 
-                if (z->imd) DBGPRT(0," INX");     // list or struct 
+                if (z->imd) DBGPRT(0," IMD");     // and look fro another....
+                if (z->imd) DBGPRT(0," INX");     // list or struct
                        #endif
-           //            if (x->ofst - z->ofst < 256) 
+           //            if (x->ofst - z->ofst < 256)
            //            xofst = z->ofst; else xofst = 0;
                        break;
                      }
@@ -5553,7 +5625,7 @@ if (x) {
            //   jx--;
 
            if (jx < chjpf.num)
-             {      
+             {
                j = (JMP*) chjpf.ptrs[jx];
                if (j->back && j->toaddr <= x->ofst && j->fromaddr > x->ofst)
                   {
@@ -5567,7 +5639,7 @@ if (x) {
 
 // now swop to OFST chain....................if loop ??
 
-//adjacent. 
+//adjacent.
 
            if (xofst)
              {
@@ -5593,10 +5665,10 @@ if (x) {
 z = x;
 jx--;
 
-// adjacent and loop too, to verify increment size and types, and whether to swap to index instead. 
+// adjacent and loop too, to verify increment size and types, and whether to swap to index instead.
 
                     }
-            //     } 
+            //     }
 }
 
 
@@ -5627,10 +5699,10 @@ jx--;
      //    }  //if opdata gap
 
       }
-    ix++; 
+    ix++;
    }
 
- 
+
 do pass for functions and lists - inside the data blocks....
 
 rules for function - at least 4 rows (?) must start and end with defined values.
@@ -5660,5 +5732,5 @@ test
         DBGPRT(1,0);
        }
 
-     } 
+     }
 } */

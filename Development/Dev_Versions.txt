@@ -98,6 +98,7 @@ so let me know any you find, with examples please, as tvrfan99@gmail.com
 OOPS! I also left on the 'gap detect' from v 4.06 which does work for functions but not so well for tables, and it does produce some
 false matches.
 
+-------------------------------------------------------------
 4.09
 
 1. Fix regression errors causing symbol names not to be matched correctly in various places in code printout (my error from changes in 4.08)
@@ -106,6 +107,7 @@ false matches.
 
 3. Turn off 'gap detect' again as it causes some strange behaviour and user commands to be ignored -to be investigated.
 
+-------------------------------------------------------------
 (4.10 removed due to stupid error in address validation)
 
 4.11 (10 mar 23)
@@ -113,6 +115,39 @@ false matches.
 1. Revert change to 'skip' opcode, which seems to cause several issues
 
 2. change address validation to match other common tools (I hope)
+
+-------------------------------------------------------------
+
+4.12
+
+1. (yet again!) Revise address validation (i.e. all address inputs in .dir and .cmt files). 
+   Final rules are - (I hope..)
+   All addresses are read as up to 5 hex digits 0xfffff where first digit is bank. Valid banks are 0,1,8,9
+   All bins.  Registers.  0x0 to 0x3ff (0x0 to 0xff for 8061) Registers cannot have a bank. Leading zeroes are ignored.
+   
+   Single banks (all 8061, some 8065)  No banks required (i.e. 4 digits). Addresses can have a bank 8 attached, which is not displayed. 
+   
+   Multibanks.  
+   0x400 to 0x1fff  allowed,  and defaults to Bank 1 (= data bank in every bin .... so far)
+   0x2000 to 0xffff MUST have a bank attached.
+
+2. Fix problem with incorrect layout for 'split comments' ('|' character) and bit names with AND and OR opcodes.
+3. Fix problem with comments showing write symbol names when they should be read names.
+4. Add word tables in .dir commands.     (not detected automatically yet, due for next release)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

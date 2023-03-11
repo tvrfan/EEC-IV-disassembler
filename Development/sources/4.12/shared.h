@@ -1,21 +1,21 @@
 
 
 /**************************************************************************
-* structs and defines for shared interface and global scope go here
+* defines and declarations for shared interface and global scope go here
 * minimal declares to keep interface clean - called by sign, main and core.
 * also refer to sign.h and core.h for more specific declares
 *
 * NOTE This code assumes INT and UNSIGNED INT are at least 32 bits (4 bytes).
- * and WILL NOT WORK with 16 bit compilers.
- * Sizes here (in bits) for information for different platforms
- *
- * OS     compiler     int     float   long   void*    double
- * Win32  mingw        32      32      32     32       64
- * Linux  amd64-gcc    32      32      64     64       64
- *
- * This code built with CodeBlocks and/or CodeLite IDE environments
- * on both Win and Linux
-**************************************************************************/ 
+* and WILL NOT WORK with 16 bit compilers.
+* Sizes here (in bits) for information for different platforms
+*
+* OS     compiler     int     float   long   void*    double
+* Win32  mingw        32      32      32     32       64
+* Linux  amd64-gcc    32      32      64     64       64
+*
+* This code built with CodeBlocks and/or CodeLite IDE environments
+* on both Win and Linux
+**************************************************************************/
 
 #include  <stdio.h>
 #include  <stdlib.h>
@@ -37,17 +37,18 @@ typedef unsigned long  ulong;
 
 
 // Banks can be 0-15, only 0,1,8,9 used. All +1 internally = 1,2,9,A
-// All registers in Bank 8, 4 true 64k malloced banks.
+// All registers in Bank 8,  4 banks of 64k are malloced.
+
 
 #define BMAX      16             // maximum bank index
 
-#define SADVERSION "4.0.7.14"
-#define SADDATE    "22 Mar 2021"
+#define SADVERSION "4.0.12"
+#define SADDATE    "12 Mar 2023"
 
 // debug defines - when switched on, this causes a LOT of output to xx_dbg file
 // DBGPRT id is kept to make debug code more obvious to view
 
- #define XDBGX
+// #define XDBGX
 
 #define NC(x)  sizeof(x)/sizeof(x[0])     // no of cells in struct 'x'
 
@@ -61,7 +62,7 @@ typedef struct
 
  char bare [64];        // bare file name (root binary name)
  char path [254];       // path of root binary name
- char dpath[256];      // default path (SAD progam/exe location)
+ char dpath[254];      // default path (SAD progam/exe location)
  char fn[7][256];      // full file names with path
 
 } HDATA;
@@ -82,9 +83,9 @@ typedef struct                // indexed by bank num (0-16)
  {
  uchar  *fbuf;                // bin file (copy) for this bank ptr.
  uint   *opcbt;               // opcode start flags for this bank (bit array ptr).
- 
+
  uint  filstrt;               // start FILE OFFSET. ( = real offset)
- uint  filend;                // end   FILE OFFSET. 
+ uint  filend;                // end   FILE OFFSET.
  uint  minpc;                 // min PC (normally PCORG)
  uint  maxpc;                 // end PC (= max PC allowed (where fill starts)
  uint  maxbk;                 // where bank really ends (after fill)

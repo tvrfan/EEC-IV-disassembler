@@ -1,1 +1,0 @@
-./Debug/Core.cpp.o ./Debug/main.cpp.o ./Debug/debug.cpp.o ./Debug/chain.cpp.o ./Debug/sign.cpp.o

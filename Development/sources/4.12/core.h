@@ -4,7 +4,7 @@ common declarations for 'core' code modules (disassembly)
 **********************************************************************
 
  * NOTE - This code assumes 'int' is at least 32 bit (4 bytes),
- * 
+ *
  * On some older compilers this would require the use of LONG instead of INT.
  * code here also uses a lot of pointer casts. Should be fine on modern compiler,
  * but stated here just in case
@@ -13,15 +13,15 @@ common declarations for 'core' code modules (disassembly)
  * On Linux builds (CodeBlocks via gcc amd64)   int at 32 bits, long=void* at 64 bits.
  *
  * 8065 manual says that bank is an extra 4 bits in CPU, (bits 16-19) to give a 20 bit address (0-0xFFFFF)
- * which could be 1 Mb (1048576), but biggest bins seem to be 256k (= 0x40000), or 4 banks, using 2 bits. 
+ * which could be 1 Mb (1048576), but biggest bins seem to be 256k (= 0x40000), or 4 banks, using 2 bits.
  *
  * Bin addresses used throughout are 20 bit, = bank in 0xf0000 + 16 bit address. Sometimes as unsigned int.
  * This code uses a pointer in a BANK structure to map into each malloced memory block (= bank) for best speed.
  * This design is therefore bank order independent.
- * 
+ *
  * This code can handle all 16 banks with only changes to bank setup subroutines required (detect and check).
  * Apart from this, all code uses bank+address everywhere, but not tested beyond 4 banks
- * 
+ *
  * NB. Changed above to store (bank+1) internally, so that 'bank present' checks are much easier, which
  * means that code now would support 15 banks, as 1-15 internally or 0-14 in bin terms, but only 0,1,8,9
  * are used, and are therefore internally mapped to 1,2,9,10
@@ -57,15 +57,28 @@ common declarations for 'core' code modules (disassembly)
 
 #define PDEFLT    (0xFC7)                //  default collection
 
+//param flags for banks and so on.
+
+
+
+#define HXRL      0xf              // read length mask 4 bits at bottom
+#define HXLZ      0x40             // lead zero single bit
+#define HXNG      0x80             // '-' before number for offsets
+
+
+
+
+
+
 
 #define ANLFFS    4                  // find funcs, post scan (anlpass)
 #define ANLPRT    5                  // print phase (anlpass)
-#define STKSZ     10                 // size of fake stack(s)  
-#define EMUGSZ    5                  // size of emulate arguments list 
-#define SYMSZE    96                 // max size of symbol name 
-   
-#define NSGV      16                 // num sig values, but sig code allows for 32 
-#define MAXSEQ    254                // max seq number  
+#define STKSZ     10                 // size of fake stack(s)
+#define EMUGSZ    5                  // size of emulate arguments list
+#define SYMSZE    96                 // max size of symbol name
+
+#define NSGV      16                 // num sig values, but sig code allows for 32
+#define MAXSEQ    254                // max seq number
 
 // command values.  Up to 31 commands (32 is cmd flag, can move it)
 
@@ -76,7 +89,7 @@ common declarations for 'core' code modules (disassembly)
 #define C_LONG   4
 #define C_TEXT   5
 #define C_VECT   6
- 
+
 
 #define C_TABLE  7
 #define C_FUNC   8
@@ -89,7 +102,7 @@ common declarations for 'core' code modules (disassembly)
 
 #define C_XCODE  13
 
-#define C_SUBR   14 
+#define C_SUBR   14
 #define C_SCAN   15
 // rbase
 
@@ -100,17 +113,17 @@ common declarations for 'core' code modules (disassembly)
 //set-psw
 
 #define C_CMD    32      // by command (can't change or merge)
-#define C_SYS    128     // for system 'base generated' cmds 
+#define C_SYS    128     // for system 'base generated' cmds
 #define C_GAP    256     // for gap scan
- 
+
 
 #define P_NOSYM  256     // nosym for pp_hdr
 
 // jump and scan request types (and can have C_CMD for user commanded)
 
-#define J_RET    0      // return opcodes  
+#define J_RET    0      // return opcodes
 #define J_INIT   1
-#define J_COND   2      // conditional jump ('if') 
+#define J_COND   2      // conditional jump ('if')
 #define J_STAT   3      // 'static' jump (goto)
 #define J_SUB    4      // subroutine call
 //#define J_ELSE   5      //not yet.
@@ -118,7 +131,7 @@ common declarations for 'core' code modules (disassembly)
 
 //error numbers
 #define E_DUPL  1          // duplicate
-#define E_INVA  2          // invalid address 
+#define E_INVA  2          // invalid address
 #define E_BKNM  3          // banks no match
 #define E_ODDB  4          //odd address (WORD etc)
 #define E_OVLP  5          //overlap
@@ -128,7 +141,7 @@ common declarations for 'core' code modules (disassembly)
 //#define E_PAR   9
 
 
-// chain index defines 
+// chain index defines
 
  #define CHJPF      0
  #define CHJPT      1
@@ -168,7 +181,7 @@ typedef struct            // OPCODE definition structure
 
   uint wfend   : 6;              // write op field end (zero if not wop)
   uint rfend1  : 6;              // read op field end
-  uint rfend2  : 6;              // These sizes are field_end + 32 for sign 
+  uint rfend2  : 6;              // These sizes are field_end + 32 for sign
   uint rfend3  : 6;              // and get converted for sce code printouts
 
   void (*eml) (struct sbk *, struct inst *);    // emulation func
@@ -226,12 +239,12 @@ typedef struct rngadt
  void  *fid;            // Foreign key to SYM or RBT
 
  union uxz{
-  struct  zxz { 
+  struct  zxz {
  char   *name;
  uint tsize;
  } SXA;
  struct xzx {
- uint   val;         
+ uint   val;
  uint testit : 5;
 } SXB;
   } ;
@@ -241,9 +254,9 @@ typedef struct rngadt
  uint   tsize  : 8 ;    // size of symbol name + null (for mallocs and free)
 
  //uint val;             //if used for RBT as well..........
-// char   *ncmnt;       // symbol comment for repeated explanation 
+// char   *ncmnt;       // symbol comment for repeated explanation
 
-} RNGADT; 
+} RNGADT;
 
 
 
@@ -257,7 +270,7 @@ typedef struct rngadt
 
 
 typedef struct xall {
-void  *fid;           // foreign row id (to another CHAIN or this CHAIN) 
+void  *fid;           // foreign row id (to another CHAIN or this CHAIN)
 uint seq    : 8 ;     // sequence number, 1-255   (0 reserved for new enquiry)
 uint type   : 8 ;     //data type (= which union option)
 
@@ -283,7 +296,7 @@ uint fnam   : 1 ;     // (N) look for symbol name
 uint newl   : 1 ;     // (|) break printout with newline (at start of this level)
 uint vaddr  : 1 ;     // (R) value is an addr/pointer to symbol (R) (full address)
 uint bank   : 1 ;     // (K) data holds a valid bank (in 0xf0000)
-uint foff   : 1 ;     // (D) data is an offset address 
+uint foff   : 1 ;     // (D) data is an offset address
 uint ans    : 1 ;     // (=) this is ANSWER definition (separate item, for verification)
 
 uint enc    : 3 ;     // (E) encoded data type (E) 1-7 (addr & 0xff)
@@ -296,7 +309,7 @@ struct        //xspf
   uint fendout  : 6;       // or this
   uint addrreg  : 10;
 
-  uint spf      : 5;        
+  uint spf      : 5;
   uint sizereg  : 10;
  } spf;
 
@@ -328,7 +341,7 @@ uint prdx    : 2 ;     // (X) print radix 0 = not set, 1 = hex, 2 = dec, 3 bin
 uint fnam    : 1 ;     // (N) look for symbol name
 uint newl    : 1 ;     // (|) break printout with newline (at start of this level)
 uint vaddr   : 1 ;     // (R) value is an addr/pointer to symbol (R) (full address)
-uint foff    : 1 ;     // (D) data is an offset address 
+uint foff    : 1 ;     // (D) data is an offset address
 uint ans     : 1 ;     // (=) this is ANSWER definition (separate item, for verification)
 uint flt     : 1 ;     // data is FLOAT, use fldat (union with data) (V, other?)
 uint places  : 4 ;     // 0-15 print decimal places (is 7 enough ?) [forces radix 10]
@@ -380,7 +393,7 @@ typedef struct
 {
 
  char   *name;
- // char   *ncmnt;       // symbol comment for repeated explanation 
+ // char   *ncmnt;       // symbol comment for repeated explanation
  uint   addb;           // actual sym address + bitno 4|16|4|1 = bank|address|bitno|r/w
 
  uint   rstart : 20;    // valid between start and end (0 and 0xfffff for 'all')
@@ -401,7 +414,7 @@ typedef struct
 
 
 
-//*****  for data addresses tracking found in code analysis 
+//*****  for data addresses tracking found in code analysis
 
 
 // tricky - definitely need search by a) register b) data start.
@@ -414,7 +427,7 @@ typedef struct dtk
 // mutliple starts in addnl struct below
 
 // but opcsub+psh+cmp+stx ia already 5 bits......numops is 7
-//perhaps a simple opcix/full and 3 regs and 
+//perhaps a simple opcix/full and 3 regs and
 
 
   ushort rgvl[5];            // reg 0-4 for indexes etc.
@@ -426,7 +439,7 @@ typedef struct dtk
 
   uint ocnt    : 4;       // total size of 'from' opcode
   uint opcix   : 8;       // opcode index
- 
+
   uint ainc    : 2;       // auto inc size
   uint numops  : 2;       // actual numops
 } TRK;
@@ -475,8 +488,8 @@ typedef struct dr
 
 
 
-// general command struct 
- 
+// general command struct
+
 typedef struct lbk        // command header structure
 {
  uint cmd    : 1;            // added by user command, guess otherwise
@@ -495,7 +508,7 @@ typedef struct lbk        // command header structure
 
 
 
- 
+
 //overlay struct (on ops[4]) for bitwise searches.
 
 typedef struct opsx
@@ -510,7 +523,7 @@ uint sceix : 3;      // source index
 }  OPBIT;
 
 
-// subroutine structure 
+// subroutine structure
 
 typedef struct
 {
@@ -531,21 +544,21 @@ typedef struct xspf
   uint pkey     :20;       // start addr of subr
   uint fendin   : 6;       // may not need this...
   uint fendout  : 6;       // or this
- 
+
   uint addrreg  : 10;
-  uint spf      : 5;        
+  uint spf      : 5;
   uint sizereg  : 10;
  } SPF;
 
 
 /********************************
- *   Jump list structure 
+ *   Jump list structure
  ********************************/
 
 typedef struct jlt
 {
 
-  uint   back     : 1;     // backwards jump  
+  uint   back     : 1;     // backwards jump
   uint   obkt     : 1;     // prt open bracket (and swop logic from goto)
   uint   cbkt     : 1;     // prt close bracket
 
@@ -607,7 +620,7 @@ uint  curaddr    : 20;        // current addr - scan position (inc. start)
 
 uint  logdata    : 1;         // log data to LBK chain
 uint  args       : 1;         // this (proc) is an arg getter
-uint  scanning   : 1;         // scan processing (do jumps, scans etc) 
+uint  scanning   : 1;         // scan processing (do jumps, scans etc)
 uint  emulating  : 1;         // emulating (with dummy scan block)
 //uint  lscan      : 1;         // loop scan (emulate), change some things
 uint  emulreqd   : 1;         // mark block as emu required (every time called) for args (here)
@@ -621,7 +634,7 @@ uint  php        : 1;         // block uses pushp (for multibanks)
 
 uint  substart   : 20;        // start address of related subroutine (for names and sigs)
 
-}  SBK ; 
+}  SBK ;
 
 
 /************************
@@ -631,7 +644,7 @@ inst has 5 OPS entries (3 ops [1][2][3] + index [0] + save [4])
 
 typedef struct          // operand storage, max 4 for each instruction
 {
- int  val  ;            // value of register contents or an immediate value 
+ int  val  ;            // value of register contents or an immediate value
  uint addr ;            // actual operand address (register mostly)
 
 // (22 bits)
@@ -646,7 +659,7 @@ typedef struct          // operand storage, max 4 for each instruction
  uint inc     : 1;      // autoinc (easier for printout....)
  uint bkt     : 1;      // print square brackets
  uint rbs     : 1;      // register is an rbase
- uint sym     : 1;      // 1 if sym found 
+ uint sym     : 1;      // 1 if sym found
 } OPS;
 
 
@@ -683,21 +696,12 @@ typedef struct inst
 
 typedef struct  sfx
  {
-   uint spf;    
+   uint spf;
    uint ans[2];
    uint rg [2];
    uint lst [2];
- }  SFIND;  
+ }  SFIND;
 
-
-typedef struct cmnt
- {
-   char  *ctext;               // comment text
-   INST  *minst;               // where ops are
-   uint  ofst     : 20;        // next addr for comment
-   uint  newl     : 1;         // set if cmt begins with newline 
- //  uint  nflag    : 2;         // newline reqd for cmnd blocks split
- } CMNT;
 
 // Register status for fake stack and arguments handling
 
@@ -708,7 +712,7 @@ typedef struct regstx
 
 //uint substart : 20;       // for subroutine ??
 
-   uint fend    : 5;       // 
+   uint fend    : 5;       //
    uint popped  : 1;       // popped reg
    uint arg     : 1;       // argument register (any)
    uint sarg    : 1;       // source arg (1st level from pop)
@@ -733,7 +737,7 @@ typedef struct regstx
 
 typedef struct stk
 {                              // fake stack struct
-uint  popped     : 1;             // register entry is popped, cleared when pushed back             
+uint  popped     : 1;             // register entry is popped, cleared when pushed back
 uint  reg        : 10;             // register (last) popped to
 uint  origadd    : 20;            // original value in nxtadd - for args detect
 uint  type       : 3;             // 1 call, 2 imd, 3 psw
@@ -742,21 +746,26 @@ uint  newadd     : 20;            // current addr value (at push)
 }  FSTK;
 
 
-// user command holder for parse and processing 
+// user command holder and comment holder for parse and processing
 
-typedef struct               // command holder for cmd parsing 
+
+typedef struct               // command holder for cmd parsing
 {
   ADT   *adnl;              // current adnl pointer
-  uint  posn;               // char posn/column (for errors)
-  uint  maxlen;
+  INST  *minst;
+  char  *cmpos;             // current read char posn
+  char  *cmend;             // end of command line
+
   int   p[8];               // 8 params max (allow for negative values)
-  int   error;              // for true error return 
+  uint  pf[8];              // param flags
+
+  int   error;              // for true error return
 
   uint  tsize    : 8;       // total size of ADT  (bytes)
   uint  adreg    : 10;       // address register
 
   uint  spf      : 5;       // special function subroutine
-  uint  firsterr : 1;       // first error, print cmd line if zero 
+  uint  firsterr : 1;       // first error, print cmd line if zero
   uint  szreg    : 10;       // size register
 
   uint  seq      : 8;       // seq no for additionals
@@ -772,7 +781,19 @@ typedef struct               // command holder for cmd parsing
   char  symname[SYMSZE+1];   // symbol 96 + null
 
  } CPS;
- 
+
+
+/*
+typedef struct cmnt
+ {
+   char  *ctext;               // comment text       cmpos
+   INST  *minst;               // where ops are                 minst
+   uint  ofst     : 20;        // next addr for comment         p[0]
+   uint  newl     : 1;         // set if cmt begins with newline  argl
+ //  uint  nflag    : 2;         // newline reqd for cmnd blocks split
+ } CMNT;
+*/
+
 /********************************
  *  Input Command definition structure
  ********************************/
@@ -781,17 +802,24 @@ typedef struct               // command holder for cmd parsing
  {
   uint  (*setcmd) (CPS*);         // command processor(cmd struct)
   uint  (*prtcmd) (uint, LBK *);  // command printer (ofst,cmd index)
-
+  uint  minpars : 3 ;             // min pars expected
   uint  maxpars : 3 ;             // max pars allowed/expected 0-7
-  uint  sgpos   : 3 ;             // where single addr is, in pars
-  uint  prpos   : 3 ;             // where 'start/end' pair is, in pars
+
+  //up to 8 types for each param for validation.
+  // 0 - none, 1 start addr, 2 end addr, 3 register, 4 st range, 5 end range (4 and 5 are 1 and 2?
+ uchar ptype[4];
+
+
+ // uint  sgpos   : 3 ;             // where single addr is, in pars
+ // uint  prpos   : 3 ;             // where 'start/end' pair is, in pars
   uint  namex   : 1 ;             // name expected/allowed
 
-  uint  maxadt  : 5 ;             // max ADT levels (< 31)
   uint  minadt  : 5 ;             // min ADT levels (< 31)
-  uint  defsze  : 6 ;             // default size, same as ssize in ADT 
+  uint  maxadt  : 5 ;             // max ADT levels (< 31)
+
+  uint  defsze  : 6 ;             // default size, same as ssize in ADT
   uint  merge   : 1 ;             // can be merged with same command (adj or olap)
-  uint  stropt  : 1 ;             // command with strings (e.g. setopt)
+  uint  stropt  : 1 ;             // command with strings (e.g. setopt)             //change to first 'type' above ??
 
   const char*  gopts;             // global options
   const char*  opts;              // data levels
