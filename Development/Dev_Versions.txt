@@ -1,23 +1,5 @@
 
-
-4.0.7.6 (13 Sept 2020)
-
-1. Fixed   - possible crash with long symbol names.
-2. Fixed   - "}" Brackets in wrong place with bit names
-3. Fixed   - Split comments not handled correctly with an3b, an3w
-4. Fixed   - Split comments wrongly adds extra spaces if "\|" sequence is at end of comment
-5. Changed - Symbol Names can now be up to 96 characters.
-
-4.0.7.7 (11 Oct 2020)
-
-Fixed    - Extra spaces printed in some comment lines.
-Fixed    - Extra quotes in name and leading spaces after a quote confuses command processing
-Fixed    - Faulty printout of bitwise code for some AD3W opcodes (when they should be ADD) 
-Fixed    - Overlap of some functions and tables not detected, leading to faulty printout
-Fixed    - Incorrect bank calculated for some opcodes, leading to wrong or missing symbols (Multibanks)
-Improved - Sizes of subroutine arguments better (i.e. word or byte) after bugs found. Still not perfect.
-Added    - better detection of single 'fill' bytes, now printed as 'fill' instead of '???'
-
+(dropped some older version descriptions)
 
 4.0.7.8 (28 Oct 2020)
 
@@ -85,32 +67,37 @@ Fix print bug which shows wrong value for STW (probably only happens in test bin
 
 -------------------------------------------------------------
 
-4.08  (01 Mar 2023)
+NOTE - After a HUGE gap, during which I was trying to write a new much neater, much more elegant version (which I can't get to work !)
+I decide to go back to the last working version and start over. 
+ 
+Changed to simpler version numbering.
 
-After a HUGE gap, during which I was trying to write a new much neater, much more elegant version (which I can't get to work !)
-I decide to go back to the last working version and start over. Changed to simpler version numbering.
+From here I will probably merge in many of those new versions from this attempt.
+
+-------------------------------------------------------------
+
+
+4.0.8  (01 Mar 2023)
 
 Fixed - Inconsistent handling of addresses (bank prefixes) in multibanks across symbols, comments, commands.
 
-NB. I expect probable regression errors as I have changed the whole address verification to use same routine...
-so let me know any you find, with examples please, as tvrfan99@gmail.com 
+NB. I expect probable regression errors as I have changed the whole address verification to use the same routine...
 
 OOPS! I also left on the 'gap detect' from v 4.06 which does work for functions but not so well for tables, and it does produce some
 false matches.
 
--------------------------------------------------------------
-4.09
+4.0.9
 
 1. Fix regression errors causing symbol names not to be matched correctly in various places in code printout (my error from changes in 4.08)
 
 2. Fix inconsistent spaces in comments after symbol addresses (\S syntax)  
 
-3. Turn off 'gap detect' again as it causes some strange behaviour and user commands to be ignored -to be investigated.
+3. Turn off 'gap detect' again as it causes some strange behaviour and user commands to be ignored.
 
--------------------------------------------------------------
-(4.10 removed due to stupid error in address validation)
+NB.  4.0.10 removed due to another stupid error in address validation
 
-4.11 (10 mar 23)
+
+4.0.11 (10 mar 23)
 
 1. Revert change to 'skip' opcode, which seems to cause several issues
 
@@ -118,27 +105,35 @@ false matches.
 
 -------------------------------------------------------------
 
-4.12
+4.0.12
 
-1. (yet again!) Revise address validation (i.e. all address inputs in .dir and .cmt files). 
-   Final rules are - (I hope..)
-   All addresses are read as up to 5 hex digits 0xfffff where first digit is bank. Valid banks are 0,1,8,9
-   All bins.  Registers.  0x0 to 0x3ff (0x0 to 0xff for 8061) Registers cannot have a bank. Leading zeroes are ignored.
+1. Revise address validation (again !!)  For all address inputs in .dir and .cmt files). 
+   Final rules are - 
+   All addresses are read as up to 5 hex digits, 0xfffff. The first digit is bank. Valid banks are 0,1,8,9 for all bins.
+   Registers are 0x0 to 0x3ff (0x0 to 0xff for 8061) Registers cannot have a bank.  Leading zeroes are ignored for compatibility.
    
-   Single banks (all 8061, some 8065)  No banks required (i.e. 4 digits). Addresses can have a bank 8 attached, which is not displayed. 
+   Single banks (all 8061, some 8065) No bank required (i.e. 4 digits). Addresses may have a bank 8 attached, which is not displayed. 
    
    Multibanks.  
-   0x400 to 0x1fff  allowed,  and defaults to Bank 1 (= data bank in every bin .... so far)
+   0x400 to 0x1fff allowed, and defaults to Bank 1 (= data bank in every bin .... so far)
    0x2000 to 0xffff MUST have a bank attached.
 
-2. Fix problem with incorrect layout for 'split comments' ('|' character) and bit names with AND and OR opcodes.
-3. Fix problem with comments showing write symbol names when they should be read names.
-4. Add word tables in .dir commands.     (not detected automatically yet, due for next release)
+2. Fixed - Incorrect print layout for 'split comments' ('|' character) and bit names with AND and OR opcodes.
+3. Fixed - Comments showing write symbol names ('\S') when they should be read names.
+4. Add   - Word tables in .dir commands.     (not detected automatically yet, due soon)
 
 
+4.0.13
 
+1. Fixed - some symbol names not appearing in listing for structs.
+2. Fixed - intermittent crash if bytes missing at front of bin file.
+3. Fixed - errors in comment format can lead to incorrect printout. 
+4. Added - new note in comments for unmatched symbol names, as '?num?' 
+4. Dropped - 'Timer' command. Changed for a more generic group of 'struct' commands.   More work to do here. Works for early bins
 
-
+5. Improvements which don't change listings yet.  For future improvments. 
+   New 'signature' match for code segments. 
+   New Bank find routine. (e.g. FM20M06, which BREAKS FORD'S HARDWARE RULES !)
 
 
 
