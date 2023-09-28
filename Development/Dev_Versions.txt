@@ -49,7 +49,6 @@ comment changes - removed '\P' sequence in comments.
 
 Temporarily removed autocomments (may move to _msg file to help keep clarity of printouts)
 
-4.0.7.14 (20 March 2021)  {removed exe}
 
 4.0.7.15 (14 June 2021)
 
@@ -122,18 +121,6 @@ NB.  4.0.10 removed due to another stupid error in address validation
 3. Fixed - Comments showing write symbol names ('\S') when they should be read names.
 4. Add   - Word tables in .dir commands.     (not detected automatically yet, due soon)
 
-
-4.0.13
-
-1. Fixed - some symbol names not appearing in listing for structs.
-2. Fixed - intermittent crash if bytes missing at front of bin file.
-3. Fixed - errors in comment format can lead to incorrect printout. 
-4. Added - new note in comments for unmatched symbol names, as '?num?' 
-4. Dropped - 'Timer' command. Changed for a more generic group of 'struct' commands.   More work to do here. Works for early bins
-
-5. Improvements which don't change listings yet.  For future improvments. 
-   New 'signature' match for code segments. 
-   New Bank find routine. (e.g. FM20M06, which BREAKS FORD'S HARDWARE RULES !)
 
 
 
