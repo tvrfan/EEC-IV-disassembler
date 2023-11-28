@@ -1,7 +1,45 @@
 
 Version Summary
+(dropped some older version descriptions)
 
---- NB. Use 'daily' subdirectory for latest test versions ---
+--- NB. Use 'development' subdirectories for latest test versions ---
+
+** Version 4.0.7 (16 Jun 2021) *********
+
+[Copied across from development branch 29 Nov 2023]
+
+Main Changes -
+
+1.       Changed internal bank handling so that addresses without bank can be recognised, so symbol names are better resolved for subroutine arguments. 
+2.       Default to adding bank 1 in multibanks for addresses with no bank.  (NB. This is a 'best guess' where use is obviously an address)
+3.       Comments- removed '\P' sequence in comments.
+                  added '\M' = next tab, like word processors
+                  added \R<ch><num>  = runout char 'ch' num times, and \R<num> = runout 'space' num times
+                  added \SW<add> to find write symbol instead of read sym
+
+4.       Temporarily removed auto code and data detection from 'gaps' as it doesn't work properly.
+5.       ALL 'odd addressed' word ops change bank in 8065. (0 - 0x3ff addresses were ignored before)
+6.       Temporarily removed autocomments (they don't help much)
+
+Fixes -
+
+Fixed - Missing symbols when not processed in 'SYM' command (i.e. WORD 3234 3235 "MyName" not handled correctly, but SYM 3234 "MyName" was).
+Fixed - Incorrect bank processing for symbol names in multibanks, so did not appear in printout.
+Fixed - Bank detect not picking up banks correctly for some binaries - changed detect algorithm (NB FM0206 still doesn't work)
+Fixed - Possible crash with corrupt or non-806x binaries.
+Fixed - A 'Catch22' where detect of banks fails and could not be overriden with user commands.  More error checks added also.
+Fixed - Comments get incorectly pushed up to start of bank (multibanks only).
+Fixed - Bitwise opcodes not displaying symbols above bit 7 for CLRW (was incorrectly set as byte sized)
+Fixed - 'W' flag with symbols not working if set in upper byte.
+Fixed - According to Ford manuals, the 'odd address' word mode for 8065 CPU does not apply for registers below R20..... But not sure if this is true
+Fixed - Internal change to ranges indexing for symbols and rbases, it was possible to 'lose' a symbol entirely.
+Fixed - Additional data printout of bank (i.e. : K <n>)  shows wrong bank.
+Fixed - Immediate push did not resolve bank address printout correctly in multibanks.
+Fixed - Bug with immediate byte shown as word (LDZBW, LDSBW, ML2B, ML3B, etc.)
+Fixed - Infinite loop in internal code (before printout) 
+Fixed - Printout shows wrong value for STW   (probably only happens in special test bins) 
+Fixed - Incorrect read of symbols at 0x3ff returning "invalid bank" in some cases
+
 
 ** Version 4.0.6 *********
 

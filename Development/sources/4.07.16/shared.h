@@ -41,7 +41,7 @@ typedef unsigned long  ulong;
 
 #define BMAX      16             // maximum bank index
 
-#define SADVERSION "4.0.7.16"
+#define SADVERSION "4.0.7"
 #define SADDATE    "16 Jun 2021"
 
 // debug defines - when switched on, this causes a LOT of output to xx_dbg file
