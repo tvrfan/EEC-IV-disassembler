@@ -6,13 +6,11 @@ NOTE - this code is intended to help understand only how each EEC works, not as 
 
 Split into separate subdirectories.
 
-Latest Stable Version      is 4.0.6
+Latest Stable Version      is 4.0.7
 
 -------------------------------------------------
 
 Docs subdirectory
-
-SAD_user_manual_to_4.0.6.pdf		disassembler documentation and user manual BEFORE 4.0.6.
 
 SAD_user_manual_4.0.6_onwards.pdf	disassembler documentation and user manual.
 
@@ -24,30 +22,30 @@ Version.txt	Short description of bugs fixed and changes made for each version.
 
 -------------------------------------------------
 
-Windows Subdirectory
+Win32 Subdirectory
 
-SADvvv.exe   Windows executable      (32 bit build. 'vvv' is version number) 
+SADvvv.exe   Windows executable      (32 bit build) 
 
 chip.ico     icon file
 
 ---------------------------------------
 
-Windows/SADwin Subdirectory
+Win32/SADwin Subdirectory
 
-SADWIN.exe   Windows GUI 'Wrapper'   (32 bit build)
+SADWIN.exe   Windows GUI 'Wrapper'
 
-SADwin.cpp   Source code             (WIN32 API)
+SADwin.cpp   Source code        (uses WIN32 API)
 
-chip.ico     icon file               (same as Windows above)
+chip.ico     icon file          (same as Windows above)
 
 Notes -  SADwin will create a default config file for you on first run,
          which you can then setup to your preference
 
 ---------------------------------------
 
-Linux Subdirectory 
+Linux64 Subdirectory 
 
-SADvvv     Linux executable         (amd64 build. 'vvv' is version number).
+SADvvv     Linux executable         (64 bit build).
 
 After download, make SAD files executable if necessary with chmod.
 
@@ -57,7 +55,7 @@ sad.ini    an example file to show path locations, not auto generated. (no SADWI
 
 Edit sad.ini for your setup.
 
-If sad.ini is not in same directory as SADvvv  then use command  SADvvv -c 'path'   where path is location of sad.ini.
+If sad.ini is not in same directory as SADvvv  then use command  SAD -c 'path'   where path is location of sad.ini.
 
 If no sad.ini present, then everything must be in same directory as SAD
 
@@ -79,5 +77,7 @@ Development Subdirectory
 early releases of SAD versions for testing - probably stable, but not guaranteed.
 
 Version.txt	Short description of bugs fixed and changes made for each version
+
+NEW VERSION '5 ALPHA' RELEASED. READ note first before using. 
 
 
