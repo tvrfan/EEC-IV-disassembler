@@ -1,13 +1,24 @@
 
+
+5.0.2. ALPHA
+
+FIXED -  Drag and drop and 'open with' in Windows causes crash and/or 'file not found'. (incorrect file path handling)
+FIXED -  Duplicate symbol error in commands when sym is write 'W', if W option appears before 'B' option 
+FIXED -  'rowsize is zero' error - appearing when it should not
+FIXED -  '2 values required' with 'F <functype> special subroutine type - only tables require 2 values.
+FIXED -  Incorrect checking of number of data items (i.e. number of '[]' items) in commands.
+
+
+
 5.0.1 ALPHA
 
 for user evaluation.
 
-Large parts of SAD rewritten.
-Supports true multibit fields. Fields can be nested within each other
-Supports a 'calc' command for true math calculations.
-New command syntax.
-Added autodetect of word tables.
+CHANGE - Large parts of SAD rewritten.
+CHANGE - New command syntax.
+NEW    - Supports true multibit fields. Fields can be nested within each other
+NEW    - Supports a 'calc' command for true math calculations.
+NEW    - Added autodetect of word tables.
  
 -------------------------------------------------------------  
 
