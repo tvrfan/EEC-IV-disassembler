@@ -1,3 +1,22 @@
+5.0.3
+
+NB. still some issues outstanding from 5.0.2, but releasing this as several things fixed. 
+
+FIXED - incorrect logic for conditional jump JNC/JC printed. (other jumps checked too).
+FIXED - incorrect bank printed after ROMBANK prefix.
+FIXED - XOR not printing correct operator (^= instead of =) 
+FIXED - functions not being extended to their true endpoint.
+FIXED - '= calcname' returns "invalid calctype"
+FIXED - columns not lining up for some structs
+FIXED - args overlapping in printouts.
+FIXED - "commands overlap" error reported for adjacent commands 
+
+
+CHANGE - put 'timer' command back, as it looks like this will be best solution, with a 'type' attached (maybe with a size too).
+TEMP -  change printout of JNV/JV (overflow flag) to 'if OVF = " as previous format doesn't appear to be correct. More work to do.
+ 
+
+
 
 
 5.0.2. ALPHA

@@ -65,7 +65,8 @@ Change comments syntax so it matches the new command sytax, i.e. with square bra
 Add a 'group' command for better layout.  This allows data structures within the group to share the same column layout and be grouped together.
 This is for structures which have different sized rows, to give a generic way to print them. Timer structures and some injection structures have different sized rows.
 
-Dropped the 'timer' command. To be replaced by a 'group' command.  Uses 'struct' in the meanwhile.
+Dropped the 'timer' command. N.B. *** REINSTATED in 5.0.3 ***  Looks like a timer with a 'type' will be best option.
+
 Some data options now deprecated but still work, and are replaced by equivalent 'calc' (D offset, E encoded, V divide).
 
 Symbols - 
