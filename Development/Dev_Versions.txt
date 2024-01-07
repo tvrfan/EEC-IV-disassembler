@@ -1,3 +1,12 @@
+5.0.4
+
+FIXED -  additonal code appears after a 'return'
+
+
+CHANGE - add remainder for divides in for Rx = Rz % Rb;  This should be shown as it changes dividend reguster.
+
+
+
 5.0.3
 
 NB. still some issues outstanding from 5.0.2, but releasing this as several things fixed. 
