@@ -1,11 +1,22 @@
 5.0.4
 
-FIXED -  additonal code appears after a 'return'
+FIXED - additonal psuedo code appears after a 'return'
+FIXED - blank psuedo code for OR, XOR, AND  when no symbol names found. (see note below)
+FIXED - system subroutine names (e.g. interrupt handlers) being overwritten.
+FIXED - incorrect parsing of math functions with no space after close brackets (? May need more) 
+
+FIXED - (MAYBE!) crash in some bins due to a zero pointer - haven't fully analysed why, but put in temp check which seems to work.
+
+CHANGE - add remainder line for divides in form of Rx = Rz % Rb;   This reminds that top of dividend register is changed to remainder value.
 
 
-CHANGE - add remainder for divides in for Rx = Rz % Rb;  This should be shown as it changes dividend reguster.
+Note  -  AND, OR, XOR - the field name print logic still differs a little from version 4, because multibit subfields are now supported.
+         Rules - If a field name is found, all found symnames for the oinstruction are used.  This is now applied to ldw, ldb, clrw, clrb etc, which is different to v4. 
+         If no field symnames found, then style of Bx_Rn or Bx_symname (if the byte or word has a symname) is used for any remaining bits.  
+         If no field symnames found and only ONE BIT is changed, then style of Bx_Rn or Bx_symname (if the byte or word has a symname) is used. (This from v4)
+         may need extra global option(s) to fine tune what users want.
 
-
+-------------------------
 
 5.0.3
 
@@ -24,9 +35,7 @@ FIXED - "commands overlap" error reported for adjacent commands
 CHANGE - put 'timer' command back, as it looks like this will be best solution, with a 'type' attached (maybe with a size too).
 TEMP -  change printout of JNV/JV (overflow flag) to 'if OVF = " as previous format doesn't appear to be correct. More work to do.
  
-
-
-
+-------------------------
 
 5.0.2. ALPHA
 
@@ -36,7 +45,7 @@ FIXED -  'rowsize is zero' error - appearing when it should not
 FIXED -  '2 values required' with 'F <functype> special subroutine type - only tables require 2 values.
 FIXED -  Incorrect checking of number of data items (i.e. number of '[]' items) in commands.
 
-
+-------------------------
 
 5.0.1 ALPHA
 
