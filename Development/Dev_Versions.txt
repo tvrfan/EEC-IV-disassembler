@@ -1,3 +1,16 @@
+5.0.5
+
+FIXED - symbol names can be trashed by symbol name reference in assocaated comment
+FIXED - 'special' subroutine names (e.g. function lookup) get replaced/changed when they should not.
+
+CHANGE - add extra line for 'normalize' opcode to reflect what really happens (like the divide in 5.0.4)
+
+FIXED - Mistake - the crash fix in 5.0.4 was NOT put in Windows versions. 
+
+
+--------------------------------
+
+
 5.0.4
 
 FIXED - additonal psuedo code appears after a 'return'
@@ -11,7 +24,7 @@ CHANGE - add remainder line for divides in form of Rx = Rz % Rb;   This reminds 
 
 
 Note  -  AND, OR, XOR - the field name print logic still differs a little from version 4, because multibit subfields are now supported.
-         Rules - If a field name is found, all found symnames for the oinstruction are used.  This is now applied to ldw, ldb, clrw, clrb etc, which is different to v4. 
+         Rules - If a field name is found, all found symnames for the instruction are used.  This is now applied to ldw, ldb, clrw, clrb etc, which is different to v4. 
          If no field symnames found, then style of Bx_Rn or Bx_symname (if the byte or word has a symname) is used for any remaining bits.  
          If no field symnames found and only ONE BIT is changed, then style of Bx_Rn or Bx_symname (if the byte or word has a symname) is used. (This from v4)
          may need extra global option(s) to fine tune what users want.
