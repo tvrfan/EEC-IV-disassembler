@@ -1,3 +1,23 @@
+
+
+5.0.6
+
+FIXED - crash in handling of calc types with "= float" due to incorrect size/pointer (in funcs and tables mainly)
+FIXED - "] expected" and "Invalid Address" and other errors if command has following spaces (and/or comments) 
+FIXED - "At least 2 values Required" error for special lookup types.
+FIXED - parsing of 'calc' commands reports error when no space after a bracket. 
+FIXED - Incorrect wrap of comments (carry over from v4)
+FIXED - repair style for AN3B, AN3W to V4 style  of  "R32 = name | name | name"
+
+
+CHANGE - add "with <command>" for duplates and overlaps in dir file.
+
+
+
+
+
+--------------------------------
+
 5.0.5
 
 FIXED - symbol names can be trashed by symbol name reference in assocaated comment
