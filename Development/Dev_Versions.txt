@@ -1,4 +1,17 @@
+5.0.7
 
+FIXED - Crash in calc when used in short format multiple times in same command (intermittent) (e.g. [UW =float(x/4.0)] [UW=float(x/8.0)]
+FIXED - "invalid floating point number" also in short format. 
+FIXED - Float format not always carried through to print phase in listing (prints hex format)
+FIXED - incorrect address format in some error reports
+FIXED - printout of calc formulae in '_msg' file uses float values in 'integer' calc types.
+
+
+CHANGE - changed some internal names to match the Ford Manual. i.e.  "alt" and "PSW_" 
+CHANGE - Allow byte symbols to overlap word symbols.  Ford DMR files do this, so SAD rules and checks changed to fit.
+
+
+--------------------------------
 
 5.0.6
 
@@ -8,13 +21,10 @@ FIXED - "At least 2 values Required" error for special lookup types.
 FIXED - parsing of 'calc' commands reports error when no space after a bracket. 
 FIXED - Incorrect wrap of comments (carry over from v4)
 FIXED - repair style for AN3B, AN3W to V4 style  of  "R32 = name | name | name"
+FIXED - incorrect print format for SYM command in _msg file.
 
 
-CHANGE - add "with <command>" for duplates and overlaps in dir file.
-
-
-
-
+CHANGE - add "with <command>" for duplicates and overlaps in dir file.
 
 --------------------------------
 
@@ -27,9 +37,7 @@ CHANGE - add extra line for 'normalize' opcode to reflect what really happens (l
 
 FIXED - Mistake - the crash fix in 5.0.4 was NOT put in Windows versions. 
 
-
 --------------------------------
-
 
 5.0.4
 
@@ -49,7 +57,7 @@ Note  -  AND, OR, XOR - the field name print logic still differs a little from v
          If no field symnames found and only ONE BIT is changed, then style of Bx_Rn or Bx_symname (if the byte or word has a symname) is used. (This from v4)
          may need extra global option(s) to fine tune what users want.
 
--------------------------
+-------------------------(delete 5.0.1 through 5.0.3) -------- 
 
 5.0.3
 
