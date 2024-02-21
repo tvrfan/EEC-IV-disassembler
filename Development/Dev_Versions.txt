@@ -1,54 +1,79 @@
+5.0.8
+
+Fixed - New logic for symbols (5.0.7) causes incorrect symbol to be displayed in many places.
+Fixed - in comments, a bit field followed by a non bit field, e.g. "\sA7:2 = 0 \t83\s247e"  may cause spurious bit to appear in second name as "B0_name"
+Fixed - Infinite loop (lock up) with KIEE binary, and probably others, due to error with merging internal commands together. 
+Fixed - args sometimes 'overrun' into next opcode in printout.  
+
+Change - Symbol rules -  Symbol fields may now overlap, but may not be identical. User can specify byte/word/bitfield at same address.
+         If an exact match is not found in searches, the nearest 'whole byte' sym name (i.e. which spans the field specified) is used as default name. (for DMR files)
+
+Outstanding bugs - all can be fixed/workaround with extra user commands (in .dir file), maybe in combination with v4 versions.
+
+NOTE - I have discovered a serious design issue which can cause lost tables and functions, and may also result in incorrect rows and columns for these data structures. Also missed args for subroutines. This is caused by my grand rewrite and change to the way a bin file is scanned.  I tried to do a 'scan once' elegant model, and now after all this effort, several bugs confirm that this 'elegant' design isn't going to work as well as I thought. I need to go back again and look at how to fix this, perhaps putting back some earlier methods.  V4 was actually better at finding some things, but did not have the 'calc' and 'nested subfield' ability.  This may take a while to fix.
+
+1.  tables sometimes appear as 1 column, which is obviously wrong 
+2.  more tables and functions missed than version 4.
+3.  Missed args on some subroutine calls.
+4.  Missed code (more than v4 anyway) 
+ 
+
+
+
+
 5.0.7
 
-FIXED - Crash in calc when used in short format multiple times in same command (intermittent) (e.g. [UW =float(x/4.0)] [UW=float(x/8.0)]
-FIXED - "invalid floating point number" also in short format. 
-FIXED - Float format not always carried through to print phase in listing (prints hex format)
-FIXED - incorrect address format in some error reports
-FIXED - printout of calc formulae in '_msg' file uses float values in 'integer' calc types.
+Fixed - Crash in calc when used in short format multiple times in same command (intermittent) (e.g. [UW =float(x/4.0)] [UW=float(x/8.0)]
+Fixed - "invalid floating point number" error, also in short format. 
+Fixed - Float format not always carried through to print phase in listing (prints hex format)
+Fixed - incorrect address format in some error reports
+Fixed - printout of calc formulae in '_msg' file uses float values in 'integer' calc types.
+Fixed - IN PART  change to process to find missing subroutine args.  Not a perfect fix, but an improvement. 
 
 
-CHANGE - changed some internal names to match the Ford Manual. i.e.  "alt" and "PSW_" 
-CHANGE - Allow byte symbols to overlap word symbols.  Ford DMR files do this, so SAD rules and checks changed to fit.
+Change - changed some internal names to match the Ford Manual. i.e.  "alt" and "PSW_" 
+Change - Allow byte symbols to overlap word symbols.  Ford DMR files do this, so SAD rules and checks changed to fit.
 
 
 --------------------------------
 
 5.0.6
 
-FIXED - crash in handling of calc types with "= float" due to incorrect size/pointer (in funcs and tables mainly)
-FIXED - "] expected" and "Invalid Address" and other errors if command has following spaces (and/or comments) 
-FIXED - "At least 2 values Required" error for special lookup types.
-FIXED - parsing of 'calc' commands reports error when no space after a bracket. 
-FIXED - Incorrect wrap of comments (carry over from v4)
-FIXED - repair style for AN3B, AN3W to V4 style  of  "R32 = name | name | name"
-FIXED - incorrect print format for SYM command in _msg file.
+Fixed - crash in handling of calc types with "= float" due to incorrect size/pointer (in funcs and tables mainly)
+Fixed - "] expected" and "Invalid Address" and other errors if command has following spaces (and/or comments) 
+Fixed - "At least 2 values Required" error for special lookup types.
+Fixed - parsing of 'calc' commands reports error when no space after a bracket. 
+Fixed - Incorrect wrap of comments (carry over from v4)
+Fixed - repair style for AN3B, AN3W to V4 style  of  "R32 = name | name | name"
+Fixed - incorrect print format for SYM command in _msg file.
 
 
-CHANGE - add "with <command>" for duplicates and overlaps in dir file.
+Change - add "with <command>" for duplicates and overlaps in dir file.
 
 --------------------------------
 
 5.0.5
 
-FIXED - symbol names can be trashed by symbol name reference in assocaated comment
-FIXED - 'special' subroutine names (e.g. function lookup) get replaced/changed when they should not.
+Fixed - symbol names can be trashed by symbol name reference in assocaated comment
+Fixed - 'special' subroutine names (e.g. function lookup) get replaced/changed when they should not.
+Fixed - Mistake - the crash fix in 5.0.4 was NOT put in Windows versions. 
 
-CHANGE - add extra line for 'normalize' opcode to reflect what really happens (like the divide in 5.0.4)
+Change - add extra line for 'normalize' opcode to reflect what really happens (like the divide in 5.0.4)
 
-FIXED - Mistake - the crash fix in 5.0.4 was NOT put in Windows versions. 
+
 
 --------------------------------
 
 5.0.4
 
-FIXED - additonal psuedo code appears after a 'return'
-FIXED - blank psuedo code for OR, XOR, AND  when no symbol names found. (see note below)
-FIXED - system subroutine names (e.g. interrupt handlers) being overwritten.
-FIXED - incorrect parsing of math functions with no space after close brackets (? May need more) 
+Fixed - additonal psuedo code appears after a 'return'
+Fixed - blank psuedo code for OR, XOR, AND  when no symbol names found. (see note below)
+Fixed - system subroutine names (e.g. interrupt handlers) being overwritten.
+Fixed - incorrect parsing of math functions with no space after close brackets (? May need more) 
 
-FIXED - (MAYBE!) crash in some bins due to a zero pointer - haven't fully analysed why, but put in temp check which seems to work.
+Fixed - (MAYBE!) crash in some bins due to a zero pointer - haven't fully analysed why, but put in temp check which seems to work.
 
-CHANGE - add remainder line for divides in form of Rx = Rz % Rb;   This reminds that top of dividend register is changed to remainder value.
+Change - add remainder line for divides in form of Rx = Rz % Rb;   This reminds that top of dividend register is changed to remainder value.
 
 
 Note  -  AND, OR, XOR - the field name print logic still differs a little from version 4, because multibit subfields are now supported.
@@ -63,28 +88,28 @@ Note  -  AND, OR, XOR - the field name print logic still differs a little from v
 
 NB. still some issues outstanding from 5.0.2, but releasing this as several things fixed. 
 
-FIXED - incorrect logic for conditional jump JNC/JC printed. (other jumps checked too).
-FIXED - incorrect bank printed after ROMBANK prefix.
-FIXED - XOR not printing correct operator (^= instead of =) 
-FIXED - functions not being extended to their true endpoint.
-FIXED - '= calcname' returns "invalid calctype"
-FIXED - columns not lining up for some structs
-FIXED - args overlapping in printouts.
-FIXED - "commands overlap" error reported for adjacent commands 
+Fixed - incorrect logic for conditional jump JNC/JC printed. (other jumps checked too).
+Fixed - incorrect bank printed after ROMBANK prefix.
+Fixed - XOR not printing correct operator (^= instead of =) 
+Fixed - functions not being extended to their true endpoint.
+Fixed - '= calcname' returns "invalid calctype"
+Fixed - columns not lining up for some structs
+Fixed - args overlapping in printouts.
+Fixed - "commands overlap" error reported for adjacent commands 
 
 
-CHANGE - put 'timer' command back, as it looks like this will be best solution, with a 'type' attached (maybe with a size too).
-TEMP -  change printout of JNV/JV (overflow flag) to 'if OVF = " as previous format doesn't appear to be correct. More work to do.
+Change - put 'timer' command back, as it looks like this will be best solution, with a 'type' attached (maybe with a size too).
+Change - change printout of JNV/JV (overflow flag) to 'if OVF = " as previous format doesn't appear to be correct. More work to do.
  
 -------------------------
 
 5.0.2. ALPHA
 
-FIXED -  Drag and drop and 'open with' in Windows causes crash and/or 'file not found'. (incorrect file path handling)
-FIXED -  Duplicate symbol error in commands when sym is write 'W', if W option appears before 'B' option 
-FIXED -  'rowsize is zero' error - appearing when it should not
-FIXED -  '2 values required' with 'F <functype> special subroutine type - only tables require 2 values.
-FIXED -  Incorrect checking of number of data items (i.e. number of '[]' items) in commands.
+Fixed -  Drag and drop and 'open with' in Windows causes crash and/or 'file not found'. (incorrect file path handling)
+Fixed -  Duplicate symbol error in commands when sym is write 'W', if W option appears before 'B' option 
+Fixed -  'rowsize is zero' error - appearing when it should not
+Fixed -  '2 values required' with 'F <functype> special subroutine type - only tables require 2 values.
+Fixed -  Incorrect checking of number of data items (i.e. number of '[]' items) in commands.
 
 -------------------------
 
@@ -92,8 +117,8 @@ FIXED -  Incorrect checking of number of data items (i.e. number of '[]' items) 
 
 for user evaluation.
 
-CHANGE - Large parts of SAD rewritten.
-CHANGE - New command syntax.
+Change - Large parts of SAD rewritten.
+Change - New command syntax.
 NEW    - Supports true multibit fields. Fields can be nested within each other
 NEW    - Supports a 'calc' command for true math calculations.
 NEW    - Added autodetect of word tables.
