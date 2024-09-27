@@ -220,4 +220,6 @@ Note 4.0.7.16  version moved to stable as 4.0.7
 
 
 
-
+4.07.16 (11 April 2022)
+Changed - Add special function command "uwtlu" for unsigned word tables
+Changed - Add special function command "swtlu" for signed word tables
