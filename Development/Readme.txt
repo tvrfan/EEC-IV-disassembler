@@ -2,56 +2,71 @@
 Development versions information.
 
 
-The development subdir contains the latest test versions.  These should be stable to use, but probably have bugs.
+The development subdir contains the latest test versions.  These should be stable to use, but probably have bugs, and may crash.
 
 Windows builds (32 bit, built with CodeLite/gnu) in Win32,  Linux builds (64 bit, built with Codelite/gcc) in Linux64.
 
 
-Dev_Versions.txt lists changes/fixes between dev versions only.   Stable release info in /Docs/Versions.txt 
+"Dev_x_Versions.txt" lists changes/fixes between dev versions.  Stable releases info in /Docs/Versions.txt 
 
-Generic address rules from version 4.0.7
+--- Running SAD ---
+
+Please be aware that your commands (in _dir file) are treated as 'master', and can actually break the processing.
+Therefore if something doesn't look quite right, please try running SAD without a directive file, or use a _dir version only with SYMbol commands in it.
+This extra check may help show a user command error, and/or new information in case of a SAD bug.  
+
+
+
+---- Generic address rules applied from version 4.0.7 onwards  -----
 
 1. Output 
  In single banks, no bank numbers are shown anywhere. all addresses are 16 bits (4 hex digits)
 
  In multibanks, addresses below 0x400 are shown with no bank number - these are registers internal to CPU. 
-   All other addresses have a bank (i.e. 5 digits). This might look strange in some cases, but is technically correct,
-   as any address 0x400 and above must be external to CPU and therefore MUST have a bank.
+   All other addresses must have a bank number (i.e. 5 digits). This might look strange in some cases, but is technically correct,
+   as any address over 0x3ff is external to the CPU and therefore MUST have a bank.
 
- where SAD can verify a value must be an address it will add the relevant bank automatically (typically bank 1 for data)
+ where SAD can automatically verify a value is an address it will add a bank automatically (typically bank 1 for data bank)
+
 
 2. Input (in commands).
 
- In single banks, no bank number is required.  
+ In single banks, no bank number is required.  ( Internally, single banks are treated as bank 8 to make code logic simpler) .   
 
- In multibanks, any address 0x400 and over MUST HAVE A BANK (i.e. 5 digits).  Valid banks are 0,1,8,9
-   To maintian compatibility with other tools, addresses below 0x2000 can be input in SAD commands without a bank, 
-   and they will automatically be amended to Bank 1 (0x1400 - 0x1ffff)
+ In multibanks, any address above 0x3ff MUST have a bank number (i.e. 5 digits). Valid banks are 0,1,8,9
+   To maintain compatibility with other tools, addresses below 0x2000 can be input in SAD commands without a bank, 
+   and they will automatically be assigned as Bank 1. (i.e. 0x400 - 0x1fff becomes 0x1400 - 0x11fff)
 
-3. Running SAD
-
-Please be aware that your commands (in .dir file) can actually break the processing, because user commands are always taken as the 'master'.
-So if something doesn't look quite right, please try running SAD without a directive file, or use a version only with SYMbol commands in it.
-This extra check may help show a user command error, and/or new information in case of a bug.  
 
 ---------------------------------------------------------------------------------------------
 
 SAD version 5.     Alpha version release
 
+V5 internal analysis model has been rewritten, but this did not work as well as intended. Work is still ongoing....
+version 4 still maintained.
+
 Main changes 
 
-Split into modules by their purpose. 
-Tidy code. made inot more C++ like, data + handler subroutines together).
-True 'subfields'. In data structures, subfields are used in many binaries. Timers are a good example.
-Add 'calc' to do math calculations on any field.
+Internal - Split code into modules by purpose. 
+Internal - Tidy code, make more C++ like, with internal data and handler subroutines put together.
 
-All 'data items' are now  start bit to end bit anywhere up to  0 to 32 bits long.  Items can be signed (top bit of field is sign bit). 
+Bin files and prinouts
 
-NEW COMMAND SYNTAX to support the additional data definitions.  This uses square brackets to describe a single data item. Colon delimiter ':' moves to '[]'
-Data items can be NESTED to define fields within fields and reuse for printing. 
+True 'subfields' throughout, of any size up to 32 bits.
 
-The colon ':' form of command is still useable to preserve backwards compatibility, but is converted so outputs are always in NEW format
+  e.g. In data structures, subfields down to separate bit flags are used in many binaries. 
+       Timer structures typically have bit masks and pointers to registers. Injection structure again typically has mix of bitmasks, pointers to subroutines, 'offset' pointers
+       to event queues, and sometimes fields are used more than once.
+ 
+To handle this better, all 'data items/fields' are now defined as 'start bit to end bit' anywhere within a 32 bit 'long'. Items can be signed (top bit of data item/field is sign bit). Size can be anywhere from 1 to 31 bits. Effectively all operands from opcodes therefore start at bit 0.
 
-V5 internal analysis model has been rewritten, using priciple that 'every code block is scanned only once', to make things simpler and faster.
+Add a 'calc' command to do multi-term math type calculations on any field/item (except operands themselves).
 
-Work is still ongoing....
+NEW COMMAND SYNTAX to support the new data definitions.  This syntax uses matched square brackets to describe a single data item. Colon delimiter ':' is replaced by '[]'
+this is so that Data items can be NESTED to define fields within fields, and repeated (maybe with different print options) for printing purposes. 
+
+The colon ':' form of command is still useable to preserve backwards compatibility, but is converted internally so outputs are always in NEW format
+
+
+
+

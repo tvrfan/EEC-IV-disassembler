@@ -38,8 +38,8 @@ SADwin.cpp   Source code        (uses WIN32 API)
 
 chip.ico     icon file          (same as Windows above)
 
-Notes -  SADwin will create a default config file for you on first run,
-         which you can then setup to your preference
+Notes -  SADwin will create a default config file (sad.ini) for you on its first run,
+         which you can then setup to your preference via SADWIN
 
 ---------------------------------------
 
@@ -51,11 +51,13 @@ After download, make SAD files executable if necessary with chmod.
 
 sad.ini    an example file to show path locations, not auto generated. (no SADWIN equiv yet)
 
--- Notes --
+---------------------------------------
+
+-- Notes sad.ini  (both Win and Linux)--
 
 Edit sad.ini for your setup.
 
-If sad.ini is not in same directory as SADvvv  then use command  SAD -c 'path'   where path is location of sad.ini.
+If sad.ini is not in same directory as SADvvv then use command  SAD -c 'path'   where path is location of sad.ini.
 
 If no sad.ini present, then everything must be in same directory as SAD
 

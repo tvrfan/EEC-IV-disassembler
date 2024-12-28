@@ -1,3 +1,8 @@
+
+NOTE - version 5 proved to have a serious problem with argument lists because of new method - may still work, but may break !! 
+
+
+
 5.0.8
 
 Fixed - New logic for symbols (5.0.7) causes incorrect symbol to be displayed in many places.
@@ -10,7 +15,11 @@ Change - Symbol rules -  Symbol fields may now overlap, but may not be identical
 
 Outstanding bugs - all can be fixed/workaround with extra user commands (in .dir file), maybe in combination with v4 versions.
 
-NOTE - I have discovered a serious design issue which can cause lost tables and functions, and may also result in incorrect rows and columns for these data structures. Also missed args for subroutines. This is caused by my grand rewrite and change to the way a bin file is scanned.  I tried to do a 'scan once' elegant model, and now after all this effort, several bugs confirm that this 'elegant' design isn't going to work as well as I thought. I need to go back again and look at how to fix this, perhaps putting back some earlier methods.  V4 was actually better at finding some things, but did not have the 'calc' and 'nested subfield' ability.  This may take a while to fix.
+NOTE - I have discovered a serious design issue which can cause lost tables and functions, and may also result in incorrect rows and columns for these data structures.
+ Also missed args for subroutines. This is caused by my grand rewrite and change to the way a bin file is scanned.  I tried to do a 'scan once' elegant model, and now
+ after all this effort, several bugs confirm that this 'elegant' design isn't going to work as well as I thought. I need to go back again and look at how to fix this,
+ perhaps putting back some earlier methods.  V4 was actually better at finding some things, but did not have the 'calc' and 'nested subfield' ability.
+ This may take a while to fix.
 
 1.  tables sometimes appear as 1 column, which is obviously wrong 
 2.  more tables and functions missed than version 4.
@@ -125,83 +134,6 @@ NEW    - Added autodetect of word tables.
  
 -------------------------------------------------------------  
 
-4.0.12
-
-1. Revise address validation (again !!)  For all address inputs in .dir and .cmt files). 
-   Final rules are - 
-   All addresses are read as up to 5 hex digits, 0xfffff. The first digit is bank. Valid banks are 0,1,8,9 for all bins.
-   Registers are 0x0 to 0x3ff (0x0 to 0xff for 8061) Registers cannot have a bank.  Leading zeroes are ignored for compatibility.
-   
-   Single banks (all 8061, some 8065) No bank required (i.e. 4 digits). Addresses may have a bank 8 attached, which is not displayed. 
-   Multibanks.  
-   0x400 to 0x1fff allowed, and defaults to Bank 1 (= data bank in every bin .... so far)
-   0x2000 to 0xffff MUST have a bank attached.
-
-2. Fixed - Incorrect print layout for 'split comments' ('|' character) and bit names with AND and OR opcodes.
-3. Fixed - Comments showing write symbol names ('\S') when they should be read names.
-4. Add   - Word tables in .dir commands.     (not detected automatically yet, due soon)
-
--------------------------------------------------------------  
-
-
-
-Note 4.0.7.16  version moved to stable
-
-NOTE - After a HUGE gap, during which I was trying to write a new much neater, much more elegant version (which I can't get to work !)
-I decide to go back to the last working version and start over. 
- 
-Changed to simpler version numbering.
-
-From here I will probably merge in many of those new versions from this attempt.
-
--------------------------------------------------------------
-
-
-
-4.0.11 (10 mar 23)
-
-1. Revert change to 'skip' opcode, which seems to cause several issues
-
-2. change address validation to match other common tools (I hope)
-
--------------------------------------------------------------
-
-NB.  4.0.10 removed due to another stupid error in address validation
-
--------------------------------------------------------------
-
-
-4.0.9
-
-1. Fix regression errors causing symbol names not to be matched correctly in various places in code printout (my error from changes in 4.08)
-
-2. Fix inconsistent spaces in comments after symbol addresses (\S syntax)  
-
-3. Turn off 'gap detect' again as it causes some strange behaviour and user commands to be ignored.
-
-
-
--------------------------------------------------------------
-
-4.0.8  (01 Mar 2023)
-
-Fixed - Inconsistent handling of addresses (bank prefixes) in multibanks across symbols, comments, commands.
-
-NB. I expect probable regression errors as I have changed the whole address verification to use the same routine...
-
-OOPS! I also left on the 'gap detect' from v 4.06 which does work for functions but not so well for tables, and it does produce some
-false matches.
-
--------------------------------------------------------------
-
-Note 4.0.7.16  version moved to stable as 4.0.7 
-
-
-(dropped older version descriptions)
-
-
-
--------------------------------------------------------------
 
 
 
