@@ -1,4 +1,11 @@
-4.0.13.1
+
+4.13.2  
+
+1. FIXED - negative values incorrectly displayed as postive in functions and tables.  
+
+
+
+4.13.1
 
 1. Add   - Allow options bank (K) and pointer (R) in data items for word, args, subr commands.
 2. Add   - add options  / for divide, and * for multiply (both floating point)
@@ -13,7 +20,7 @@ NOT FIXED - For subroutines which jump into another subroutine (instead of a CAL
  
 -------------------------------------------------------------  
 
-4.0.12
+4.12
 
 1. Revise address validation (again !!)  For all address inputs in .dir and .cmt files). 
    Final rules are - 
@@ -33,7 +40,7 @@ NOT FIXED - For subroutines which jump into another subroutine (instead of a CAL
 
 
 
-Note 4.0.7.16  version moved to stable as 4.0.7
+Note 4.0.7.16  version moved to stable branch as 4.0.7
 
 NOTE - After a HUGE gap, during which I was trying to write a new much neater, much more elegant version (which I can't get to work !)
 I decide to go back to the last working version and start over. 
