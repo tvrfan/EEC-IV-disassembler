@@ -446,6 +446,8 @@ typedef struct dtk
 
   uint ainc    : 2;       // auto inc size
   uint numops  : 2;       // actual numops
+
+ // uint done ??
 } TRK;
 
 //move inc etc into here to reduce access to main entry for struct analysis,

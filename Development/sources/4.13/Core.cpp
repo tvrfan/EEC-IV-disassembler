@@ -1043,6 +1043,16 @@ void p_run(char c, uint num)
  if (gcol >= WRAPPOSN) wrap();
 }
 
+void p_run(uint nl, char c, uint num)
+{
+ uint i;
+
+ for (i = 0; i < num; i++) fprintf(fldata.fl[1], "%c",c);
+ gcol +=num;
+ if (gcol >= WRAPPOSN) wrap();
+ if (nl) gcol = 0;         // newline
+ while (nl--) fprintf(fldata.fl[1], "\n");
+}
 
 
 
@@ -3447,6 +3457,7 @@ for varibale bit fields (0-31)
 Auto negates via sign (fend & 32) if required
 ***********************************/
 
+/*
 int g_val (uint addr, uint fstart, uint fend)
 {                   // addr is encoded bank | addr
   int val, start,stop;
@@ -3459,16 +3470,16 @@ int g_val (uint addr, uint fstart, uint fend)
   if (!b)  return 0;               // map to required bank
   t = (uchar*) &val;
 
-  fstart &= 31;                    // max field
-  sign = (fend & 32);
-  fend &= 31;
+  sign   = (fend & 32);
+  fstart &= 31;                    // max fields
+  fend   &= 31;
 
   if (fstart > fend) return 0;     // safety
 
   stop   = fend   /8;
   start  = fstart /8;
 
-  if (fend == fstart) sign = 0;         // no sign for single bit
+  if (fend == fstart) sign = 0;    // no sign for single bit
 
   val = 0;
 
@@ -3478,11 +3489,7 @@ int g_val (uint addr, uint fstart, uint fend)
      start++;
     }
 
-  // do the field extract and sign
-
- // size = (fend - fstart) + 1;      // field width
- // mask = 0xffffffff >> (32 - size);              // make mask
-
+//make part this a separate 'scale_value' for pp_adt as well ??
 
   if (fstart) val >>= fstart;                  // shift down (start bit -> bit 0)
   mask = 0xffffffff >> (31 + fstart - fend);   // make mask
@@ -3492,8 +3499,9 @@ int g_val (uint addr, uint fstart, uint fend)
 
   if (sign)
     {
-     mask = ~mask;                           // flip for set negative
+
      sign = 1 << fend;                       // sign mask
+     mask = ~mask;                           // flip for set negative
      if (val & sign) val = val | mask;
     }
 
@@ -3501,12 +3509,97 @@ return val;
 
 }
 
+*/
+
+int scale_val (int val, uint fstart, uint fend)
+
+{
+//make part this a separate 'scale_value' for pp_adt as well ??
+  int mask, sign;
+
+  sign = (fend & 0x20);
+
+  if (fstart == fend) sign = 0;     // no sign for single bit, safety
+
+  if (fstart) val >>= fstart;                  // shift down (start bit -> bit 0)
+  mask = 0xffffffff >> (31 + fstart - fend);   // make mask
+  val &= mask;                                 // and extract required field value
+
+  // set sign, reusing mask
+
+  if (sign)
+    {
+     sign = 1 << fend;                       // sign mask
+     if (val & sign)
+       {                   // if negative
+        mask = ~mask;                           // flip for set negative
+        val = val | mask;
+       }
+    }
+
+return val;
+}
+
+
+int g_val (uint addr, uint fstart, uint fend)
+{                   // addr is encoded bank | addr
+  int val, start,end;
+ // uint mask, sign;
+  uchar *b;
+  uchar *t;
+
+  b = map_addr(&addr);
+
+  if (!b)  return 0;               // map to required bank
+  t = (uchar*) &val;
+
+ // sign = (fend & 0x20);
+  start = (fstart & 0x1f);                    // max fields
+  end   = (fend   & 0x1f);                //NO ! not if used again for subr call.
+
+  if (start > end)  return 0;     // safety
+ // if (fstart == fend) sign = 0;     // no sign for single bit, safety
+
+  start  = start / 8;
+  end   = end   / 8;
+
+  val = 0;
+
+  while (start <= end)
+    {
+     t[start] = b[addr+start];
+     start++;
+    }
+
+  val = scale_val(val, fstart, fend);
+
+
+/*make part this a separate 'scale_value' for pp_adt as well ??
+
+  if (fstart) val >>= fstart;                  // shift down (start bit -> bit 0)
+  mask = 0xffffffff >> (31 + fstart - fend);   // make mask
+  val &= mask;                                 // and extract required field value
+
+  // set sign, reusing mask
+
+  if (sign)
+    {
+     sign = 1 << fend;                       // sign mask
+     if (val & sign)
+       {                   // if negative
+        mask = ~mask;                           // flip for set negative
+        val = val | mask;
+       }
+    }
+*/
+
+return val;
+
+}
 
 int abank(ADT *a, int val)
 {
-
    if (val > (int) max_reg()) val |= (a->bank << 16);
-//  }
  return val;
 }
 
@@ -5722,14 +5815,13 @@ int pp_adt (int ofst, ADT *a, int pfwo)
         }
      }
 
-
   if (a->vaddr)                //address with bank
     {
      paddr(val,0,pstr);
      return bytes(a->fend);
     }
 
-  val &= get_sizemask(a->fend);         // all 16 bit values from here, with no bank
+  val = scale_val (val, a->fstart, a->fend);          // rescale as per g->val
 
   if (a->div)
      {      // float - probably need to extend pfw to make full sense - allow override with X ?
@@ -9865,6 +9957,8 @@ uint pp_code (uint ofst, LBK *k)
   // This is neatest way to show addresses correctly in printout
   // internally, keep 'ofst' at original address, but update curaddr for printout.
 
+
+
   if (c->bank)
     {
      pp_hdr (ofst, "rombk", 2);
@@ -9878,6 +9972,7 @@ uint pp_code (uint ofst, LBK *k)
 
   cnt = prtscan.nextaddr - prtscan.curaddr;
   pp_hdr (prtscan.curaddr, opl->name, cnt);
+
 
   i = c->numops;
   while (i)
@@ -11255,25 +11350,27 @@ uint set_psw (CPS *c)
   anlpass = ANLPRT;                   // safety
 
   pstr(1,0);            //newline
-  pstr(1,"####################################################################################################");
-  pstr(0,"#\n# Disassembly listing of binary '%s'  ",fldata.bare);
+  p_run(1, '#', 80);
+  pstr(1,"   SAD Version %s (%s)", SADVERSION, SADDATE);
+  p_run(1, '#', 80);
+  pstr(1,"#\n# Disassembly listing of file '%s'  ",fldata.bare);
 
-  //pstr(0,"  806%d%c %d bank%c ", P8065 ? 5 : 1, PSTPD ? 'D' : ' ',  numbanks+1, numbanks ? 's' : ' ');
-  pstr(0,"  806%d  %d bank%c ", P8065 ? 5 : 1, numbanks+1, numbanks ? 's' : ' ');
+  pstr(2,"Appears to be 806%d  %d bank%c ", P8065 ? 5 : 1, numbanks+1, numbanks ? 's' : ' ');
 
-  pstr(0,"   SAD Version %s (%s)", SADVERSION, SADDATE);
-  pstr(0,"\n# See '%s%s' for warnings, results and other information", fldata.bare, fd[2].suffix);
+
+  pstr(1,"# See '%s%s' for warnings, results and other information", fldata.bare, fd[2].suffix);
+
   pstr(0,"\n\n# Explanation of extra flags and formats - ");
   pstr(0,"\n#   R general register. Extra prefix letters shown for mixed size opcodes (e.g DIVW)");
   pstr(0,"\n#   l=long (4 bytes), w=word (2 bytes), y=byte, s=signed. Unsigned is default.");
   pstr(0,"\n#   [ ]=use value as an address   (addresses are always word) ");
-  pstr(0,"\n#   @=value is an address (to symbol),  '++' increment register after operation." );
+  pstr(0,"\n#   '++' increment register after operation." );
   pstr(0,"\n# Processor status flags (for conditional jumps)" );
   pstr(1,"\n#   CY=carry, STC=sticky, OVF=overflow, OVT=overflow trap");
 #ifdef  XDBGX
-pstr(0,"\n# - - - -  DEBUG  - - - - - ");
+pstr(1,"\n# - - - -  DEBUG  - - - - - ");
 #endif
-  pstr(1,"#\n####################################################################################################");
+   p_run(1, '#', 80);
 
 
  memset(&cmnd, 0, sizeof(CPS));          // clear entire struct, used for comments
@@ -11316,7 +11413,7 @@ pstr(0,"\n# - - - -  DEBUG  - - - - - ");
          }
        }      // ofst loop
 
-     pp_comment(g_bank(ofst)+0x10000,0);           // next bank+0 - need this for any trailing comments at 0xbffff and beyond listing end
+     pp_comment(g_bank(b->maxbk) + 0x10000,0);    // next bank+0 - need this for any trailing comments (NOT  g_bank(ofst)+ 0x10000,0);
     }        // bank
 
   }
@@ -11822,7 +11919,7 @@ int do_adnl_letter (CPS* c)
          if (!ans) return do_error(c,1, "Bit Number required ");
          if (c->p[4] < 0 || c->p[4] > 31) return do_error(c,1, "Bit Number invalid");
          a->fstart = c->p[4];
-          // can't use a->fend , which is for SIZE (=W)
+          // can't use a->fend , which is for SIZE (=W), temp use a->data
          if (ans > 1) a->data = c->p[5];         // TEMP !!
          else a->data = a->fstart;               // single bit
          a->enc = 7;           // temp marker for  bitno
@@ -14583,7 +14680,7 @@ void main()
 
  // scan_code_gaps();           // scan for code gaps  TEMP !!!
 
-  do_structs();                // then structs
+  do_structs();                 // then put structs (direct to cmd)
 
 //  turn_dtk_into_data();        // add data found fom dtk
 
@@ -14592,6 +14689,8 @@ void main()
  //scan_gaps();                 // BEFORE data, so only code, tabs,vects,funcs
 
  turn_dtk_into_data();        // add data found fom dtk
+
+//after data processed, clear dtk+dtd and check over ???
 
 
 

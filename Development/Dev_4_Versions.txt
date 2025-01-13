@@ -1,7 +1,15 @@
 
+
+4.13.3
+
+1. fixed - 'calculated' values appearing with bank when they should not, after symbol name fix.   (From 4.13.1 fix 3) 
+2. fixed - Comments appearing but still not in right place, after last comment fix                (From 4.13.1 fix 4)
+
+
+
 4.13.2  
 
-1. FIXED - negative values incorrectly displayed as postive in functions and tables.  
+1. Fixed - negative values incorrectly displayed as postive in functions and tables.  
 
 
 
@@ -25,12 +33,15 @@ NOT FIXED - For subroutines which jump into another subroutine (instead of a CAL
 1. Revise address validation (again !!)  For all address inputs in .dir and .cmt files). 
    Final rules are - 
    All addresses are read as up to 5 hex digits, 0xfffff. The first digit is bank. Valid banks are 0,1,8,9 for all bins.
-   Registers are 0x0 to 0x3ff (0x0 to 0xff for 8061) Registers cannot have a bank.  Leading zeroes are ignored for compatibility.
+   Registers are 0x0 to 0x3ff (0x0 to 0xff for 8061) Registers cannot have a bank.
+   Leading zeroes in register addresses are ignored for compatibility, but not for addresses > 0x2000 in multibanks, as bank 0 is valid.
    
-   Single banks (all 8061, some 8065) No bank required (i.e. 4 digits). Addresses may have a bank 8 attached, which is not displayed. 
-   Multibanks.  
-   0x400 to 0x1fff allowed, and defaults to Bank 1 (= data bank in every bin .... so far)
-   0x2000 to 0xffff MUST have a bank attached.
+   Single banks (all 8061, some 8065)
+      No bank required (i.e. 4 digits). Addresses may have a bank 8 attached, which is not displayed. (Single banks are treated as bank 8 in SAD) 
+  
+   Multibanks. (8065) 
+      0x400 to 0x1fff inputs allowed, and default to Bank 1.   (for compatibility with other tools)
+      0x2000 to 0xffff MUST have a bank prefixed.  (0,1,8, or 9)
 
 2. Fixed - Incorrect print layout for 'split comments' ('|' character) and bit names with AND and OR opcodes.
 3. Fixed - Comments showing write symbol names ('\S') when they should be read names.
