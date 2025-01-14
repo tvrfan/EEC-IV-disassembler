@@ -507,6 +507,8 @@ typedef struct lbk        // command header structure
  uint term   : 2;            // data command has terminating byte(s) 0-3
  uint argl   : 1;            // use args layout
  uint cptl   : 1;            // use compact layout
+ uint user   : 1;
+ uint adt    : 1;
  uint fcom   : 5;            // command index
  uint end    : 20;           // end address (inc bank)
 } LBK ;

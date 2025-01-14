@@ -1,3 +1,8 @@
+4.13.4
+
+1. fixed - user commands can get merged with others, and also commands with different data options.
+2. fixed - offset option 'D' should print a WORD.  (From 4.13.1 fix 3 and onwards...)  
+3. fixed - special sequences in comments ('\s' etc) can run over end of line and print rubbish.
 
 
 4.13.3
@@ -12,7 +17,6 @@
 1. Fixed - negative values incorrectly displayed as postive in functions and tables.  
 
 
-
 4.13.1
 
 1. Add   - Allow options bank (K) and pointer (R) in data items for word, args, subr commands.
@@ -25,6 +29,9 @@
 6. Change - tighter checks for faulty data or pointers whilst emulating code. 
 
 NOT FIXED - For subroutines which jump into another subroutine (instead of a CALL) arguments occasionally get missed. Still working on this.
+
+
+
  
 -------------------------------------------------------------  
 

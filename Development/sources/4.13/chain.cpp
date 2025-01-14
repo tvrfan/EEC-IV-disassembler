@@ -927,8 +927,8 @@ no overrides, just overlaps and fail if not same command ????
  //    if (!newb->cmd && dirs[t->fcom].maxovr > newb->fcom) ans |= 0x10;  // newb cannot overwrite t  - relevant for part overlaps
  //   }
 
-   if (dirs[t->fcom].merge && t->fcom == newb->fcom)
-    {      //only merge matching commands.
+   if (dirs[t->fcom].merge && t->fcom == newb->fcom && !newb->user && !t->user && !t->adt && ! newb->adt)
+    {      //only merge matching commands, not user, not addnl.
      if (ans) ans |= 0x40;                            // overlap set already, merge allowed
      if (newb->end == t->start-1)  ans |= 0x44;       // adjacent to front of test block (merge+front)
      if (newb->start == t->end+1)  ans |= 0x48;       // adjacent to end of test block (merge+rear)

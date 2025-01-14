@@ -2051,6 +2051,7 @@ int add_args(LBK *l, int dreg, int args)
            addr += a->cnt;
            reg  += a->cnt;           // next reg if list
            size -= a->cnt;
+           l->adt = 1;
           }
       else break;                    // not found
    }
@@ -3624,6 +3625,7 @@ int decode_addr(ADT *a, uint ofst)
     {   // fixed offset (assume bank in a->data)
      val += a->data;
      val &= 0xffff;           // wrap in 16 bits
+     a->fend |= 0xf;           // make a word
   //   return val;            // no, may have bank
     }
 
@@ -3707,6 +3709,7 @@ void avcf (SIG *z, SBK *blk)
      // do bank here......
        c = add_adt(&chadnl, s->start,1);    // only one
        if (c) {
+           s->adt = 1;
        if (bk == g_bank(addr)) c->cnt = 0;
        c->bank = bk >> 16;                 // always add bank
        }
@@ -3944,6 +3947,7 @@ void set_xfunc(SFIND *f)
        a->fend = nm->fendout;              // size out
        a->pfw =  get_pfwdef(a);
        a->prdx = 2;                         // default decimal print
+       k->adt = 1;
       }
 
  }
@@ -4096,14 +4100,17 @@ void set_xtab(SFIND *f)
      if (PSTCA) k->argl = 1;              // layout by default
      new_autosym(4,ofst);                 // auto table name, can fail
      a = add_adt(&chadnl,k->start,1);            // just ONE adt
-     k->size = cols;                      // size for one line ( = cols)
+     if (a)
+      {
+       k->size = cols;                      // size for one line ( = cols)
      a->cnt = cols;
      a->prdx = 2;                         // default decimal print
     // cnvsstofld(a, anames[f->spf].sizeout);
 
      a->fend = anames[f->spf].fendout;   // includes sign
      a->pfw =  get_pfwdef(a);
-
+     k->adt = 1;
+      }
     }
 
   // probably need some more checks, but simple version works for now...
@@ -4348,7 +4355,7 @@ void ptimep(SIG *x, SBK *blk)
 
     k = add_cmd(start, ofst, C_TIMR, 0);      // this basic works, need to add symbols ?....
     if (k) a = add_adt(&chadnl,k->start,1);                   // only one (for now)
-    if (a) {a->fend = (z*8) -1;  a->cnt = 1;
+    if (a) {a->fend = (z*8) -1;  a->cnt = 1; k->adt = 1;
 // a->fnam = 1;
 }
 
@@ -5460,6 +5467,7 @@ void do_vect_list(INST *c, uint start, uint end) // SBK *caller
        if (a) {
        a->bank = basepars.codbnk >> 16;                  // add current codbank
        if (g_bank(vcall) == g_bank(start)) a->cnt = 0;  //don't print if match
+       s->adt = 1;
        }
     }
      #ifdef XDBGX
@@ -6708,14 +6716,19 @@ void parse_cmnt(CPS *c, uint *flags)
 
 
          case '\\' :                // special sequences
+
+           if (c->cmpos == c->cmend) pchar(*c->cmpos);        //print backslash if end of line
+
            c->cmpos++;                     // skip the backslash, process next char.
+           if (c->cmpos >= c->cmend) break;
+
 
            rs = toupper(*c->cmpos);
            switch (rs)
              {  // special sequences
 
                default:
-                 pchar(*c->cmpos);             // print anything else
+                 pchar(*c->cmpos);
                  break;
 
 // more opcode/operand options ??
@@ -6729,7 +6742,6 @@ void parse_cmnt(CPS *c, uint *flags)
                  if (rs >= 0 && rs <= 3)
                    {
                     p_opsc(c->minst,rs,0);
-                    //c++;  done below..........
                    }
                    c->cmpos++;
                  break;
@@ -6808,6 +6820,7 @@ void parse_cmnt(CPS *c, uint *flags)
          //      case 't' :
                                 // tab to 'x'
                  c->cmpos++;            //next char
+                                  if (c->cmpos >= c->cmend) break;
                  chars = 0;
 
                  ans = getpd(c,1,1);         //sscanf(c,"%u%n",&addr,&chars);
@@ -6818,6 +6831,7 @@ void parse_cmnt(CPS *c, uint *flags)
 
                case 'R' :        // runout
                  c->cmpos++;
+                 if (c->cmpos >= c->cmend) break;
                  chars = 0;
                  rs = ' ';     //space is default
 
@@ -6875,13 +6889,10 @@ void parse_cmnt(CPS *c, uint *flags)
 
 
        }        // end switch for char
-    // if (*c->cmpos) c->cmpos++;
+
     }
 
-// save char position if in opcode,  else clear string
 
- // if ((flags & 2) && *c->cmpos)  m->ctext = c;             ??
-  //else *c->cmpos = '\0';    //m->ctext = NULL;         // clear string for next cmt
 }
 
 
@@ -10496,7 +10507,7 @@ void add_ans(uint start, ADT *ca)
 
 }
 
-void cpy_adt(CPS *c, uint start)                 //, int start)
+void cpy_adt(CPS *c, uint start)
 {
  // move adt blocks from cmd to new LBK
  // NB. create NEW ones as fid will be in worng place otherwise in adt chain
@@ -10666,7 +10677,8 @@ uint set_func (CPS *c)
 
   cpy_adt(c,blk->start);
   blk->size = totsize(&chadnl, blk->start);
-
+  blk->user =1;
+  if (blk->size) blk->adt = 1;
   return 0;
 }
 
@@ -10684,7 +10696,9 @@ uint set_tab (CPS *c)
 
 
   cpy_adt(c,blk->start);
-  blk->size = totsize(&chadnl,blk->start);
+  blk->size = totsize(&chadnl, blk->start);
+  blk->user =1;
+  if (blk->size) blk->adt = 1;
 
  if (c->argl) blk->argl = 1;     // default is argl OFF
  return 0;
@@ -10704,7 +10718,9 @@ uint set_stct (CPS *c)
   if (chcmd.lasterr) return do_ch_error(c,&chcmd);      //do_error(c,2,0);
 
   cpy_adt(c,blk->start);
-  blk->size = totsize(&chadnl,blk->start);
+  blk->size = totsize(&chadnl, blk->start);
+  blk->user =1;
+  if (blk->size) blk->adt = 1;
 
   blk->term = c->term;                    // terminating byte flag (struct only)
   if (c->argl) blk->argl = 1;             // default is arg layout
@@ -10741,8 +10757,9 @@ uint set_data (CPS *c)
   //if (a && a->bsize < c->fcom)  a->bsize = c->fcom;
 
   cpy_adt(c,blk->start);
-  blk->size = totsize(&chadnl,blk->start);
-
+  blk->size = totsize(&chadnl, blk->start);
+  blk->user =1;
+  if (blk->size) blk->adt = 1;
   return 0;
 }
 
@@ -10837,8 +10854,8 @@ uint set_subr (CPS *c)
   add_scan (c->p[0], J_SUB,0);
 
   cpy_adt(c, xsub->start);
-
   xsub->size = totsize(&chadnl,xsub->start);
+//  xsub->user = 1;
   if (c->cptl) xsub->cptl = 1;     // default is argl ON
  return 0;
  }
@@ -11264,6 +11281,7 @@ uint set_vect (CPS *c)
      bank = a->bank << 16;
      if (!bkmap[a->bank].bok) return do_error(c,1, "Bank invalid");
      cpy_adt(c,blk->start);
+
    }
   else bank = g_bank(c->p[0]);
 
@@ -11305,7 +11323,7 @@ uint set_args(CPS *c)
 
   // must clear all fieldwidths for args command
 
-  cpy_adt(c,blk->start);
+  cpy_adt(c,blk->size);
   set_data_vect(blk);
 
   blk->size = totsize(&chadnl,blk->start);
