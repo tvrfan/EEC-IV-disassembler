@@ -508,7 +508,7 @@ typedef struct lbk        // command header structure
  uint argl   : 1;            // use args layout
  uint cptl   : 1;            // use compact layout
  uint user   : 1;
- uint adt    : 1;
+// uint adt    : 1;          //use size instead
  uint fcom   : 5;            // command index
  uint end    : 20;           // end address (inc bank)
 } LBK ;
@@ -817,9 +817,6 @@ typedef struct cmnt
   // 0 - none, 1 start addr, 2 end addr, 3 register, 4 st range, 5 end range (4 and 5 are 1 and 2?
  uchar ptype[4];
 
-
- // uint  sgpos   : 3 ;             // where single addr is, in pars
- // uint  prpos   : 3 ;             // where 'start/end' pair is, in pars
   uint  namex   : 1 ;             // name expected/allowed
 
   uint  minadt  : 5 ;             // min ADT levels (< 31)

@@ -1,5 +1,11 @@
 
 
+4.13.6
+
+(well this has been something of a bad run since 4.13...)
+
+1. Fixed - incorrect write to ROM address(es) allowed when it should not be. Shows in listing output.
+2. Fixed - typo fixing (4.13.5 fix 1) corruptd the result of user 'args'command. 
 
 
 4.13.5
@@ -8,7 +14,7 @@
 2. fixed - offset option 'D' should print a WORD.  (From 4.13.1 fix 3 and onwards...)  
 3. fixed - special sequences in comments ('\s' etc) can run over end of line and print rubbish.
 
-[ 4.13.4 removed becuase of incorrect fix for offsets]
+[ 4.13.4 removed because of incorrect fix for offsets]
 
 4.13.3
 

@@ -2051,7 +2051,7 @@ int add_args(LBK *l, int dreg, int args)
            addr += a->cnt;
            reg  += a->cnt;           // next reg if list
            size -= a->cnt;
-           l->adt = 1;
+   //        l->adt = 1;
           }
       else break;                    // not found
    }
@@ -3625,7 +3625,7 @@ int decode_addr(ADT *a, uint ofst)
     {   // fixed offset (assume bank in a->data)
      val += a->data;
      val &= 0xffff;           // wrap in 16 bits
-     a->fend |= 0xf;           // make a word
+
   //   return val;            // no, may have bank
     }
 
@@ -3709,7 +3709,7 @@ void avcf (SIG *z, SBK *blk)
      // do bank here......
        c = add_adt(&chadnl, s->start,1);    // only one
        if (c) {
-           s->adt = 1;
+   //        s->adt = 1;
        if (bk == g_bank(addr)) c->cnt = 0;
        c->bank = bk >> 16;                 // always add bank
        }
@@ -3947,7 +3947,7 @@ void set_xfunc(SFIND *f)
        a->fend = nm->fendout;              // size out
        a->pfw =  get_pfwdef(a);
        a->prdx = 2;                         // default decimal print
-       k->adt = 1;
+    //   k->adt = 1;
       }
 
  }
@@ -4109,7 +4109,7 @@ void set_xtab(SFIND *f)
 
      a->fend = anames[f->spf].fendout;   // includes sign
      a->pfw =  get_pfwdef(a);
-     k->adt = 1;
+   //  k->adt = 1;
       }
     }
 
@@ -4355,7 +4355,7 @@ void ptimep(SIG *x, SBK *blk)
 
     k = add_cmd(start, ofst, C_TIMR, 0);      // this basic works, need to add symbols ?....
     if (k) a = add_adt(&chadnl,k->start,1);                   // only one (for now)
-    if (a) {a->fend = (z*8) -1;  a->cnt = 1; k->adt = 1;
+    if (a) {a->fend = (z*8) -1;  a->cnt = 1; //k->adt = 1;
 // a->fnam = 1;
 }
 
@@ -4877,6 +4877,16 @@ void skip_args(SBK *s)
      k = get_aux_cmd(s->curaddr,C_ARGS);
      if (k)
        {
+              if (!k->size)
+         {
+          #ifdef XDBGX
+           DBGPRT(1,"precheck ARGSIZE IS ZERO !! %x", s->curaddr);
+         #endif
+         }
+
+
+
+
           fix_args(k,s);
           add_arg_data(k->start, s->curaddr);
 
@@ -5467,7 +5477,7 @@ void do_vect_list(INST *c, uint start, uint end) // SBK *caller
        if (a) {
        a->bank = basepars.codbnk >> 16;                  // add current codbank
        if (g_bank(vcall) == g_bank(start)) a->cnt = 0;  //don't print if match
-       s->adt = 1;
+    //   s->adt = 1;
        }
     }
      #ifdef XDBGX
@@ -5792,7 +5802,7 @@ int pp_adt (int ofst, ADT *a, int pfwo)
 // print a SINGLE ITEM from *a, even if a->cnt is set
 // done this way for ARGS printouts.
 
-  int pfw, val;
+  int pfw, val, fend;
 
   pfw = 1;                               // min field width
 
@@ -5823,13 +5833,15 @@ int pp_adt (int ofst, ADT *a, int pfwo)
         }
      }
 
+fend = a->fend;
   if (a->vaddr)                //address with bank
     {
      paddr(val,0,pstr);
      return bytes(a->fend);
     }
 
-  val = scale_val (val, a->fstart, a->fend);          // rescale as per g->val
+  if (a->foff)  fend |= 0xf;             // make a word (locally)
+  val = scale_val (val, a->fstart, fend);          // rescale as per g->val
 
   if (a->div)
      {      // float - probably need to extend pfw to make full sense - allow override with X ?
@@ -5849,7 +5861,7 @@ int pp_adt (int ofst, ADT *a, int pfwo)
 
 //switch ?
 
-  if (a->prdx == 3) pbin(val, a->fend);           // binary print, need size.
+  if (a->prdx == 3) pbin(val, a->fend);                // binary print, need size.
   if (a->prdx == 2) pstr(0,"%*d", pfw, val);           // decimal print, need full width if negative
   if (a->prdx < 2)  pstr(0,"%*x", pfw, val);       // HEX default
 
@@ -9939,10 +9951,7 @@ uint pp_code (uint ofst, LBK *k)
   INST *c;
  // JMP *j;
 
-//if (ofst == 0x9250f)
-//{                         //xdt2
-//DBGPRT(0,0);
-//}
+
 //if (ofst == 0x12002)
 //{                         //RZAS
 //DBGPRT(0,0);
@@ -10678,7 +10687,7 @@ uint set_func (CPS *c)
   cpy_adt(c,blk->start);
   blk->size = totsize(&chadnl, blk->start);
   blk->user =1;
-  if (blk->size) blk->adt = 1;
+//  if (blk->size) blk->adt = 1;
   return 0;
 }
 
@@ -10698,7 +10707,7 @@ uint set_tab (CPS *c)
   cpy_adt(c,blk->start);
   blk->size = totsize(&chadnl, blk->start);
   blk->user =1;
-  if (blk->size) blk->adt = 1;
+ // if (blk->size) blk->adt = 1;
 
  if (c->argl) blk->argl = 1;     // default is argl OFF
  return 0;
@@ -10720,7 +10729,7 @@ uint set_stct (CPS *c)
   cpy_adt(c,blk->start);
   blk->size = totsize(&chadnl, blk->start);
   blk->user =1;
-  if (blk->size) blk->adt = 1;
+ // if (blk->size) blk->adt = 1;
 
   blk->term = c->term;                    // terminating byte flag (struct only)
   if (c->argl) blk->argl = 1;             // default is arg layout
@@ -10759,7 +10768,7 @@ uint set_data (CPS *c)
   cpy_adt(c,blk->start);
   blk->size = totsize(&chadnl, blk->start);
   blk->user =1;
-  if (blk->size) blk->adt = 1;
+ // if (blk->size) blk->adt = 1;
   return 0;
 }
 
@@ -11048,7 +11057,7 @@ void find_fill_txt(BANK *b)
         // fill at end
        add_cmd (ofst,last, C_DFLT|C_SYS,0);
        add_aux_cmd (ofst,b->maxpc,C_XCODE|C_SYS,0);       // and xcode to match
-       if (ofst < b->maxpc) b->maxpc = ofst;
+  //     if (ofst < b->maxpc) b->maxpc = ofst;           //no, allows writes.
       }
   }
 
@@ -11323,12 +11332,16 @@ uint set_args(CPS *c)
 
   // must clear all fieldwidths for args command
 
-  cpy_adt(c,blk->size);
+  cpy_adt(c,blk->start);
   set_data_vect(blk);
 
   blk->size = totsize(&chadnl,blk->start);
 
   #ifdef XDBGX
+
+  if (!blk->size)
+      DBGPRT(1,"ZZ SIZE IS ZERO %x", blk->start);
+
   DBGPRT(1,0);
   #endif
 return 0;
@@ -13205,7 +13218,7 @@ void copy_banks(uchar * fbuf)
        to->maxbk |= bk;
        to->bok = 1;
        to->bprt = 1;         // print his bank
-       to->maxpc = 0;        // do the fill check
+  //     to->maxpc = 0;        // do the fill check     redundant
        find_fill_txt(to);
        from->bok = 0;        // clear old bank
        from->bprt = 0;       // and print flag
