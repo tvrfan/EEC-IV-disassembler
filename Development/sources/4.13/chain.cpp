@@ -4299,7 +4299,7 @@ void scan_code_gaps(void)          //TEMP !!
    {
     s = (SBK*) chscan.ptrs[ix];
 
-    if (ix+1 > chscan.num) break;
+    if (ix+1 >= chscan.num) break;
 
     n = (SBK*) chscan.ptrs[ix+1]; // next scan block
 

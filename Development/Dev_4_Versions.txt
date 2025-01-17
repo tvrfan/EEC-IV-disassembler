@@ -1,4 +1,12 @@
 
+4.13.7
+
+1. Fixed - marking data items as 'R' (pointer to) can cause incorrect code scans.
+2. Add extra validation check to SYM command (allows multiple colons, should not)
+
+
+
+
 
 4.13.6
 

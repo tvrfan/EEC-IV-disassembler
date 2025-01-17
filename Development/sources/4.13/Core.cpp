@@ -2804,7 +2804,7 @@ int do_table_sizes(uint start, int scols, uint *apnd, uint maxend)
 
 #ifdef XDBGX
   DBGPRT(2,0);
-  DBGPRT(1,"do data table sizes for %x-%x cols %d, max %x", start, apend, scols, maxend);
+  DBGPRT(1,"do table data sizes for %x-%x cols %d, max %x", start, apend, scols, maxend);
  #endif
 
  for (j = 0; j < 2; j++)
@@ -10465,7 +10465,7 @@ return 0;
 
 
 
-
+/*
 
 void set_data_vect(LBK *blk)
 {
@@ -10498,6 +10498,8 @@ void set_data_vect(LBK *blk)
     }
   }
 }
+
+*/
 
 void add_ans(uint start, ADT *ca)
 {  //special adt copy for subr answers
@@ -10734,7 +10736,7 @@ uint set_stct (CPS *c)
   blk->term = c->term;                    // terminating byte flag (struct only)
   if (c->argl) blk->argl = 1;             // default is arg layout
 
-  set_data_vect(blk);   // for Refs out in structs
+ // set_data_vect(blk);   // for Refs out in structs
   return 0;
 }
 
@@ -10775,13 +10777,15 @@ uint set_data (CPS *c)
 
 uint set_sym (CPS *c)
 {
-  int fstart,fend,write;    //,i, flags
-  ADT *a;
+  int fstart,fend,write;
+  ADT *a;        //, *b;
   SYM  *s;
 
 // flagsword.
 // allow/inhibit if immediate...
 
+  //check command levels    c->seq
+  if (c->seq > 1) return do_error(c,0,"Only one data level allowed");
 
   write = 0;           // read or write
  // flags = 0;           // flags word
@@ -10794,8 +10798,11 @@ uint set_sym (CPS *c)
     c->p[2] = 0xfffff;   // max possible address
    }
 
-// only one adt level allowed
-
+// only one adt level allowed, but incorrect colon will bugger it up....
+ // a = get_adnl(&chadnl,k->start,1);        // entry 1
+ // if (!a) return;
+ // b = get_next_adnl(&chadnl,a);            // entry 2
+ // if (!b) return;
 // for (i = 0; i <= c->levels; i++)
  //  {
     a = get_adnl(&chadcm, 0, 1);     //cmdadnl + i;           //->adnl;
@@ -11333,7 +11340,7 @@ uint set_args(CPS *c)
   // must clear all fieldwidths for args command
 
   cpy_adt(c,blk->start);
-  set_data_vect(blk);
+ // set_data_vect(blk);
 
   blk->size = totsize(&chadnl,blk->start);
 
@@ -14422,7 +14429,7 @@ void extend_table(uint ix)
 
   k = (LBK *) chcmd.ptrs[ix];
 
-
+  // DBGPRT(1,"extend table for %x", k->start);
  // attempt to extend by data,use external proc
  // to do best match by data for row and col sizes
 
@@ -14435,6 +14442,8 @@ void extend_table(uint ix)
    {
     jx = ix+1;
     n = (LBK *) chcmd.ptrs[jx];
+
+  //  DBGPRT(1,"next cmd is %x-%x", n->start, n->end);
     apeadr = n->start;             // apparent end from next cmd
 
     while ( n->fcom < C_TEXT && !n->cmd)
@@ -14709,7 +14718,7 @@ void main()
 
   turn_scans_into_code();      // turn all valid scans into code
 
- // scan_code_gaps();           // scan for code gaps  TEMP !!!
+ // scan_code_gaps();           // scan for code gaps  TEMP !!! no not here........
 
   do_structs();                 // then put structs (direct to cmd)
 
