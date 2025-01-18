@@ -1,4 +1,15 @@
 
+
+4.13.8 
+
+1. Fixed - SAD adding offset 'D' internally with a faulty bank reference. Should be no bank, 16 bits.
+
+2. ADD    limited 'gap' scanning for missed code. (reduces manual 'scan' commands).
+3. ADD    A check for possible infinite loop in printout. may cause one strange print line. 
+
+
+
+
 4.13.7
 
 1. Fixed - marking data items as 'R' (pointer to) can cause incorrect code scans.
