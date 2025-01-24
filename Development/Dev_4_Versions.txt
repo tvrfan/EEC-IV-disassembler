@@ -1,3 +1,11 @@
+4.13.9
+
+1. Fixed - autoincrement was not showing "++" appended when printing symbol names instead of Rxx style.
+2. Fixed - If register declared as an RBASE, writes to it may show an incorrect Register value 
+3. Fixed - Code gap scan can cause incorrect register to appear at following opcode
+
+4. Remove check for words and longs on even boundaries. special chips allow this, and also possible in structures.
+
 
 
 4.13.8 
