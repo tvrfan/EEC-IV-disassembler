@@ -114,6 +114,7 @@ common declarations for 'core' code modules (disassembly)
 
 #define C_CMD    32      // by command (can't change or merge)
 #define C_SYS    128     // for system 'base generated' cmds
+#define C_NOMERGE  512    // inhibit merge for data options
 #define C_GAP    256     // for gap scan
 
 
@@ -508,6 +509,7 @@ typedef struct lbk        // command header structure
  uint argl   : 1;            // use args layout
  uint cptl   : 1;            // use compact layout
  uint user   : 1;
+// gribble  nomerge
 // uint adt    : 1;          //use size instead
  uint fcom   : 5;            // command index
  uint end    : 20;           // end address (inc bank)

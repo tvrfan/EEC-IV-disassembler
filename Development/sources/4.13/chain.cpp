@@ -927,6 +927,8 @@ no overrides, just overlaps and fail if not same command ????
  //    if (!newb->cmd && dirs[t->fcom].maxovr > newb->fcom) ans |= 0x10;  // newb cannot overwrite t  - relevant for part overlaps
  //   }
 
+// Gribble
+
    if (dirs[t->fcom].merge && t->fcom == newb->fcom && !newb->user && !t->user && !t->size && ! newb->size)
     {      //only merge matching commands, not user, not addnl.
      if (ans) ans |= 0x40;                            // overlap set already, merge allowed
@@ -1031,7 +1033,9 @@ int inschk(CHAIN *x, int ix, LBK *newb)
 
   // OK, find min and max overlap
 
-  if (x->num == 0) return 1;        //ok to insert
+  if (x->num == 0) return 1;        //always ok to insert
+
+  if (newb->fcom & C_NOMERGE) return 1;
 
  // ix is where insert would be
 
@@ -1311,11 +1315,11 @@ LBK* add_cmd(uint start, uint end, uint com, uint from)
        }
      }
 
-
+/*
    if ((tcom == C_WORD || tcom == C_LONG || tcom == C_VECT) && (start & 1))
     {
       // must start on even address
-      chcmd.lasterr = 4;
+      chcmd.lasterr = E_ODDB;
       #ifdef XDBGX
          DBGPRT(0,"FAIL add cmd");
          DBGPRT(0, " %x ODD Boundary from %x", start, from);
@@ -1325,7 +1329,7 @@ LBK* add_cmd(uint start, uint end, uint com, uint from)
 
       return NULL;
     }
-
+*/
  //  chcmd.lasterr = 0;      //done in insert
 
 
@@ -1337,6 +1341,8 @@ LBK* add_cmd(uint start, uint end, uint com, uint from)
    if (com & C_CMD) b->cmd = 1;
    if (com & C_SYS) b->sys = 1;
    if (PARGC)       b->cptl = 1;
+
+// gribble NOMERGE
 
 
    x = inscmd(&chcmd,b);
@@ -1559,18 +1565,32 @@ RST* add_rgstat(uint reg, uint fend, uint sreg, uint ofst)
 {
 
  RST *x;
+// RBT *b;
  int ix, ans;
 
  if (!val_general_reg(reg))
    {
- #ifdef XDBGX
-    DBGPRT (0,"REJECT Add");
+    #ifdef XDBGX
+    DBGPRT (0,"REJECT Add Invr");
     DBGPRT  (0," rgstat %x fend %d from %x", reg, fend, ofst);
     DBGPRT(1,0);
    #endif
     return NULL;
 }
 
+/*
+ b = get_rbt(reg, ofst);
+
+ if (b)
+   {
+    #ifdef XDBGX
+    DBGPRT (0,"REJECT Add rbase");
+    DBGPRT  (0," rgstat %x fend %d from %x", reg, fend, ofst);
+    DBGPRT(1,0);
+   #endif
+    return NULL;
+  }
+*/
 
  x = (RST *) chmem(&chrgst,0);
  x->reg  = nobank(reg);
@@ -3212,7 +3232,7 @@ SBK *add_escan (uint add, SBK *caller)
 
    if (anlpass >= ANLPRT)   return 0;
 
-   s = (SBK *) chmem(&chemul,0);             // new block (zeroed)
+   s = (SBK *) chmem(&chemul,0);           // new block (zeroed)
    if (add) s->start = add;                // standard add emu
    else s->start    = caller->start;       // copy of SBK to new emu
 
@@ -3700,6 +3720,7 @@ void scan_sgap(uint addr)
 
   x = add_scan(addr, J_STAT | C_GAP,0);
   if (!x) return;
+//  if (chscan.lasterr) return;
 
  // x->gapscan = 1;              //set here for
   scan_blk(x, &cinst);
@@ -5176,34 +5197,39 @@ if (stype ==1)
 
 
 
-void turn_gapscans_into_code (void)
+uint turn_gapscans_into_code (void)
  {
 
   // turn gapscan list into code commands.
   // if any are invalid, ignore the whole lot
 
-  uint ix;
+  uint ix, ans;
   SBK *s;
 
+ans = 0;
   for (ix = 0; ix < chsgap.num; ix++)
    {
     s = (SBK*) chsgap.ptrs[ix];
     if (s->inv)
      {
-      clearchain(&chsgap);       // clear all temp scan blocks
-      return;
+  //       DBGPRT(1,"gapscans invalid");
+      clearchain(&chsgap);       // clear all temp scan blocks, do nothing
+      return 0;
      }
    }
 
+// DBGPRT(1,"gapscans OK");
    for (ix = 0; ix < chsgap.num; ix++)
-   {
+   {                                 //for all valid blocks completed
     s = (SBK*) chsgap.ptrs[ix];
     if (s && s->stop)
       {
        add_cmd (s->start,s->nextaddr,C_CODE,0);
+       if (!chcmd.lasterr) ans = 1;
       }
    }            // for loop
  clearchain(&chsgap);       // clear all temp scan blocks
+ return ans;
  }
 
 
@@ -5263,14 +5289,40 @@ for (ix = 0; ix  < chdtkd.num; ix++)
 
 
 
-
-void scan_gaps(void)
+uint do_cgap(uint start)
 {
-   // base detect first - combined cmd chain.
+   #ifdef XDBGX
+      DBGPRT(1,"Gap Code scan %x", start);
+   #endif
+   scan_sgap(start);
+   if (turn_gapscans_into_code ())
 
-  LBK *s, *n, *cb;
-  DTD *d;
-  uint ix, jx, i, xend, start, end;
+   //but this skips some stuff, so must probably go back and refind the start point..........
+   // dup scan is OK....but..........
+  //   if (chscan.lasterr) return ix;
+  {
+   get_cmd(start,0);
+   return 1;
+  }
+   return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+void scan_cmd_gaps(uint (*pgap) (LBK *s, LBK *n))
+{
+   // COMMAND CHAIN gaps.
+
+  LBK *s, *n;
+  uint ix;
 
  #ifdef XDBGX
     DBGPRT(1,0);
@@ -5287,63 +5339,126 @@ void scan_gaps(void)
 
     n = (LBK*) chcmd.ptrs[ix+1]; // next scan block
 
-    start = s->end+1;
-    end  = n->start-1;
+    if ((n->start-1) < (s->end+1)) continue;
 
-    if (end < start) continue;
+    if (g_bank(s->start) != g_bank(n->start) ) continue;       //safety
 
     #ifdef XDBGX
-      DBGPRT(0,"\n\nGAP %x-%x", start, end);
+      DBGPRT(0,"\n\nGAP %x-%x", s->end-1, n->start-1);
       DBGPRT(1, "  %s <-> %s", cmds[s->fcom], cmds[n->fcom]);
     #endif
 
-    //get next data item from start
-    d = 0;
-    get_dtkd(&chdtkd,0, start);
-    jx = chdtkd.lastix;
-    if (jx < chdtkd.num) d = (DTD *) chdtkd.ptrs[jx];
+    if (pgap (s,n)) ix--;    //ix -= pgap (s,n);         ??
+   }
 
-    //code scan if no data found in this gap
+}
 
-    if (s->fcom == C_CODE && n->fcom == C_CODE)
-       { // could be code -> code
-        cb = get_aux_cmd(start, 0);
-        if (!cb || cb->fcom != C_XCODE)
-         {  //  not XCODE
-          if (d && (d->stdat > end || d->psh))
-            {
-                #ifdef XDBGX
-             DBGPRT(1,"No data - Code scan ");
-             #endif
-             scan_sgap(start);
-             turn_gapscans_into_code ();
 
-//but this skips some stuff, so must probably go back and refind the start point..........
-             get_cmd(start,0);
-             if (chcmd.lastix < chcmd.num) ix = chcmd.lastix-1;
 
-             continue;
-            }
-         } else  {
-               #ifdef XDBGX
-               DBGPRT(1,"XCODE set");
-               #endif
-         }
-       }
+uint scan_cgap(LBK *s, LBK *n)
+{
+   LBK *cb;
+   DTD *d;
+   uint jx, start, end, val;  //, cnt;
 
+   start = s->end+1;
+   end  = n->start-1;
+
+   #ifdef XDBGX
+      DBGPRT(1,"code scan %x-%x", start, end);
+   #endif
+
+
+// XCODE ??
+
+   cb = get_aux_cmd(start, 0);
+   if (cb && cb->fcom == C_XCODE)
+     {
+       #ifdef XDBGX
+        DBGPRT(1,"Ignore, XCODE set");
+       #endif
+       return 0;
+     }
+
+   //data ?? get next item from start
+
+   get_dtkd(&chdtkd,0, start);
+   jx = chdtkd.lastix;
+   d = 0;
+   if (jx < chdtkd.num)
+      {
+       d = (DTD *) chdtkd.ptrs[jx];
+       if (d->stdat <= end && !d->psh)
+         {
+          #ifdef XDBGX
+            DBGPRT(1,"Data found, STOP");
+          #endif
+          return 0;
+        }
+      }
+   //code scan
+
+   val = g_byte(end);
+
+   if (s->fcom == C_CODE)
+     {
+       //if (n->fcom == C_CODE) return do_cgap(start);
+
+//only if gap ends with a ret.
+
+        // code, not code. does last byte end in jump or ret ??
+        //may need to scan backwards for f0 here...
+        if (val == 0xf0 || val == 0xf1 )
+          {
+            return do_cgap(start);
+          }
+
+     }
+    else
+    {
+        //not code -> code
+     //if next command is code...end gap is code, and need previous is f0 consider scanning code...
+    // but may get a couple together....
+      if (n->fcom == C_CODE)
+        {
+         if (val == 0xf0 || val == 0xf1 )
+           {
+             return do_cgap(start-1);          //start BEFORE the gap..
+           }
+        }
+     }
+
+    return 0;
+}
+
+
+
+
+
+uint scan_fillgap(LBK *s, LBK *n)
+{
     // not code, so look for data structs
     // check for fill block first.  Must not overlap anything data.
+   uint i,jx, start, end, flag;
+   DTD *d;
 
-    if (n->fcom > C_BYTE)
-        {  // bigger than byte, not tables, use up to first data item.
-         uint flag;
-         i = start;
-         if (d && d->stdat < end) xend = d->stdat-1; else xend = end;
-         flag = 0;
+   if (n->fcom <= C_BYTE) return 0; // n bigger than byte
 
-         while (i <= xend)
-          {
+   start = s->end+1;
+   end  = n->start-1;        i = s->end+1;
+
+   get_dtkd(&chdtkd,0, start);
+   jx = chdtkd.lastix;
+   d = 0;
+   if (jx < chdtkd.num)
+      {
+       d = (DTD *) chdtkd.ptrs[jx];
+         if (d && d->stdat < end) end = d->stdat-1;
+      //   flag = 0;
            flag = 1;
+
+         while (i <= end)
+          {
            jx = g_byte(i);
            if (jx != 0xff)
             {
@@ -5355,19 +5470,14 @@ void scan_gaps(void)
 
          if (flag)
            {
-            cb = add_cmd(start, xend,0,0);      // fill
-            if (!chcmd.lasterr) continue;   // new command OK
+            add_cmd(start, end,0,0);      // all fill
+            if (!chcmd.lasterr) return 1;   // new command OK
            }
         }
 
-    // not code, not fill, check data, look for structs
 
-    discover_struct(start,end);
 
-  }
- #ifdef XDBGX
-DBGPRT(2,0);
-    #endif
+return 0;
 }
 
 

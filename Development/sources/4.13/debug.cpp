@@ -11,9 +11,9 @@
 #ifdef XDBGX
 
 extern int anlpass;
-extern HDATA fldata;        
+extern HDATA fldata;
 
-extern const char *cmds[]; 
+extern const char *cmds[];
 extern CHAIN chrgst;
 extern CHAIN chscan;
 extern CHAIN chsubr;
@@ -71,9 +71,9 @@ DTD *get_next_dtkd(DTD *);
 
 // how to have an array of subroutine pointers.....this works.
 
-// typedef void DBGPB(CHAIN *, int, void*, const char *fmt);  
+// typedef void DBGPB(CHAIN *, int, void*, const char *fmt);
 // DBGPB *chdbgpt [4];
- 
+
 
 uint DBGPRT (uint nl, const char *fmt, ...)
 {  // debug file prt with newlines
@@ -110,10 +110,12 @@ void DBGPBK(int nl, LBK *b, const char *fmt, ...)
 
 
 
-void DBG_stack (FSTK *t)
+void DBG_stack (SBK *s, FSTK *t)
  {
-   int i;
+  int i;
 
+  if (s && (s->scanning || s->emulating))
+   {
   if (anlpass >= ANLPRT) return;
 
   DBGPRT(0,"STK ");
@@ -125,6 +127,7 @@ void DBG_stack (FSTK *t)
     t++;
    }
   DBGPRT(1,0);
+   }
  }
 
 
@@ -211,7 +214,7 @@ void DBG_sbk(const char *t, SBK *s)
  if (!s->logdata)  DBGPRT(0," NDAT");
  if (s->inv)       DBGPRT(0," INV");
  //if (!s->stop)     DBGPRT(0," NOT Scanned");
-   if (!s->stop)     DBGPRT(0," Scanned"); 
+   if (!s->stop)     DBGPRT(0," Scanned");
 // if (s->gapchk)    DBGPRT(0," GAP");
 
  DBGPRT(1,0);
@@ -242,7 +245,7 @@ void DBG_dtkx (TRK *k)
 
   wop = opctbl[k->opcix].wop;
 
-  DBGPRT(0,"%5x, %5x, %5s ", k->ofst, k->ofst+k->ocnt, opctbl[k->opcix].name); 
+  DBGPRT(0,"%5x, %5x, %5s ", k->ofst, k->ofst+k->ocnt, opctbl[k->opcix].name);
 
   for (i = 0; i <= 4; i++)
     {
@@ -294,10 +297,10 @@ void DBG_dtkx (TRK *k)
         DBGPRT(0," %5x", d->stdat);
     //    if (d->olp) DBGPRT(0,"O");
         if (d->psh) DBGPRT(0," P");
-        if (d->gap) DBGPRT(0," G%d",d->gap); 
+        if (d->gap) DBGPRT(0," G%d",d->gap);
         if (d->olp) DBGPRT(0," O");
         DBGPRT(0,",");
-      } 
+      }
     DBGPRT(1,0);
   }
 
@@ -320,7 +323,7 @@ void DBG_dtk (void)
   DBGPRT(1,"# ------------ data tracking list");
   DBGPRT(1,"# num items = %d", chdtk.num);
 
-  DBGPRT(1,"from, next, addr, size"); 
+  DBGPRT(1,"from, next, addr, size");
   DBGPRT(1,"# by ofst");
 
   for (ix = 0; ix < chdtk.num; ix++)
@@ -346,7 +349,7 @@ void DBG_dtk (void)
   for (ix = 0; ix < chdtkd.num; ix++)
       {
         d = (DTD*) chdtkd.ptrs[ix];
-        DBGPRT(0,"%5x, %5x, ", d->fk, d->stdat); 
+        DBGPRT(0,"%5x, %5x, ", d->fk, d->stdat);
 
  /*       f = d->modes;
         i = 0;
@@ -514,7 +517,7 @@ void DBG_banks(void)
          DBGPRT(0,"%2d, %5x %5x %5x", ix, b->filstrt, b->filend, b->maxpc);
          DBGPRT(0," ## %5x %5x", b->minpc, b->maxbk);
          DBGPRT(0,"  %x %x %x %x  %5x", b->bok, b->cmd,b->bkmask, b->cbnk, b->fbuf);
-         DBGPRT(0," %5x", b->opbt-opbit ); 
+         DBGPRT(0," %5x", b->opbt-opbit );
          DBGPRT(1,0);}
        }
   DBGPRT(1,0);
@@ -543,7 +546,7 @@ void DBG_banks(void)
 
 void DBG_data()
  {
-  
+
    DBGPRT(1,"max alloc = %d (%dK)", DBGmaxalloc, DBGmaxalloc/1024);
    DBGPRT(1,"cur alloc = %d", DBGcuralloc);
    DBGPRT(1,"mcalls    = %d", DBGmcalls);

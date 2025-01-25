@@ -42,8 +42,8 @@ typedef unsigned long  ulong;
 
 #define BMAX      16             // maximum bank index
 
-#define SADVERSION "4.0.13.7"
-#define SADDATE    "17 Jan 2024"
+#define SADVERSION "4.0.13.10"
+#define SADDATE    "26 Jan 2025"
 
 // debug defines - when switched on, this causes a LOT of output to xx_dbg file
 // DBGPRT id is kept to make debug code more obvious to view

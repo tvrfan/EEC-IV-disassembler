@@ -103,8 +103,14 @@ SIG* inssig(SIG *blk);
 void fixbitfield(uint *, uint *, uint *);
 
 //void scan_dc_olaps(void);
-void scan_code_gaps(void);
-void scan_gaps(void);
+//void scan_code_gaps(void);
+void scan_cmd_gaps(uint (*pgap) (LBK *s, LBK *n));
+
+uint scan_cgap(LBK *s, LBK *n);
+uint scan_fillgap(LBK *s, LBK *n);
+//void scan_gaps(void);
+
+
 void check_dtk_links(void);
 
 //void scan_lpdata(void);
@@ -144,7 +150,7 @@ extern const char *chntxt[];
 extern const char *jtxt[];
 
 uint DBGPRT (uint, const char *, ...);
-void DBG_stack (FSTK *);
+void DBG_stack (SBK *,FSTK *);
 void DBG_rgchain(void);
 void DBG_rgstat(RST *);
 void DBG_sbk(const char *t, SBK *s);
@@ -910,7 +916,7 @@ FSTK  scanstack[STKSZ];       // fake stack holder for previous subr calls (for 
 FSTK  emulstack[STKSZ];       // fake stack for emulation - emulate all parameter/argument getters
 CPS   cmnd;                   // command structure
 
-uchar *fbinbuf;               // bin file goes in here.
+uchar *fbinbuf;               // bin file goes in here. Now not freed until end so that FM20M06 ...
 
 int recurse  = 0;             // recurse count check
 
@@ -1212,6 +1218,7 @@ void set_opstart (uint ofst)
 {
   // 1 for code start
   BANK *b;
+
   b = mapbank(ofst);
   if (!b->bok) return;     // invalid
   set_flag(ofst,b->opcbt);
@@ -2153,14 +2160,16 @@ void do_args(SBK *s, FSTK *t)
 
 
 
-void do_rbcheck(SBK *s, INST *c)
+uint do_rbcheck(SBK *s, INST *c)
 {
   OPS *o;
   RBT *b;
   uint val;
 
-   if (!s->scanning) return;      // only in scan mode
-   if (!c->wop) return;           // no writes
+   //ans 1 to stop updates
+
+   if (!s->scanning) return 1;      // only in scan mode
+   if (!c->wop) return 1;           // no writes
 
    o = c->opr + c->wop;           // destination operand (wop)
 
@@ -2170,12 +2179,12 @@ void do_rbcheck(SBK *s, INST *c)
   if (c->wop == 1)
      {
        if (c->opcsub == 2 && c->opr[1].inc) o = c->opr + 4;    // c->inc move to true register
-       if (c->opcsub == 3) return;                    // ignore indexed stx
+       if (c->opcsub == 3) return 0;                    // ignore indexed stx
      }
 
-   if (!o->rgf) return;
-   if (!val_general_reg(o->addr)) return;
-   if (get_flag(o->addr, rbinv)) return;    // already marked as invalid
+   if (!o->rgf) return 0;
+   if (!val_general_reg(o->addr)) return 0;
+   if (get_flag(o->addr, rbinv)) return 0;    // already marked as invalid
 
    b = get_rbt(o->addr,0);                 // is it an rbase (default)?
 
@@ -2184,36 +2193,40 @@ void do_rbcheck(SBK *s, INST *c)
        #ifdef XDBGX
         DBGPRT(1,"cmd bans rbase update %x", o->addr);
        #endif
-       return;
+       return 1;
      }
 
-    val = databank(o->val,c);          // if val is an address, add bank
+    val = databank(o->val,c);          // val is an address, add bank
 
    // only add an RBASE if ldw or stw, immediate,WORD, not zero and not invalid
    // AD3w allowed for NEW rbase if other op is an rbase already (A9L 7096 ad3w)
 
    if (!b)
    {
-   if (c->opcsub == 1 && o->val > (int) max_reg() && bytes(o->wfend) == 2)           //o->wsize == 2)
+    if (c->opcsub == 1 && o->val > (int) max_reg() && bytes(o->wfend) == 2)           //o->wsize == 2)
       {
        // ldw, stw or ad3w and immediate - new rbase candidate
        if (c->opcix == 41 || c->opcix == 49 || (c->opcix == 25 && c->opr[2].rbs))
-        b = add_rbase(o->addr, val,0,0xfffff);
+            b = add_rbase(o->addr, val,0,0xfffff);
       }
+    return 0;  // no rbase, or new one, update allowed
    }
-   else
-       {   // rbase already exists, invalidate if not same value or not immediate
 
-        if (b->val != val || c->opcsub != 1)
-           {
-             b->inv = 1;      // not same value
-             set_flag(o->addr, rbinv);
+// b is set,  rbase already exists, invalidate if not same value or not immediate
+
+    if (b->val != val || c->opcsub != 1)
+      {
+       b->inv = 1;      // not same value
+       set_flag(o->addr, rbinv);
              #ifdef XDBGX
-               DBGPRT(1,"Inv rbase R%x (%x)", o->addr, c->ofst);
+               DBGPRT(1,"Inv r%x (%x)", o->addr, c->ofst);
              #endif
-           }
-       }         // end check rbase
-   }
+       return 0;          //update allowed
+      }         // end check rbase
+  return 1;        //no update
+}
+
+
 
 
 void upd_watch(SBK *s, INST *c)
@@ -2225,6 +2238,7 @@ void upd_watch(SBK *s, INST *c)
   o = c->opr + c->wop;                      // destination entry (wop)
 
   do_rbcheck(s,c);
+
 
   if (s->scanning || s->emulating)
     {
@@ -2352,6 +2366,264 @@ else
 #endif
 
 }
+
+
+void find_data_bank(void)
+{
+    //set up a bank 1 (must only be a bank 8 to get here) via rbase registers........
+
+
+}
+
+
+void rbasp(SIG *sx, SBK *b)
+{
+
+  //add rbase entries from signature match
+
+  uint add, add2, reg, i, cnt;   //,xcnt,rcnt;
+//  RBT *r;
+  uint  pc;
+  LBK* l;
+  ADT *a;
+
+  if (b) return;                  // no processing if subr set
+
+ // rcnt = chbase.num;              // may have rbases already. start at 'NEW' point
+  reg = (sx->v[1] & max_reg());
+  add = sx->v[3];
+  cnt = g_byte(add);              // no of entries in list
+
+  #ifdef XDBGX
+  DBGPRT(1,"In rbasp - begin reg %x at %x, cnt %d", reg, add, cnt);
+  #endif
+
+  add_cmd(add, add+1, C_BYTE|C_SYS,0);
+  l = add_cmd(add+2, add+(cnt*2)+1, C_WORD|C_SYS, 0);
+
+  if (chcmd.lasterr)
+   {
+     #ifdef XDBGX
+      DBGPRT(1,"Rbase Already Processed");
+     #endif
+    return ;
+   }
+
+
+  if (l)
+    { a = add_adt(&chadnl,l->start,256);
+  if (a)
+   { a->fend = 15;
+     a->vaddr = 1;
+     a->prdx = 0;
+     a->bank = basepars.datbnk >> 16;               // add + default data bank
+       a->pfw   = get_pfwdef(a);
+   }
+    }
+
+
+  pc= add+2;
+
+ //  check bank is correct ?
+    add = g_word(pc);                       // register pointer
+    add |= basepars.datbnk;                 // + default data bank
+    add2 = g_word(add);                     // check pointer is consistent with next entry
+    i = g_word(pc+2);                       // next in list
+
+  #ifdef XDBGX
+  if (i != add2)
+    {
+     // rbases point to different bank
+     DBGPRT(1,"RBASEDBNK");
+    }
+  #endif
+
+  for (i = 0; i < cnt; i++)
+   {
+    add = g_word(pc);                       // register pointer
+    add |= basepars.datbnk;               // add + default data bank
+
+   if (nobank(add) < 0x2020) break;
+   add_cmd(add, add+1, C_WORD|C_SYS,0);
+   add2 = g_word(add);                     // check pointer is consistent with next entry
+    // also valid for last pointer for xcode
+
+//   r =
+   add_rbase(reg,add,0,0xfffff);                     // dbg message in here....
+ //  if (r) r->cmd = 1;
+   upd_ram(reg,add,15);
+   add_aux_cmd(add,add2-1, C_XCODE|C_SYS,0);          // and add an XCODE as this is data
+
+    reg+=2;
+    pc+=2;
+   }
+
+ /* now check pointers for XCODE directives for newly added entries
+
+ if (rcnt == chbase.num)  return ;     // nothing added
+
+ for (i = rcnt; i < rcnt+cnt; i++)
+   {
+     if (i >= chbase.num)  break;
+    r = (RBT*) chbase.ptrs[i];
+    n = (RBT*) chbase.ptrs[i+1];
+    pc = n->rval & 0xffff;
+
+    xcnt =0;
+
+    if (i >= rcnt+cnt-1)
+     {
+      n = (RBT*) chbase.ptrs[i-1];                  // get bank of last pointer
+      r->rval = (r->rval & 0xffff) | (n->rval & 0xf0000);
+      pc = g_word(r->rval);
+     }
+    else
+     {
+       while (pc != g_word(r->rval) && xcnt < BMAX && i < rcnt+cnt-1)
+       {
+        xcnt++;             // try to find matching bank...
+        if (bkmap[xcnt].bok)  r->rval = (r->rval & 0xffff) | (xcnt << 16);
+       }
+     }
+
+    if (xcnt >= BMAX)
+    {
+		#ifdef XDBGX
+        DBGPRT(1,"Matching rbase addr not found !");
+		#endif
+    }
+    else
+      {
+   //     if (xcnt) DBGPRTN("Rbase %x = %x",r->radd, r->rval);
+      //  set_cmd(r->rval, r->rval+1, C_WORD);
+     //   set_auxcmd(r->rval,pc-1, C_XCODE);          // and add an XCODE as this is data
+        add_data_cmd(val, val+1, C_WORD|C_CMD,0);
+        add_code_cmd(val,val2-1, C_XCODE);          // and add an XCODE as this is data
+      }
+   }
+   sx->done = 1;
+   #ifdef XDBGX
+   DBGPRT(1,"end rbasp");
+   #endif
+   return ;*/
+}
+
+
+/*
+void check_rbase(void)       //SIG *sx, SBK *dummy)
+{
+
+// rewrite to ditch the sig scan
+// CAN'T DO THIS - 0FAB does not use f0 as start point !!!
+ // must go back to signature !!
+
+  //check if rbase caclcon pointer entries are present
+  // 2020 num of levels (always 8)
+  // 2021 no of calibrations (1)
+  // 2022-20A1 cal pointers = 7f 0r 64 pointers
+  // presume 2060 for 8065.
+
+  int i, cnt,bank, bf;
+  RBT *r;
+  uint  pc, addr, val, val2;
+
+ #ifdef XDBGX
+  DBGPRT(1,"In chk_rbasp");
+  #endif
+
+// do NOT use numbanks, as CAN have single bank 8065 !!
+  if (P8065) addr = 0x82060; else addr = 0x82020;
+
+  cnt = g_byte(addr);                     // no of entries
+  bf = 0;
+  pc = addr+2;
+  val2 = g_word(pc);
+
+  if (cnt != 8)
+   {             // may be a bigger number somewhere....
+    #ifdef XDBGX
+     DBGPRT(1,"Not Found");
+    #endif
+   return;
+   }
+
+  bank = 8;
+
+  for (i = 1; i < cnt; i++)
+   {
+    addr = val2 | (bank << 16);
+    if (!val_data_addr(addr)) break;  // cancel all
+
+    val = g_word(addr);                    // value at pointed to
+    pc += 2;                               // still in bank 8
+    val2 = g_word(pc);                     // get next match (was addr)
+
+    if (val != val2)
+     {
+      if (!numbanks)  break;
+      // check if rbase points to another bank (typically b1)
+      if (!bf)
+        {
+         // not checked yet
+          for (bank = 0; bank < BMAX; bank++)
+              {
+                if (bkmap[bank].bok)
+                 {          // bank is OK
+                   addr = nobank(addr) | (bank << 16);
+                   val = g_word(addr);                    // value at pointed to
+                  if (val == val2) {bf = 1; break;}                      // bank found
+                 }
+              }
+        }
+     }
+   }
+
+  if (i < cnt)
+   {
+    #ifdef XDBGX
+    DBGPRT(1,"Not Found");
+    #endif
+    return;
+   }
+
+
+  #ifdef XDBGX
+    DBGPRT(1,"FOUND RBASE, points to bank %d", bank);
+  #endif
+
+  // OK, matched list and bank................
+
+  if (P8065) addr = 0x82062; else addr = 0x82022;
+
+  add_data_cmd(addr-2, addr-1, C_BYTE|C_CMD, 0);
+  add_data_cmd(addr, addr+(cnt*2)-1, C_WORD|C_CMD, 0);
+
+  pc = 0xf0;                                // always 0xf0 ?? NO !!!!
+  for (i = 0; i < cnt; i++)
+   {
+    val   = g_word(addr);                    // value at pointed to
+    val  |= (bank << 16);
+    val2  = g_word(val);
+    val2 |= (bank << 16);
+
+    r = add_rbase(pc,val,0,0);             // message in here....
+    if (r)
+      {
+       r->cmd = 1;
+       upd_ram(pc,val,2);                           // and set register
+       add_data_cmd(val, val+1, C_WORD|C_CMD,0);
+       add_code_cmd(val,val2-1, C_XCODE);          // and add an XCODE as this is data
+      }
+
+    pc+=2;
+    addr+=2;
+   }
+
+   #ifdef XDBGX
+   DBGPRT(1,"end rbasp");
+   #endif
+   return ;
+}*/
 
 
 
@@ -3458,83 +3730,28 @@ for varibale bit fields (0-31)
 Auto negates via sign (fend & 32) if required
 ***********************************/
 
-/*
-int g_val (uint addr, uint fstart, uint fend)
-{                   // addr is encoded bank | addr
-  int val, start,stop;
-  uint mask, sign;
-  uchar *b;
-  uchar *t;
-
-  b = map_addr(&addr);
-
-  if (!b)  return 0;               // map to required bank
-  t = (uchar*) &val;
-
-  sign   = (fend & 32);
-  fstart &= 31;                    // max fields
-  fend   &= 31;
-
-  if (fstart > fend) return 0;     // safety
-
-  stop   = fend   /8;
-  start  = fstart /8;
-
-  if (fend == fstart) sign = 0;    // no sign for single bit
-
-  val = 0;
-
-  while (start <= stop)
-    {
-     t[start] = b[addr+start];
-     start++;
-    }
-
-//make part this a separate 'scale_value' for pp_adt as well ??
-
-  if (fstart) val >>= fstart;                  // shift down (start bit -> bit 0)
-  mask = 0xffffffff >> (31 + fstart - fend);   // make mask
-  val &= mask;                                 // and extract required field
-
-  // set sign, reusing mask
-
-  if (sign)
-    {
-
-     sign = 1 << fend;                       // sign mask
-     mask = ~mask;                           // flip for set negative
-     if (val & sign) val = val | mask;
-    }
-
-return val;
-
-}
-
-*/
 
 int scale_val (int val, uint fstart, uint fend)
-
 {
-//make part this a separate 'scale_value' for pp_adt as well ??
+  // separate 'scale_value' used for pp_adt as well as g_val
+
   int mask, sign;
 
-  sign = (fend & 0x20);
+  sign = (fend & 0x20);                        // keep sign state
 
-  if (fstart == fend) sign = 0;     // no sign for single bit, safety
+  if (fstart == fend) sign = 0;                // no sign for single bit
 
   if (fstart) val >>= fstart;                  // shift down (start bit -> bit 0)
   mask = 0xffffffff >> (31 + fstart - fend);   // make mask
   val &= mask;                                 // and extract required field value
 
-  // set sign, reusing mask
-
   if (sign)
-    {
-     sign = 1 << fend;                       // sign mask
+    {                                          // signed set
+     sign = 1 << fend;                         // sign mask
      if (val & sign)
-       {                   // if negative
+       {                                        // if negative
         mask = ~mask;                           // flip for set negative
-        val = val | mask;
+        val = val | mask;                       // add mask for -ve
        }
     }
 
@@ -3545,7 +3762,6 @@ return val;
 int g_val (uint addr, uint fstart, uint fend)
 {                   // addr is encoded bank | addr
   int val, start,end;
- // uint mask, sign;
   uchar *b;
   uchar *t;
 
@@ -3554,14 +3770,12 @@ int g_val (uint addr, uint fstart, uint fend)
   if (!b)  return 0;               // map to required bank
   t = (uchar*) &val;
 
- // sign = (fend & 0x20);
-  start = (fstart & 0x1f);                    // max fields
-  end   = (fend   & 0x1f);                //NO ! not if used again for subr call.
+  start = (fstart & 0x1f);        // max fields
+  end   = (fend   & 0x1f);        // use end (fend has sign)
 
-  if (start > end)  return 0;     // safety
- // if (fstart == fend) sign = 0;     // no sign for single bit, safety
+  if (start > end)  return 0;     // safety check
 
-  start  = start / 8;
+  start = start / 8;
   end   = end   / 8;
 
   val = 0;
@@ -3574,29 +3788,11 @@ int g_val (uint addr, uint fstart, uint fend)
 
   val = scale_val(val, fstart, fend);
 
-
-/*make part this a separate 'scale_value' for pp_adt as well ??
-
-  if (fstart) val >>= fstart;                  // shift down (start bit -> bit 0)
-  mask = 0xffffffff >> (31 + fstart - fend);   // make mask
-  val &= mask;                                 // and extract required field value
-
-  // set sign, reusing mask
-
-  if (sign)
-    {
-     sign = 1 << fend;                       // sign mask
-     if (val & sign)
-       {                   // if negative
-        mask = ~mask;                           // flip for set negative
-        val = val | mask;
-       }
-    }
-*/
-
-return val;
+  return val;
 
 }
+
+
 
 int abank(ADT *a, int val)
 {
@@ -3683,6 +3879,7 @@ int decode_addr(ADT *a, uint ofst)
 void avcf (SIG *z, SBK *blk)
   {
     int start, addr, val, bk;
+    SBK *x;
     LBK *s;
     ADT *c;
 
@@ -3698,8 +3895,14 @@ void avcf (SIG *z, SBK *blk)
      {
         val = g_word(addr);
         val |= bk;
-        if (!val_rom_addr(val)) break;
-        add_scan(val, J_SUB,0);
+        x = add_scan(val, J_SUB,0);
+
+        if (!x)
+        {     //invalid scan for last addr value.
+            addr +=2;
+            break;
+        }
+
         addr -= 2;
      }
     s = add_cmd (addr, start, C_VECT, z->start);
@@ -3920,7 +4123,7 @@ void set_xfunc(SFIND *f)
      if (val != startval)
       {
        #ifdef XDBGX
-         DBGPRT(1,"func %x Invalid start value %x, expect %x", f->ans[0], val, startval);
+         DBGPRT(1,"func %x Invalid %x expect %x", f->ans[0], val, startval);
        #endif
        return ;
       }
@@ -4478,9 +4681,13 @@ void build_fake_stack(SBK *s)
  // Higher (= older) than its call out.
 
   int i;
- // SBK *x;
+
   FSTK *c, *d;
 
+        #ifdef XDBGX
+  SBK *x;
+x = s;                   //for debug
+#endif
   c = emulstack;
   d = scanstack;
 
@@ -4515,8 +4722,8 @@ void build_fake_stack(SBK *s)
         i++;
       }
           #ifdef XDBGX
-DBG_stack(d);
-DBG_stack(c);
+DBG_stack(x,d);
+DBG_stack(x,c);
 #endif
 }
 
@@ -5166,7 +5373,7 @@ if (!match && s->emulating)
 
     #ifdef XDBGX
     DBGPRT(1,"STACK TYPE not match %x != %x at %x", t->type, types, s->curaddr);
-    DBG_stack(emulstack);
+    DBG_stack(s,emulstack);
     #endif
   }
 
@@ -5292,6 +5499,7 @@ void do_sjsubr(SBK *caller, INST *c, int type)
 
          add_jump(caller, addr, type);
 
+         if (c->opcix == 80)  caller->nextaddr++;         //skip fakes extra opcode
          end_scan (caller);                              // END of this block
          if (check_backw(addr, caller, type)) break;     // backward jump probably a loop
 
@@ -6276,6 +6484,7 @@ void p_sc (INST *x, int ix, int ws)
 
         if (s->prtbit) pstr (0,"B%d_", o->val);   // default 'base' name
         pstr(0,"%s", s->name);
+        if (o->inc) pstr (0,"++");
         return;
       }
     }
@@ -6976,6 +7185,8 @@ int maxsizes(LBK *x)
    {
     sz += cellsize(a);
 
+if (!a->cnt) ofst = end;      // safety to stop loops
+
     // now try to work out widths -not only symsize, but floats as well ?
 
     for (i = 0; i < a->cnt; i++)             // count within each level
@@ -7316,7 +7527,8 @@ void fix_sym_names(const char **tx, INST *c)
      }
 
   //  Shifts, drop sym if immediate
-  if (c->opcix < 10 && c->opr[1].val < 16)  c->opr[1].sym = 0;
+  if (c->opcix < 10 && c->opr[1].imd)               // val < 16)
+  c->opr[1].sym = 0;             //   <<<<\ val ????
 
   // indexed - check if RBS, or zero base (equiv of = [imd])
 
@@ -7425,13 +7637,13 @@ if (opl->nops == 2 && c->wop && zero_reg(c->opr + c->wop))
 
    }   // end op 3 op checks
 
- //     R3 = R2 + R1 style.  is anything rbase ?? replace with address as an imd
+ //     R3 = R2 + R1 style.  is anything rbase ?? replace with address as an imd, but NOT if it's traget
   if (!c->opcsub && (c->opr[1].rbs || c->opr[2].rbs))
       {
         for (i = 1; i < c->numops; i++)
           {  //  op 1 for 2 ops, 1 & 2 for 3 ops
             b = c->opr + i;
-            if (b->rbs)
+            if (b->rbs && i != c->wop)
               {
                b->imd = 1;
                b->rgf = 0;
@@ -8588,7 +8800,7 @@ void popw(SBK *s, INST *c)
  if (s->emulating) t = emulstack; else t = scanstack;
 
    #ifdef XDBGX
-   DBG_stack(t);
+   DBG_stack(s,t);
    #endif
 
      for (i=0; i < STKSZ; i++)
@@ -8850,7 +9062,7 @@ void stx (SBK *s, INST *c)
           {
                  #ifdef XDBGX
            DBGPRT(0,"PSW INV PUSH!! %d ",t->type);
-           DBG_stack(x);
+           DBG_stack(s,x);
            #endif
            return;
           }
@@ -8891,8 +9103,8 @@ void ldx(SBK *s, INST *c)
 
   if (val_stack_reg(c->opr[4].addr))
     {
-           #ifdef XDBGX
-    DBG_stack(x);
+        #ifdef XDBGX
+    DBG_stack(s,x);
     #endif
       inx = -1;
       if (c->opcsub == 2) inx = 0;                    // inr
@@ -9008,11 +9220,12 @@ if (c->opr[2].addr == 0xa && c->opr[1].val & 0x10)
  {        //Mem_expand bit set
     if (numbanks == 0)
     {
-             #ifdef XDBGX
+          #ifdef XDBGX
         DBGPRT(1,"%x MEM_EXPAND SET BUT SINGLE BANK !!!!", s->curaddr);
         #endif
         wnprt(1,"##        MEM_EXPAND SET BUT SINGLE BANK !!!!");
 
+ find_data_bank();
         // find bank by rbase data..........
 
     }
@@ -9128,8 +9341,9 @@ void dvx(SBK *s, INST *c)
 
 void calc_shift_ops(SBK *s, INST *c)
 {
-    short b;
-     b = g_byte(s->nextaddr+1);             // first data byte after (true) opcode
+    uint b;
+    c->opcsub = 0;                          // not multimode
+    b = g_byte(s->nextaddr+1);             // first data byte after (true) opcode
   //   set_opdata(s->nextaddr+1,7);
      op_calc (b, 1,c);                      // 5 lowest bits only from firstb, from hbook
 
@@ -9899,6 +10113,7 @@ void do_code (SBK *s, INST *c)
 //------------
 
   c->opcsub = x & 3;                               // this is valid only for multimode opcodes
+// c->opcode = x;
   c->opcix = indx;                                 // opcode index
   c->sigix = opl->sigix;                           // sig index
   c->ofst  = s->curaddr;                           // original start of opcode
@@ -9952,9 +10167,9 @@ uint pp_code (uint ofst, LBK *k)
  // JMP *j;
 
 
-//if (ofst == 0x12002)
+//if (ofst == 0x9244a)
 //{                         //RZAS
-//DBGPRT(0,0);
+// DBGPRT(0,0);
 //}
 
 
@@ -10107,6 +10322,8 @@ uint pp_code (uint ofst, LBK *k)
                 pstr (0,"goto ");
                 p_opsc (c,1,0);
                 pchar (';');
+
+             if (c->opcix == 80)  pstr(1,0);        //skip fakes a newline
                 break;
              }
 
@@ -10292,11 +10509,7 @@ uint fix_input_addr_bank(CPS *c, int ix)
 
 uint validate_input_addr(CPS *c, int ix, uint type)
 {
-  // force single bank addrs to bank 9,  uint x;#include "sign.h"
-
-
-
-
+  // force single bank addrs to bank 9.
 
   // 0 none, 1 start address, 2 end address (same bank) 3 register,
  // 4 start address (no ROM valid) 5 end address (no ROM valid)
@@ -11381,7 +11594,7 @@ uint set_psw (CPS *c)
 
  void do_listing (void)
 {
-  uint ofst;
+  uint ofst, xofst;
   int i, lastcom;
   LBK *x;
   BANK *b;
@@ -11447,7 +11660,9 @@ pstr(1,"\n# - - - -  DEBUG  - - - - - ");
          {
           show_prog (anlpass);
           pp_comment(ofst,0);
+          xofst = ofst;
           ofst = dirs[x->fcom].prtcmd (ofst, x);
+          if (ofst == xofst) ofst++;                     //stop infinite loop, safety check
          }
        }      // ofst loop
 
@@ -13596,256 +13811,6 @@ int readbin(void)
 }
 
 
-void rbasp(SIG *sx, SBK *b)
-{
-
-  //add rbase entries from signature match
-
-  uint add, add2, reg, i, cnt;   //,xcnt,rcnt;
-//  RBT *r;
-  uint  pc;
-  LBK* l;
-  ADT *a;
-
-  if (b) return;                  // no processing if subr set
-
- // rcnt = chbase.num;              // may have rbases already. start at 'NEW' point
-  reg = (sx->v[1] & max_reg());
-  add = sx->v[3];
-  cnt = g_byte(add);              // no of entries in list
-
-  #ifdef XDBGX
-  DBGPRT(1,"In rbasp - begin reg %x at %x, cnt %d", reg, add, cnt);
-  #endif
-
-  add_cmd(add, add+1, C_BYTE|C_SYS,0);
-  l = add_cmd(add+2, add+(cnt*2)+1, C_WORD|C_SYS, 0);
-
-  if (chcmd.lasterr)
-   {
-     #ifdef XDBGX
-      DBGPRT(1,"Rbase Already Processed");
-     #endif
-    return ;
-   }
-
-
-  if (l)
-    { a = add_adt(&chadnl,l->start,256);
-  if (a)
-   { a->fend = 15;
-     a->vaddr = 1;
-     a->prdx = 0;
-     a->bank = basepars.datbnk >> 16;               // add + default data bank
-       a->pfw   = get_pfwdef(a);
-   }
-    }
-
-
-  pc= add+2;
-
- //  check bank is correct ?
-    add = g_word(pc);                       // register pointer
-    add |= basepars.datbnk;                 // + default data bank
-    add2 = g_word(add);                     // check pointer is consistent with next entry
-    i = g_word(pc+2);                       // next in list
-
-  #ifdef XDBGX
-  if (i != add2)
-    {
-     // rbases point to different bank
-     DBGPRT(1,"RBASEDBNK");
-    }
-  #endif
-
-  for (i = 0; i < cnt; i++)
-   {
-    add = g_word(pc);                       // register pointer
-    add |= basepars.datbnk;               // add + default data bank
-
-   if (nobank(add) < 0x2020) break;
-   add_cmd(add, add+1, C_WORD|C_SYS,0);
-   add2 = g_word(add);                     // check pointer is consistent with next entry
-    // also valid for last pointer for xcode
-
-//   r =
-   add_rbase(reg,add,0,0xfffff);                     // dbg message in here....
- //  if (r) r->cmd = 1;
-   upd_ram(reg,add,15);
-   add_aux_cmd(add,add2-1, C_XCODE|C_SYS,0);          // and add an XCODE as this is data
-
-    reg+=2;
-    pc+=2;
-   }
-
- /* now check pointers for XCODE directives for newly added entries
-
- if (rcnt == chbase.num)  return ;     // nothing added
-
- for (i = rcnt; i < rcnt+cnt; i++)
-   {
-     if (i >= chbase.num)  break;
-    r = (RBT*) chbase.ptrs[i];
-    n = (RBT*) chbase.ptrs[i+1];
-    pc = n->rval & 0xffff;
-
-    xcnt =0;
-
-    if (i >= rcnt+cnt-1)
-     {
-      n = (RBT*) chbase.ptrs[i-1];                  // get bank of last pointer
-      r->rval = (r->rval & 0xffff) | (n->rval & 0xf0000);
-      pc = g_word(r->rval);
-     }
-    else
-     {
-       while (pc != g_word(r->rval) && xcnt < BMAX && i < rcnt+cnt-1)
-       {
-        xcnt++;             // try to find matching bank...
-        if (bkmap[xcnt].bok)  r->rval = (r->rval & 0xffff) | (xcnt << 16);
-       }
-     }
-
-    if (xcnt >= BMAX)
-    {
-		#ifdef XDBGX
-        DBGPRT(1,"Matching rbase addr not found !");
-		#endif
-    }
-    else
-      {
-   //     if (xcnt) DBGPRTN("Rbase %x = %x",r->radd, r->rval);
-      //  set_cmd(r->rval, r->rval+1, C_WORD);
-     //   set_auxcmd(r->rval,pc-1, C_XCODE);          // and add an XCODE as this is data
-        add_data_cmd(val, val+1, C_WORD|C_CMD,0);
-        add_code_cmd(val,val2-1, C_XCODE);          // and add an XCODE as this is data
-      }
-   }
-   sx->done = 1;
-   #ifdef XDBGX
-   DBGPRT(1,"end rbasp");
-   #endif
-   return ;*/
-}
-
-
-/*
-void check_rbase(void)       //SIG *sx, SBK *dummy)
-{
-
-// rewrite to ditch the sig scan
-// CAN'T DO THIS - 0FAB does not use f0 as start point !!!
- // must go back to signature !!
-
-  //check if rbase caclcon pointer entries are present
-  // 2020 num of levels (always 8)
-  // 2021 no of calibrations (1)
-  // 2022-20A1 cal pointers = 7f 0r 64 pointers
-  // presume 2060 for 8065.
-
-  int i, cnt,bank, bf;
-  RBT *r;
-  uint  pc, addr, val, val2;
-
- #ifdef XDBGX
-  DBGPRT(1,"In chk_rbasp");
-  #endif
-
-// do NOT use numbanks, as CAN have single bank 8065 !!
-  if (P8065) addr = 0x82060; else addr = 0x82020;
-
-  cnt = g_byte(addr);                     // no of entries
-  bf = 0;
-  pc = addr+2;
-  val2 = g_word(pc);
-
-  if (cnt != 8)
-   {             // may be a bigger number somewhere....
-    #ifdef XDBGX
-     DBGPRT(1,"Not Found");
-    #endif
-   return;
-   }
-
-  bank = 8;
-
-  for (i = 1; i < cnt; i++)
-   {
-    addr = val2 | (bank << 16);
-    if (!val_data_addr(addr)) break;  // cancel all
-
-    val = g_word(addr);                    // value at pointed to
-    pc += 2;                               // still in bank 8
-    val2 = g_word(pc);                     // get next match (was addr)
-
-    if (val != val2)
-     {
-      if (!numbanks)  break;
-      // check if rbase points to another bank (typically b1)
-      if (!bf)
-        {
-         // not checked yet
-          for (bank = 0; bank < BMAX; bank++)
-              {
-                if (bkmap[bank].bok)
-                 {          // bank is OK
-                   addr = nobank(addr) | (bank << 16);
-                   val = g_word(addr);                    // value at pointed to
-                  if (val == val2) {bf = 1; break;}                      // bank found
-                 }
-              }
-        }
-     }
-   }
-
-  if (i < cnt)
-   {
-    #ifdef XDBGX
-    DBGPRT(1,"Not Found");
-    #endif
-    return;
-   }
-
-
-  #ifdef XDBGX
-    DBGPRT(1,"FOUND RBASE, points to bank %d", bank);
-  #endif
-
-  // OK, matched list and bank................
-
-  if (P8065) addr = 0x82062; else addr = 0x82022;
-
-  add_data_cmd(addr-2, addr-1, C_BYTE|C_CMD, 0);
-  add_data_cmd(addr, addr+(cnt*2)-1, C_WORD|C_CMD, 0);
-
-  pc = 0xf0;                                // always 0xf0 ?? NO !!!!
-  for (i = 0; i < cnt; i++)
-   {
-    val   = g_word(addr);                    // value at pointed to
-    val  |= (bank << 16);
-    val2  = g_word(val);
-    val2 |= (bank << 16);
-
-    r = add_rbase(pc,val,0,0);             // message in here....
-    if (r)
-      {
-       r->cmd = 1;
-       upd_ram(pc,val,2);                           // and set register
-       add_data_cmd(val, val+1, C_WORD|C_CMD,0);
-       add_code_cmd(val,val2-1, C_XCODE);          // and add an XCODE as this is data
-      }
-
-    pc+=2;
-    addr+=2;
-   }
-
-   #ifdef XDBGX
-   DBGPRT(1,"end rbasp");
-   #endif
-   return ;
-}*/
-
-
 // do branch has a FULL copy of SFIND to ensure that parallel branches have their own
 // parameter set established at start of each new branch (= a jump to here)
 // this is because the registers may CHANGE in each branch.
@@ -13905,6 +13870,7 @@ void do_list_struct(SFIND *f)
 
   m = start;
 
+
   if (!f->rg[1])
     {  // func, check first byte is valid.
 
@@ -13918,7 +13884,7 @@ void do_list_struct(SFIND *f)
 
        if (!val_rom_addr(addr)) break;
        i = g_byte(addr);
-       if ( i != 0x7f && i != 0xff) break;
+       if ( i != 0x7f && i != 0xff) break;     //check func start
        f->ans[0] = addr;        //set func address
        set_struct(f);
        m += 2;
@@ -13952,7 +13918,8 @@ void do_list_struct(SFIND *f)
        }
     }
 
-   if (m >= start+2) {  k = add_cmd (start,  m-1, C_WORD, 0);
+   if (m >= start+2) {
+  k = add_cmd (start,  m-1, C_WORD|C_NOMERGE, 0);
 
    if (k)
     {
@@ -13962,7 +13929,7 @@ void do_list_struct(SFIND *f)
       a->fend = 15;         //word
   //    a->bsize = 1;
       a->foff = 1;
-      a->data = f->lst[1];
+      a->data = f->lst[1] & 0xffff;
       a->fnam = 1;
       a->cnt = 1;
      }
@@ -14182,18 +14149,6 @@ void extend_func(uint ix)
 
   k = (LBK *) chcmd.ptrs[ix];
 
-//if (k->start == 0x22336)
-//{
-//DBGPRT(1,0);
-//}
-
-
-
-
-
-
-
-
   ix++;
   if (ix < chcmd.num) n =  (LBK *) chcmd.ptrs[ix]; else n = 0;
       // check end of func
@@ -14206,7 +14161,6 @@ void extend_func(uint ix)
 
  // extend func to zero or max negative here
 
- // size = bytes(a->fend);
   rsize = bytes(a->fend) + bytes(b->fend);    // whole row size in BYTES
   eval  = get_signmask(a->fend);              // end value
   adr   = k->start;
@@ -14219,19 +14173,19 @@ void extend_func(uint ix)
      val = g_val(adr,0, (a->fend & 31));      // next input value as UNSIGNED
      if (val == eval)
         {
-         eadr = adr + rsize-1;            // hit end input value, set end
+         eadr = adr + rsize-1;            // hit end input value, break
          break;
         }
     }
 
-  k->end = eadr;                        // stage 1 of extend
+  k->end = eadr;                        // stage 1 of extend (to end value
 
   //check here if any command occurs inside the function and delete them
   n = del_olaps(eadr, ix);
 
   //adr is now at first zero row, and val is last value
 
-  eadr = maxpcadd(k->end);           // reset end
+  eadr = maxpcadd(k->end);           // reset end (why??)
 
   if (n)
     {
@@ -14296,7 +14250,7 @@ void extend_func(uint ix)
   rsize = bytes(a->fend) + bytes(b->fend);    // whole row size in BYTES
 
 if (rsize == 4)
-  {          //word table - check for table dim style (top byte only)
+  {          //word funce - check for table dim style (top byte only)
    uint lval, chg;
 // prob need more rules (like eval should always be <= lval...but val must change also
 // and end up at zero ??)
@@ -14342,81 +14296,136 @@ if (eval && chg)
  }
 
 
-/* experimentals
+// experimentals
 
-uint test_func(uint start, uint ssize)
+
+int endval (uint fend)
 {
-uint addr, end, rsz;
-int val,lval;
-if (start == 0x827b4)
+  switch (fend)
+  {
+      default:
+        return 0;
+      case 0x27:
+        return 0x80;
+      case 0x2f:
+        return 0x8000;
+  }
+
+}
+
+int startval (uint fend)
 {
-DBGPRT(1,0);
+  switch (fend)
+  {
+      default:
+        return 0;
+      case 0x7:
+        return 0xff;
+      case 0x27:
+        return 0x7f;
+      case 0xf:
+        return 0x8000;
+      case 0x2f:
+        return 0x7fff;
+  }
+
 }
 
 
 
-rsz = casz[ssize] * 2;          // one row
-
-addr = start;
-end = start + 128;      // safety
-
-lval = g_val(addr, ssize);   //start value
 
 
-val = (~casg[ssize]) & camk[ssize];     // start value
 
-if (lval != val) return start;
 
+void test_func(uint start, uint fend)
+{
+    // fend & 0x20 for sign...
+    // 7 27, f 2f
+
+uint addr, end, rsize;
+int val,lval, cnt;
+
+//if (start == 0x827b4)
+//{
+//DBGPRT(1,0);
+//}
+
+rsize = bytes(fend);          // size in bytes
+
+lval = g_val(start, 0, fend);   // start value as unsigned
+
+if (lval != startval(fend)) return ;
+
+val = lval;
 
 // need row extender in here for some short tables
 
-addr += rsz;
+rsize *= 2;      // whole row size, input values only.
+addr = start + rsize;
+end  = start + 128;      // safety
 
+cnt = 1;
 while (addr < end)
-{
-val = g_val(addr, ssize);
-if (val >= lval) break;
-lval = val;
-addr += rsz;
+  {
+    val = g_val(addr, 0, fend);
+    if (val >= lval) break;
+    lval = val;
+    if (lval == endval(fend)) break;
+    addr += rsize;
+    cnt++;
 }
 
 // 3 rows = 6 * size
-if ( (addr - start) >= (rsz * 3) && (lval & camk[ssize]) == casg[ssize] )
+if (cnt > 3)
 {
-DBGPRT (1,"possible func at %x-%x (%d)", start, addr, ssize);
+      #ifdef XDBGX
+DBGPRT (1,"possible func at %x-%x (%d)", start, addr, fend);
+#endif
 }
 
-return start;
+
 }
 
 
 
 
-void find_func(uint start, uint end)
+uint scan_func(LBK *s, LBK *n)       //uint start, uint end)
 {
-uint addr;
-int val;
 
-addr = start;
+   uint addr, start, end, val;  //, cnt;
+
+   start = s->end+1;
+   end  = n->start-1;
+
+   if (g_bank(start) != basepars.datbnk) return 0;
+
+   #ifdef XDBGX
+      DBGPRT(1,"func scan %x-%x", start, end);
+   #endif
+
+   addr = start;
+
+  //   uint bytes(uint fend)
 
 while (addr < end)
   {
    val = g_byte(addr);
    if (val == 0xff || val == 0x7f)
     {
-     test_func(addr,1);
-     test_func(addr,5);      // byte
+     test_func(addr,0x7);       // uns byte
+     test_func(addr,0x27);      // sign byte
      if (!(addr &1))
       {
-       test_func(addr,2);
-       test_func(addr,6);  // word
+       test_func(addr,0xf);
+       test_func(addr,0x2f);  // word
       }
      }
     addr++;
 
  }
+ return 0;
 }
-*/
+
 
 
 
@@ -14456,7 +14465,7 @@ void extend_table(uint ix)
     maxadr = n->start;            // max end. not skippable
    }
 
-  a = get_adnl(&chadnl,k->start,1);          //k->adnl;                 // cols in a->cnt
+  a = get_adnl(&chadnl,k->start,1);
 
   if (!a) return;
   size = apeadr - k->start;    // size in bytes to apparent end
@@ -14516,7 +14525,7 @@ void do_structs()
    LBK *k;
    SFIND f;
    SPF *x;
-   // go down tab and func subroutines and find params (structs)
+   // go down tab and func subroutines call trees  and find params (structs)
 
    // func subroutines
 
@@ -14718,21 +14727,26 @@ void main()
 
   turn_scans_into_code();      // turn all valid scans into code
 
- // scan_code_gaps();           // scan for code gaps  TEMP !!! no not here........
+  do_structs();                 // recursive loop down call branches tablu and funclu
 
-  do_structs();                 // then put structs (direct to cmd)
+ // scan_cmd_gaps(scan_func);        not yet!!          //find funcs and tables here ??  after code before data ?.
 
-//  turn_dtk_into_data();        // add data found fom dtk
+
 
  check_dtk_links();
 
- //scan_gaps();                 // BEFORE data, so only code, tabs,vects,funcs
+ turn_dtk_into_data();              // add data found fom dtk
 
- turn_dtk_into_data();        // add data found fom dtk
+ scan_cmd_gaps(scan_cgap);                // code scans
+
+ scan_cmd_gaps(scan_fillgap);             // fill data
+
 
 //after data processed, clear dtk+dtd and check over ???
 
 
+
+// and now look for other functions and tabs ?? discover_struct() :
 
   // ----------------------------------------------------------------------
 

@@ -1,3 +1,18 @@
+
+
+4.13.10
+
+1. Fixed - symbol names not correctly showing up on shift instructions
+2. Fixed - multibanks using Alt_stackpointer (R22) for background task list can cause freeze/loop due to 
+           incorrect list start calculation.
+
+3. Change - continue opcode printing after a 'skip' instead of treating it as a full 'goto'.  
+
+
+
+
+
+
 4.13.9
 
 1. Fixed - autoincrement was not showing "++" appended when printing symbol names instead of Rxx style.
