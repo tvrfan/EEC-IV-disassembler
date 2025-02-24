@@ -53,6 +53,13 @@ sad.ini    an example file to show path locations, not auto generated. (no SADWI
 
 ---------------------------------------
 
+Development Subdirectory
+
+Similar dir tree to main, with latest development builds.  Probably stable, but no guarantees.
+
+---------------------------------------
+
+
 -- Notes sad.ini  (both Win and Linux)--
 
 Edit sad.ini for your setup.
@@ -71,15 +78,4 @@ Not sorted out a makefile, it's a straight compile and link of the .cpp files.
 
 Separate Subdirectory SADWin containing the source for the Win32API graphic interface for SAD (binfile select,
 viewing various files and config)
-
-----------------------------------
-
-Development Subdirectory
- 
-early releases of SAD versions for testing - probably stable, but not guaranteed.
-
-Version.txt	Short description of bugs fixed and changes made for each version
-
-NEW VERSION '5 ALPHA' RELEASED. READ note first before using. 
-
 

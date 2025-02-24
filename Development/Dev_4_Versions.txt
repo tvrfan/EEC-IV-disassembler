@@ -1,5 +1,25 @@
 
 
+
+4.13.11
+
+change div,norm to double line    (v5).
+internal, drop wop and install + 0x40 as write marker (v5).
+internal put in new syms find etc to match.
+
+
+
+
+add v5 void* for address as well
+put in calc from v5
+
+put in new cmd structure ? maybe later.
+
+
+
+
+
+
 4.13.10
 
 1. Fixed - symbol names not correctly showing up on shift instructions

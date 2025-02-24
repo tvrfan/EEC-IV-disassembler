@@ -40,7 +40,7 @@ This extra check may help show a user command error, and/or new information in c
 
 ---------------------------------------------------------------------------------------------
 
-SAD version 5.     Alpha version release
+SAD version 5.     Alpha version release  
 
 V5 internal analysis model has been rewritten, but this did not work as well as intended. Work is still ongoing....
 version 4 still maintained.
