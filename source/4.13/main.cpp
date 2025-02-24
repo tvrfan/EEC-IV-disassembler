@@ -1,6 +1,7 @@
 
 #include <signal.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <stdio.h>
 #include <string.h>                // linux
@@ -9,7 +10,7 @@
 int    get_config(char **);
 void   shutdwn   (void);
 void   startup   (void);
-short  dissas    (char *);
+short  disassemble    (char *);
 char   *get_filemap (void);
 
 void closefiles(void);
@@ -50,14 +51,20 @@ void show_prog (int s)
     }
   incpg++;
 
-  if (incpg > 50 )           // not if redirected to a file.....
+//isatty(stdout);
+if (isatty(STDOUT_FILENO))
+    {
+       // connected to terminal
+
+  if (incpg > 50 )           // not if redirected to a file.....how to check ??
     {
       incpg = 0;
       if (lastsym >= sizeof (prg)) lastsym = 0;
       printf ("  %c\r", prg[lastsym]);
       fflush (stdout);
       lastsym++;
-    }
+    }  
+}
 }
 
 
@@ -181,7 +188,7 @@ int main (int argc, const char **argv)
     if (fn)
        {
         printf ("\nFor binary file '%s'\n", fn);
-        go = dissas(fn);
+        go = disassemble(fn);
         
         return go;
        }
@@ -193,7 +200,7 @@ int main (int argc, const char **argv)
        printf ("\nEnter binary file name (full path allowed)\n");
        fgets (fstr, 64, stdin);
        if (!strcmp (fstr, "\n")) return 10;
-       go = dissas(fstr);                     // = 0 if successful
+       go = disassemble(fstr);                     // = 0 if successful
        fflush(stdout);
       }
 

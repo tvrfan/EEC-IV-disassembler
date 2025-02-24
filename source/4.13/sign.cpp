@@ -3,13 +3,13 @@
  ******************************************************/
 #include "sign.h"
 
-uint   maxadd    (uint);
+uint   maxpcadd    (uint);
 uint   minadd    (uint);
 uchar* map_addr  (int);
-int    negval    (int, int);
+int    sjmp_ofst (uint);
 int    wnprt     (const char *, ...);
 int    wnprtn    (const char *, ...);
-void*  chmem     (CHAIN *);
+void*  chmem     (CHAIN *,uint);
 SIG*   inssig    (SIG *);
 void   clearchain(CHAIN *);
 int    get_posn  (int);
@@ -19,37 +19,36 @@ LBK*   set_cmd   (int, int, int, int);
 
 int    g_byte    (uint);
 int    g_word    (uint);
+int    g_val     (uint, uint, uint);
 
+
+#ifdef XDBGX
+uint DBGPRT( uint, const char* fmt, ...);
+#endif
 
 extern OPC   opctbl[];
 extern uchar opcind[];
 extern BANK  bkmap[];
 extern int   cmdopts;
 extern int   anlpass;
-extern int   datbnk;
+extern BASP basepars;
+extern CHAIN chsig;
 
-extern CHAIN sigch;
-extern int casz[];
 
 int bgv[NSGV];             // backup signature values
-int tempbank;
+uint tempbank;
 
 // see sign.h for description of SIGN arrays.
 
 // startup jump for each bank (save jmp to see if loopstop)
 
 uint initial[] =
-{0xa0012010, 0x2000006};                // single sjmp (with destination in v[1])
+{0xa0012010, 0x2000006};                // single jump (with destination in v[1])
 
 // int_ignore (ret or retei)
 
 uint ignint[] = {0x80001014};                        // single ret or reti
 
-
-uint vect3[] = {                               // generic - push followed by ret (closely).  experiment !!
-0x400f6000,                                    // skip up to 6 opcodes, to a ret
-0x80001014 
-};
 
 // this may now be covered by a vect3 ?
 
@@ -135,8 +134,7 @@ uint times [] = {
 
 uint fnlu[] = {      //  byte AND WORD function lookup signature  make * optional ?
 
- //   need to add a remember which bit (or carry state) so can compare with value (f6 here)
- // why was the signed check made optional - for A(L hot wire ? BWAK ??
+ // why was the signed check made optional - for A9L hot wire ? BWAK ??
 
 0x8000400a,  0x40032, 0x20002, 0x80034 ,   // cmpb/w  R34,[R32+2] or 4
 
@@ -146,7 +144,7 @@ uint fnlu[] = {      //  byte AND WORD function lookup signature  make * optiona
 
 0x80002013,  0x0006,                     // jge   x
 
-0x80003006,  0x20002,  0x40032,            //,0x00, 0 , 0x32,4 ,   // ad2w  R32,2 (or 4)
+0x80003006,  0x20002,  0x40032,            // ad2w  R32,2 (or 4)
 0x80002010, 0x20000ed,                     // sjmp  x
 0xc0003005, 0x20000df,  0x300f6,           // optional an2b RF6
 0x8000300c,  0x40032,  0x60036,            // ldb   R36,[R32++]
@@ -167,12 +165,72 @@ uint fnlu[] = {      //  byte AND WORD function lookup signature  make * optiona
 0x80003017,  0x300f6, 0x200002,          // jnb B0,Rf6, x
 0x80002002,  0x70038                          // negb R38
 
-//6  ,0x8030 ,0x32, 4    ,0x38, 7,              // ad2w  R38,[R32]
-//5  ,0x8030 ,0xfc, 0x20 ,0xf6, 3,              // an2b flag clear
 };
 
 
+/*
+2deb: d3,0b               jnc   2df8             if (R50 >= [R52])  {
+2ded: 69,04,00,52         sb2w  R52,4            R52 -= 4;                         # back up in MAF transfer function Table to the right value
+2df1: 8a,52,50            cmpw  R50,[R52]        
+2df4: d9,f7               jgtu  2ded             if (R50 > [R52]) goto 2ded;       # loop
+2df6: 20,0d               sjmp  2e05             goto 2e05;  }
+
+2df8: 65,04,00,52         ad2w  R52,4            R52 += 4;                         # jmp ahead in the MAF transfer function to the right value
+2dfc: 8a,52,50            cmpw  R50,[R52]        
+2dff: d3,f7               jnc   2df8             if (R50 < [R52]) goto 2df8;       # loop
+2e01: 69,04,00,52         sb2w  R52,4            R52 -= 4;
+2e05: a2,53,58            ldw   R58,[R52++]      R58 = [R52++];                    # interpolate larger MAF
+2e08: a2,53,54            ldw   R54,[R52++]      R54 = [R52++];                    # larger air flow
+2e0b: 6a,52,58            sb2w  R58,[R52]        R58 -= [R52];                     # MAF difference
+2e0e: 6a,53,50            sb2w  R50,[R52++]      R50 -= [R52++];                   # MAF delta to interpolate
+2e11: 6a,52,54            sb2w  R54,[R52]        R54 -= [R52];                     # air flow difference
+2e14: 6c,50,54            ml2w  R54,R50          lR54 *= R50;
+2e17: 8c,58,54            divw  R54,R58          wR54 /= R58;
+2e1a: 66,53,54            ad2w  R54,[R52++]      R54 += [R52++];                   # interpolated air flow
+2e1d: 69,04,00,52         sb2w  R52,4            R52 -= 4;
+2e21: c3,76,b4,52         stw   R52,[R76+b4]     Maf_ptr = R52;                    # Save last MAF tfr func ptr - for speed?
+*/
+
+
+
+/* cut down version for MAF_tfr lookup (A9L and others)
+
+uint fstlu[] = {      //  fast lookup version of fnlu
+
+ // why was the signed check made optional - for A9L hot wire ? BWAK ??
+
+//0x8000400a,  0x40032, 0x20002, 0x80034 ,   // cmpb/w  R34,[R32+2] or 4
+
+//0x880b3017,  0x300f6,  0x04,              // *jnb   B1,Rf6,x keep bit - Signed IN ?  **JB**
+//0x880b2013,  0x000a,                      // *jc    x keep carry state - goto unsigned
+//0x80002010,  0x0002,                      // *sjmp  x
+
+//0x80002013,  0x0006,                     // jge   x
+
+//0x80003006,  0x20002,  0x40032,            // ad2w  R32,2 (or 4)
+//0x80002010, 0x20000ed,                     // sjmp  x
+//0xc0003005, 0x20000df,  0x300f6,           // optional an2b RF6
+
+0x8000300c,  0x40032,  0x60036,            // ldw   R36,[R32++]
+0x8000300c,  0x40033,  0x70038,            // ldw   R38,[R32++]
+0x80003007,  0x40032,  0x60036,            // sb2w  R36,[R32]
+0x80003007,  0x40033,  0x80034,            // sb2w  R34,[R32++]
+0x80003007,  0x40032,  0x70038,            // sb2w  R38,[R32]
+
+0x80003008,  0x80034,  0x70038,            // ml2w  R38,R34
+0x8000300b,  0x60036,  0x70038             // divw  R38,R36
+//ad2w
+//sb2w
+
+};
+
+*/
+
+
+
+
 /* table signatures
+
 
  
  *   Sub10:
@@ -202,16 +260,15 @@ c 3740: 5c,31,30,36         ml3b  R36,R30,R31      (int) R36 = R30 * R31;
 uint  ttrps[] = {     // table interpolate - signed. flag is SET for signed
 
 0x980e2001,  0x2000033,                  // multiple clrb
-0x880a3017, 0x3002d,  0x7001a,         // jnb   B7,R2d, x    table signed flag [10];
+0x880a3017,  0x3002d,   0x7001a,         // jnb   B7,R2d, x    table signed flag [10];
 0x40098000,                            // skip up to 8 opcodes, (cnt in [9])
-0x86003008, 0x2003a,  0x5003c         // sml2w R3c,R3a     MUST HAVE fe
+0x86003008,  0x2003a,   0x5003c         // sml2w R3c,R3a     MUST HAVE fe
 };
 
 uint  tblu [] = { // table lookup (byte) signed & unsigned
 
-    // tab addr in [9], rows in [8], cols in [2] ??
+    // tab addr in [3], cols in [4]
 
-//5 , 0xc030 ,0xfe,0xe ,0xf7,3 ,              // an2b rf7, fe    optional signed
 0x80004008,  0x80033,  0x30034,  0x90036,     // ml3b  R36,R34,R33
 0x80003006,  0x60031,  0x90036,               // ad2b  R36,R31
 
@@ -233,13 +290,9 @@ uint  tblu [] = { // table lookup (byte) signed & unsigned
 
 
 
-uint tbl2 [] = {  // later table lookup   /swop over 1 and 3 ?
+uint tbl2 [] = {  // later table lookup
 
-      // to match...... tab addr in [3], cols in [4] 
-      //R34,36 are dims, chosse 36 ?
-      //R38 is col size [2]  OK
-
-      // addr was 1 and size was 2 ??
+      // tab addr in [3], cols in [4] 
 
 0x80004008,  0x80037,  0x30038, 0x1003a,      // ml3b R3a, R38, R37
 0x80003006,  0x90035,  0x1003a,                 // ad2b R3a, R35
@@ -272,10 +325,6 @@ uint enc24 [] = { // encoded addresses type 4 and 2
 
 uint enc13 [] = { // encoded addresses type 3 and 1 (A9L etc)
 
-// NB. CANNOT have an optional at the front.
-//0xC000300c,  0x9003e,  0x80042,            // ldw   R42,[R3e]   optional 
-//0xC101300c,  0x9003e,  0x80042,            // ldw   R42,[R3e]   optional 
-
 0x80003017,  0x4080042, 0x2000014,         // jnb   B7,R43,3cda  (drop bit)
 0x8000300c,  0x4080042,  0x4003a,            // ldzbw R3a,R43      (drop bit)
 0x000b0000,  0x303,                       // any order opcodes, mult, 11 entries, all 3 patts must match
@@ -289,23 +338,44 @@ uint enc13 [] = { // encoded addresses type 3 and 1 (A9L etc)
 
 };
 
+uint rbse [] = {       // rbase array code
+
+0x8000300c,  0x100f0, 0x20018,                     // ldw   R18,f0
+0x8000400c,  0x0,     0x30020, 0x5001a,            // ldb   R1a,[0+2020];
+0x8000300c,  0x60014, 0x7001c,                     // ldw   R1c,[R14++]
+0x8000300d,  0x20018, 0x7001c,                     // stw   R1c,[R18++]
+0x80003012,  0x5001a, 0x800f7,                     // djnz  R1a,d477
+};
+
+
 
 // process subroutine for sigs
 
 void fnplu  (SIG*, SBK*);
+void fsplu  (SIG*, SBK*);
 void tbplu  (SIG*, SBK*);
 void encdx  (SIG*, SBK*);
 void ptimep (SIG*, SBK*);
 void avcf   (SIG*, SBK*);
+void rbasp  (SIG*, SBK*);
 
 // *****  PATS are sign,name, sigproc, size.
 
 // initial search sigs
 
-// these three specifically called
+// specifically called
 PAT hdr    = {initial, "INIT"   , 0 , NC(initial) ,0 };         // initial jump
 PAT intign = {ignint,  "IGNINT" , 0 , NC(ignint)  ,0 };         // ignore interrupt
-PAT vc3    = {vect3,   "vect3"  , 0 , NC(vect3)   ,0 };
+
+// prescan sigs
+
+PAT rbase =  {rbse,    "RBASE",  rbasp,  NC(rbse),   0};       // rbase lookup
+
+PAT *prepats[] = {&rbase};          
+
+
+
+//specifically called in tbplu, for signed check
 
 
 PAT tint   = {ttrps,   "istrp"  , 0 , NC(ttrps)   ,0 };    // table interpolate (for signed/unsigned checks)
@@ -317,15 +387,15 @@ PAT *apats[] = {&tint};
 
 // scanned with code scans if  PSIGS  set
 
-PAT avcl = {avct,   "AVCT" , avcf   , NC(avct)  ,0 };      // altstack vector list
-PAT timr = {times,  "TIMER", ptimep , NC(times) ,0 };     // timer list
+PAT avcl = {avct,   "AVCT" , avcf   , NC(avct)  ,0 };    // altstack vector list
+PAT timr = {times,  "TIMER", ptimep , NC(times) ,0 };    // timer list
 PAT fnlp = {fnlu,   "FnLU" , fnplu  , NC(fnlu)  ,0 };    // func lookup - byte or word
 PAT tblp = {tbl2,   "TBL2" , tbplu  , NC(tbl2)  ,0 };    // table lookup, later multibank
 PAT tblx = {tblu,   "TBLU" , tbplu  , NC(tblu)  ,0 };    // table lookup, early
-PAT ec13 = {enc13,  "1ENC3", encdx  , NC(enc13) ,1 };    //pencdx, encdx  };    // encoded address types 3 and 1
-PAT ec24 = {enc24,  "2ENC4", encdx  , NC(enc24) ,2 };    //pencdx, encdx  };    // encoded address type 4 and 2,
+PAT ec13 = {enc13,  "1ENC3", encdx  , NC(enc13) ,1 };    // encoded address types 3 and 1
+PAT ec24 = {enc24,  "2ENC4", encdx  , NC(enc24) ,2 };    // encoded address type 4 and 2,
 
-PAT *cpats[] = {&avcl, &timr, &fnlp, &tblp, &tblx, &ec13, &ec24}; 
+PAT *cpats[] = {&avcl, &timr, &fnlp, &tblp, &tblx, &ec13, &ec24};      //,&fnfs}; 
 
 
 //************************************************************************
@@ -359,7 +429,7 @@ if (dsize)
  }
 
 ix = 0;
-max = maxadd(foff);
+max = maxpcadd(foff);
 
 
  if (dsize & 0x8000) 
@@ -398,7 +468,7 @@ while (ans && ix < psize && ix >= 0)          // extra check for both ways...
         foff++;
         sval |= (xval << 8);
         if (sval > PCORG)          // only for non-regs
-         { if (tempbank >= 0) sval |= tempbank; else sval |= datbnk;}    //correct address for inx
+         { if (tempbank < 0x100000) sval |= tempbank; else sval |= basepars.datbnk;}    //correct address for inx
        }
 
      if (sg & SDINC)
@@ -407,13 +477,6 @@ while (ans && ix < psize && ix >= 0)          // extra check for both ways...
          tval += z->v[(sg >> 8) & 0xf];              // 1f where repeat count is stored
          if (tval > NSGV) tval = xval;               // safety check to increment tval
        }
-
-  /*  if (sg & SDDAT)
-      { 
-       z->v[(sg >> 8) & 0x1f] = g_word(sval);      // save data
-      } 
-*/
-
 
      if (tval && ans && (!z->v[tval] || (sg & SDANY))) z->v[tval] = sval;  // save register to index
 
@@ -439,40 +502,44 @@ while (ans && ix < psize && ix >= 0)          // extra check for both ways...
 
 
 
+//this is really BAD, to use tempbank................nasty....
 
+uint do_jumpsig (int inx, uint foff, uint bank)
+  {        // calc jump address for the different jump types
+           // need SIGNED values in here
 
-int do_jumpsig (int inx, int foff)
-  {               // calc jump address for the different jump types
+// need to change to calc-jump ops type which allows for wrap.....
+
    uint joff;
+
    joff = 0;               // jump offset
-   OPC *opl;
+
+   if (bank >= 0x100000) bank = (foff & 0xf0000);    //get bank from foff
    
-   opl = opctbl + inx;
-   
-   if (opl->sigix == 14) 
+   if (inx > 49 && inx < 52) 
      {                                            // pushw
       joff = g_word(foff + 1);                    // direct address
-      joff |= (foff & 0xf0000);                   // add bank from offset
+      joff |= bank;                               // add bank
      }
 
    if (inx > 53 && inx < 84) 
-     {                                           // all jumps)
-      if (inx > 69 && inx < 73)  joff = negval(g_byte(foff + 2), 0x80) + 3;   // JB, JNB, DJNZ
+     {     // jumps
+      if      (inx > 69 && inx < 73)   joff = g_val(foff+2, 0, 39) + 3;  // JB, JNB, DJNZ  signed byte
+      else if (inx > 80 && inx < 84)   joff = sjmp_ofst (foff)   + 2;  // short, special calc
+      else if (inx > 72 && inx < 76)   joff = g_val(foff+1, 0, 47) + 3;  // long, signed word
+      else if (inx == 80)  joff = 2;                                   // skip = addr + 2
 
-      else if (inx == 80)  joff = 2;                   // skip - treat as  jump + 2
-      else if (inx > 80 && inx < 84)                  //  short jumps and calls
-         joff = negval(((g_byte(foff) & 7) << 8) + g_byte(foff + 1), 0x400) + 2;
-      else if (inx > 72 && inx < 76)                      // long jumps and calls
-         joff = negval (g_word(foff+1), 0x8000) + 3;
 
-      joff+=foff;                                    // gets bank from foffset
-      if (joff < 0 || joff >= maxadd(foff)) joff = 0;
-      if (inx > 75 && inx < 80) joff = 0;                             // Don't keep if a ret
+      joff+=foff;                                                      // gets bank from foff
+      joff &= 0xffff;                                                  // strip bank (and any wrap)
+      joff |= bank;
+
+      if (joff >= maxpcadd(foff)) joff = 0;
+      if (inx > 75 && inx < 80) joff = 0;                              // Don't keep if a ret
      }
-     
-   if (tempbank >= 0) { joff &= 0xffff; joff |= tempbank;}
    return joff;
   }
+
 
 int do_optopc(uint *foff, uint maxadd)
   {
@@ -499,7 +566,7 @@ int do_optopc(uint *foff, uint maxadd)
     return ans;                            // number of skips
    }
 
-int opsize(int inx, char opc, int foff)
+int opsize(int inx, char opc, uint foff)
    {
     int x, gdsize;
     const OPC *ope;
@@ -520,7 +587,7 @@ int opsize(int inx, char opc, int foff)
        switch (opc & 3)
        {
         case 1:
-          if (casz[ope->rsz1] > 1)
+          if ((ope->rfend1 & 31) > 7)     // bigger than byte
             {
              gdsize++;
              gdsize |= 0x2000;                                 // imd word
@@ -594,7 +661,7 @@ int do_sgentry(SIG *z, uint **sz, uint foff)
   psize = (sg >> 12) & 0xf;             // size of this pattern (inc data)  ADDED OUTSIDE SUBR
   ans  = 1;                             // 1 is match
   if ((sg & OPRPT) && (sg & OPSPV)) rpt = 1; else rpt = 0;  // allow optional repeat
-  max = maxadd(foff);
+  max = maxpcadd(foff);
 
   if (foff >= max)  return 0;           // foff+psize ?
 
@@ -623,13 +690,14 @@ int do_sgentry(SIG *z, uint **sz, uint foff)
      // codbank and datbank OK as default  
      // but NOT for any subsequent opcodes, so check here
 
-    tempbank = -1;        // no bank change 
+    tempbank = 0x100000;        // no bank change 
     if (opc == 0x10)
       {  // bank change
-        tempbank = g_byte(foff+1);
-        if (tempbank >= 0 && tempbank < 16)
-          {        // valid, skip this and the bank
-           if (bkmap[tempbank].bok) tempbank <<= 16;
+        sval = g_byte(foff+1);
+        sval++;                  //for new offest banks
+        if (sval >= 1 && sval <= 16)
+          {        // valid, skip this and the bank value
+           if (bkmap[sval].bok) tempbank = sval << 16;
            foff+=2;
            opc = g_byte(foff); 
           }
@@ -655,7 +723,7 @@ int do_sgentry(SIG *z, uint **sz, uint foff)
 
     tval = (sg >> 16) & 0xf;                                  // array index 1f
 
-    if ((sg & OPJMP)) z->v[tval] = do_jumpsig (inx,foff);      // jump or call - save dest, and can be sgv[0] 
+    if ((sg & OPJMP)) z->v[tval] = do_jumpsig (inx,foff, tempbank);                  // jump or call - save dest, and can be sgv[0] 
 
     if (inx > 9 && inx < 54 && (sg & OPSPV) && tval != (opc & 3)) ans = 0;           // check opcode subtype for multi modes
    
@@ -713,7 +781,7 @@ int do_sgentry(SIG *z, uint **sz, uint foff)
  }
 
 
-int do_subsig(SIG *z, uint **sz, int foff)
+int do_subsig(SIG *z, uint **sz, uint foff)
  {
    // subpattern with optional matches - max of 255 patts (ff) and 255 matches (ff)
    // updates pattern pointer (sz) Needs at least ONE match reqd (I think).
@@ -783,7 +851,7 @@ int do_subsig(SIG *z, uint **sz, int foff)
 
 
 
- int do_skpsig(SIG *z, uint **sx, int foff)
+ int do_skpsig(SIG *z, uint **sx, uint foff)
  {
    int ans, counts, max, tval;
    uint *st, sg, ptsz;
@@ -833,7 +901,7 @@ int do_subsig(SIG *z, uint **sz, int foff)
 
 
 
-SIG* find_sig (PAT *ptn, int xofst)
+SIG* match_sig (PAT *ptn, uint xofst,uint ix)
 {
   int ans;
 
@@ -844,11 +912,11 @@ SIG* find_sig (PAT *ptn, int xofst)
   if (anlpass >= ANLPRT) return 0;
 
   ofst = xofst;
-  max = maxadd(ofst);             // safety
+  max = maxpcadd(ofst);             // safety
 
   if (ofst < minadd(ofst)  || ofst >= max)  return 0;
 
-  z = (SIG *) chmem(&sigch);            // use insert candidate directly....
+  z = (SIG *) chmem(&chsig,ix);            // use block specified....
   z->ptn = ptn;
 
   // check for redundant opcodes at front
@@ -879,6 +947,8 @@ SIG* find_sig (PAT *ptn, int xofst)
 
     }       // end of while
 
+  tempbank = 0x100000;
+
   if (ans > 0 && foff > ofst) 
     {  // must have at least one matched patt
       z->start = xofst;            // addr before skips
@@ -889,11 +959,11 @@ SIG* find_sig (PAT *ptn, int xofst)
 }
 
 
-SIG* do_sig (PAT *ptn, int xofst)
+SIG* do_sig (PAT *ptn, uint xofst)
 {
  SIG *z, *r;                         // for signature chaining
 
- z = find_sig (ptn, xofst);
+ z = match_sig (ptn, xofst,0);
 
  if (z && z->start) 
     {
@@ -936,21 +1006,6 @@ SIG* scan_sigs (int ofst)
   SIG *s;
 
   if (PMANL) return 0;
-  
-  /* ALWAYS scan bpats list DISABLE THIS
-
-  for (j = 0; j < NC(bpats); j++)
-      {
-        s = do_sig (bpats[j], ofst);        // code list
-        if (s)
-        {
-//            WNPRTN("Add Sig %s at %x", s->ptn->name,ofst);
-        } 
-        if (s) break;                       // stop as soon as one found
-      }
-
-  if (s) return s; */
-
   if (!(PSIG)) return 0;
 
   // only scan cpats if PSIG set
@@ -958,17 +1013,13 @@ SIG* scan_sigs (int ofst)
   for (j = 0; j < NC(cpats); j++)
       {
         s = do_sig (cpats[j], ofst);        // code list
-        if (s)
-        {
-//            WNPRTN("Add Sig %s at %x", s->ptn->name,ofst);
-        } 
         if (s) break;                       // stop as soon as one found
       }
  
  return s;
 }
 
-/*
+
 void prescan_sigs (void)
 {
  // scan whole binary file (exclude fill areas) for signatures first.
@@ -982,7 +1033,10 @@ void prescan_sigs (void)
   if (PMANL) return;
   if (!(PSIG)) return;
 
- // wnprt("\n -- Scan whole bin for init sigs --\n");
+  #ifdef XDBGX
+   DBGPRT(1,0);
+   DBGPRT(1," -- Scan whole bin for pre sigs --");
+  #endif
 
   for (i = 0; i < BMAX; i++)
    {
@@ -1006,11 +1060,13 @@ void prescan_sigs (void)
        }
    }
 
-// wnprt("\n -- END Scan whole bin--\n");
+ #ifdef XDBGX
+   DBGPRT(2," -- End Scan whole bin --");
+  #endif
 }
-*/
 
 
+/// END of sign.cpp
 
 
 
