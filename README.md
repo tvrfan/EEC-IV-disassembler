@@ -2,11 +2,11 @@
 
 Semi Automatic Disassembler for Ford EEC-IV and V binaries
 
-NOTE - this code is intended to help understand only how each EEC works, not as a tuning or commercial tool.
+NOTE - this app is intended to help understand only how EEC code works, not as a tuning or commercial tool.
 
 Split into separate subdirectories.
 
-Latest Stable Version      is 4.0.7
+Latest Stable Version      is 4.13
 
 -------------------------------------------------
 
