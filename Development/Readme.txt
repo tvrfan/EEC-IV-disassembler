@@ -16,11 +16,10 @@ Therefore if something doesn't look quite right, please try running SAD without 
 This extra check may help show a user command error, and/or new information in case of a SAD bug.  
 
 
-
 ---- Generic address rules applied from version 4.0.7 onwards  -----
 
 1. Output 
- In single banks, no bank numbers are shown anywhere. all addresses are 16 bits (4 hex digits)
+ In single banks, no bank numbers are shown anywhere. All addresses are 16 bits (4 hex digits)
 
  In multibanks, addresses below 0x400 are shown with no bank number - these are registers internal to CPU. 
    All other addresses must have a bank number (i.e. 5 digits). This might look strange in some cases, but is technically correct,
@@ -37,10 +36,9 @@ This extra check may help show a user command error, and/or new information in c
    To maintain compatibility with other tools, addresses below 0x2000 can be input in SAD commands without a bank, 
    and they will automatically be assigned as Bank 1. (i.e. 0x400 - 0x1fff becomes 0x1400 - 0x11fff)
 
-
 ---------------------------------------------------------------------------------------------
 
-SAD version 5.     Withdrawn 
+SAD version 5.     Withdrawn. Features will be merged into version 4. 
 
 
 

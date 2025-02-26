@@ -1,0 +1,12 @@
+
+
+4.14.1
+
+1. Change printout to show two lines for divide, normalize, to show extra registers affected.
+2. Install multibit field printout, copied from version 5.
+3. (Internal) tidy handling of read vs. write operands for symbol names
+   
+ 
+**************************************************
+4.13.10 Moved to main tree as stable release 4.13
+
