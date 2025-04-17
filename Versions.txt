@@ -9,33 +9,34 @@ Version 4.13 (1 Feb 2025) **********************************************
 
 1.  Revise and unify address validation for all address inputs in .dir and .cmt files. 
     Rules are - 
-    All addresses are read as up to 5 hex digits, 0xfffff. The first digit is bank. Valid banks are 0,1,8,9 for all bins.
-    Registers are 0x0 to 0x3ff (0x0 to 0xff for 8061) Registers cannot have a bank.
-    Leading zeroes in register addresses are ignored for compatibility, but not for addresses > 0x2000 in multibanks, as bank 0 is valid.
+    All addresses are read as up to 5 hex digits, "fffff". The first digit is bank. Valid banks are 0,1,8,9 for all bins.
+    Registers are 0 to 3ff (0 to ff for 8061) Registers cannot have a bank as they are internal to CPU.
+    Leading zeroes in register addresses are ignored for compatibility, but not for addresses > 2000 in multibanks, as bank 0 is valid.
    
     Single banks (all 8061, some 8065)
-      No bank required (i.e. 4 digits). Addresses may have a bank 8 attached, which is not displayed. (Single banks are treated as bank 8 in SAD) 
+      No bank required (i.e. 4 digits). Addresses can have a bank 8 attached, which is not printed. 
+      (Single banks are treated internally as bank 8 in SAD) 
   
     Multibanks. (8065) 
-      0x400 to 0x1fff inputs allowed, and default to Bank 1.        (for compatibility with other tools)
-      0x2000 to 0xffff MUST have a bank prefix.  (0,1,8, or 9)
+      400  to 1fff input addresses allowed, and will default to Bank 1.        (for compatibility with other tools)
+      2000 to ffff MUST have a bank prefix.  (0,1,8, or 9)
 
 2.  Fixed - Incorrect print layout for 'split comments' ('|' character) and bit names with AND and OR opcodes.
 3.  Fixed - Comments showing write symbol names ('\S') when they should be read names.
 4.  Fixed - Inconsistent spaces in comments after symbol addresses (\S syntax)  
-5.  Fixed - Symbol names not always appearing.  Caused by incorrect bank handling in printout
+5.  Fixed - Symbol names not always appearing in code prints.  Caused by incorrect bank handling.
 6.  Fixed - comments assigned at end of bank (e.g. 1ffff ) do not get printed correctly (or at all). 
-7.  Fixed - Bin files with missing bytes at front may not be processed correctly. Added extra checks for end of bank.
-8.  Fixed - User commands can get merged with others, and also commands with different data options.
+7.  Fixed - Bin files with missing bytes at front may not be processed correctly. Also added extra checks for end of bank.
+8.  Fixed - User commands can get merged with others incorrectly, and also commands with different data options.
 9.  Fixed - Offset option 'D' should print a WORD, not a byte.  
 
-10. Fixed - Special sequences in comments ('\s' etc) can run over end of line and print rubbish.
+10. Fixed - Special sequences in comments ('\S' etc) can run over end of line and print rubbish.
 11. Fixed - Incorrect write to ROM address(es) allowed when it should not be. Shows in listing output.
 12. Fixed - marking data items as 'R' (pointer to) can cause incorrect code scans.
-13. Fixed - Autadded offset 'D' had faulty bank reference. Should plain address, 16 bits.
+13. Fixed - Auto added offset 'D' has faulty bank reference. Should be plain address, 16 bits.
 14. Fixed - autoincrement was not showing "++" appended when printing symbol names instead of Rxx style.
 15. Fixed - If register declared as an RBASE, writes to it may show an incorrect register value 
-16. Fixed - Code gap scan can cause incorrect register to appear at following opcode
+16. Fixed - Code gap scan can cause incorrect register to appear for opcode following gap.
 17. Fixed - Symbol names not correctly showing up on all shift instructions
 18. Fixed - Multibanks using Alt_stackpointer (R22) for background task list can cause freeze/loop due to 
             incorrect list start calculation.
@@ -48,19 +49,9 @@ Version 4.13 (1 Feb 2025) **********************************************
 6. Add   - Limited 'gap' scanning for missed code. (reduces manual 'scan' commands).
 3. Add   - Check for possible infinite loop in printout. may cause one strange print line. 
 
-1. Remove - Check for words and longs on even boundaries. special chips allow this, and also possible in structures.
+1. Remove - Check for words and longs on even boundaries. Special chips allow this, and also possible in structures.
 
 1. Change - Continue opcode printing after a 'skip' instead of treating it as a full 'goto'.  
-
-
-
-
-
-
-
-
-
-
 
 
 ** Version 4.0.7 (16 Jun 2021) *********
@@ -163,7 +154,7 @@ Changes/Additions
 
 ** Version 4.0.3 *****************
 
-Version 4 automatically handles VARIABLE ARGUMENTS in subroutines.  This caused some regression errors.
+Version 4 first to automatically handle VARIABLE ARGUMENTS in subroutines.
 
 Fixed  -
 
@@ -192,6 +183,4 @@ make command options and layout more regular
 
 ************************************************************************************
 
-Dropped older version descriptions.
-up to and including Version 3, subroutine arguments did not work automatically.
 

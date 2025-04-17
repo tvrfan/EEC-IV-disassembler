@@ -1,9 +1,32 @@
 
 
+
+4.14.2
+
+ Many regression errors from merge of version 5 code, to move forwards with functionality.
+ Changes are true multibit fields, 'cleaner' operand handling,
+ including 'per operand' status flags (read,write,sign,indexed, indirect etc).
+
+ 1. Fixed  - Symbols can get confused between read and write 
+ 2. Fixed  - Incorrect register shown on special func subroutines (FUNCLU, TableLU)
+ 3. Fixed  - Indirect references to registers drops 'R' format (shows '[]' format)
+ 4. Fixed  - Operand sizes incorrect for some opcodes.
+ 5. Fixed  - DJNZ shows a zero register
+ 6. Fixed  - Bit numbers show +64 or +96 (status flags not masked out)
+
+Other.
+
+7. Fixed  - 'Odd word address' shortcut not working correctly for some operands
+8. Fixed.  After a CMP (compare) sometimes the wrong operands are picked up.
+
+
+
+
+
 4.14.1
 
 1. Change printout to show two lines for divide, normalize, to show extra registers affected.
-2. Install multibit field printout, copied from version 5.
+2. Install multibit field handling, copied from version 5.
 3. (Internal) tidy handling of read vs. write operands for symbol names
    
  

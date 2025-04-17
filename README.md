@@ -2,22 +2,29 @@
 
 Semi Automatic Disassembler for Ford EEC-IV and V binaries
 
-NOTE - this app is intended to help understand only how EEC code works, not as a tuning or commercial tool.
-
 Split into separate subdirectories.
 
-Latest Stable Version      is 4.13
+Latest Stable Version          4.13
+
+
+--- Running SAD ---
+
+NOTE - This app is intended to help understand only how EEC code works, not as a tuning or commercial tool.
+
+Please be aware that your commands (in _dir file) are treated as 'master', and can actually break the processing.
+Therefore if something doesn't look right, please try running SAD WITHOUT any directive file, or make a _dir version only with SYMBOL commands in it.
+This extra check may help show a user command error, and/or new information in case of a SAD bug.
 
 -------------------------------------------------
 
 Docs subdirectory
 
-SAD_user_manual_4.0.6_onwards.pdf	disassembler documentation and user manual.
+SAD_user_manual.pdf	            disassembler documentation and user manual.
 
 SAD_commands_definition.pdf		complete command definition, and comments file definition.
 
-SADWIN.pdf	Windows Wrapper documentation.
-
+SADWIN.pdf	                    Windows Wrapper documentation.
+ 
 Version.txt	Short description of bugs fixed and changes made for each version.
 
 -------------------------------------------------
