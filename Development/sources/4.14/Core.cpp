@@ -1,12 +1,11 @@
 
 /******************************************************
- *  8065 advanced disassembler for EEC-IV
+ *  8065 disassembler for EEC-IV
  *
  * This program is for private use only.
  * No liability of any kind accepted or offered.
  *
- * Version 4.0.7
- ******************************************************
+  ******************************************************
  * BUILD NOTES
  * This code assumes INT and UNSIGNED INT are at least 32 bits (4 bytes).
  * and WILL NOT WORK with 16 bit compilers.
@@ -33,136 +32,7 @@
 external subroutines, variables
 ***********************************************************************************/
 
-extern PAT intign;                // sig 'ignore interrupt'  (for naming)
-extern PAT hdr;                   // sig 'start jump' (and vects);
-extern PAT fnlp;
-extern PAT tblp;
-extern PAT inthd;
 
-void  show_prog    (int);
-
-SIG*  scan_sigs    (int);
-SIG*  scan_asigs   (int);
-void  prescan_sigs (void);
-int   do_jumpsig   (int, uint, uint);
-void  do_jumps     (void);
-
-void *mem          (void*,size_t, size_t);
-void  mfree        (void *, size_t);
-
-void free_structs (void);
-void set_rgsize   (RST *,uint);
-
-int adtchnsize    (CHAIN *, uint, uint, uint);
-
-ADT *add_adt      (CHAIN *, uint, uint);
-LBK *add_cmd      (uint, uint, uint, uint);
-LBK *add_aux_cmd  (uint, uint, uint, uint);
-RBT *add_rbase    (uint, uint, uint, uint);
-SYM *add_sym      (const char *, uint, uint, uint, uint, uint, uint);
-SUB *add_subr     (uint);
-SBK *add_scan     (uint, int, SBK *);
-SPF *add_spf      (uint);
-SBK *add_escan    (uint, SBK *);
-JMP *add_jump     (SBK *, int, int);
-RST *add_rgstat   (uint, uint, uint, uint);
-PSW *add_psw      (uint, uint);
-TRK* add_dtk      (SBK *,INST *);
-
-SBK *get_scan      (uint, uint);
-RST *get_rgarg     (uint, uint);
-LBK *get_cmd  (uint, uint);
-LBK *get_aux_cmd  (uint, uint);
-SBK *get_scan      (uint);
-
-LBK *get_prt_cmd   (LBK *dflt, BANK *b, uint ofst);
-RST* get_rgstat    (uint);
-SIG* get_sig       (uint);
-uint get_tjmp_ix   (uint);
-JMP *get_fjump     (uint);
-uint get_jump      (CHAIN *,uint);
-SUB *get_subr      (uint);
-RBT* get_rbt       (uint, uint);
-SYM* get_sym       (uint , uint , uint , uint);
-ADT *get_adnl      (CHAIN *, uint, uint );
-ADT *get_next_adnl (CHAIN *, ADT *);
-SPF *get_spf       (uint) ;
-PSW* get_psw       (uint);
-TRK* get_dtk       (uint);
-DTD* get_dtkd      (CHAIN *, uint, uint );
-
-
-int find_tjump (uint);
-JMP * find_fjump (uint , int*);
-
-SIG* match_sig     (PAT *, uint,uint);
-
-ADT *start_adnl_loop(CHAIN *, uint);
-
-SIG* inssig(SIG *blk);
-
-void fixbitfield(uint *, uint *, uint *);
-
-//void scan_dc_olaps(void);
-//void scan_code_gaps(void);
-void scan_gaps(void);
-void check_dtk_links(void);
-
-//void scan_lpdata(void);
-
-void free_adnl(CHAIN *,void *);
-ADT *set_adnl(ADT* a);
-uint set_adt_fkey(uint,uint);
-
-void chdelete(CHAIN *, uint, int);
-void clearchain(CHAIN *);
-
-
-
-extern CHAIN chjpt;
-extern CHAIN chjpf;
-extern CHAIN chcmd;
-extern CHAIN chaux;
-extern CHAIN chadnl;
-extern CHAIN chadcm;
-extern CHAIN chans;
-extern CHAIN chbase;
-extern CHAIN chscan;
-extern CHAIN chsubr;
-extern CHAIN chsig;
-extern CHAIN chsym;
-extern CHAIN chrgst;
-extern CHAIN chemul;
-extern CHAIN chsbcn;
-extern CHAIN chpsw;
-extern CHAIN chdtko;
-extern CHAIN chdtk;
-
-
-#ifdef XDBGX
-
-extern const char *chntxt[];
-extern const char *jtxt[];
-
-uint DBGPRT (uint, const char *, ...);
-void DBG_stack (FSTK *);
-void DBG_rgchain(void);
-void DBG_rgstat(RST *);
-void DBG_sbk(const char *t, SBK *s);
-void DBGPRTFGS(int ,LBK *,LBK *);
-
-void DBG_banks(void);
-
-void DBG_sigs(CHAIN*);
-void DBG_data(void);
-
-extern  int DBGmcalls;            // malloc calls
-extern  int DBGmrels;             // malloc releases
-extern  int DBGmaxalloc;          //  TEMP for malloc tracing
-extern  int DBGcuralloc;
-
-
-#endif
 
 
 
@@ -176,7 +46,6 @@ void do_code (SBK *, INST *);
 const char *empty = "\0\0\0";      // safety and allows increments, fixes compiler warnings too
 
 //for chain.lasterr errors
-
 
 
 const char *htxt[] = {empty,"Error - ", "Warning - "};   //more ?
@@ -199,8 +68,16 @@ struct
 { 2, "New Symname replaces previous one"}
 
  };
+/*
+#define E_DUPL  1          // duplicate
+#define E_INVA  2          // invalid address
+#define E_BKNM  3          // banks no match
+#define E_ODDB  4          //odd address (WORD etc)
+#define E_OVLP  5          //overlap
+#define E_OVRG  6          //overlapping ranges
+#define E_XCOD  7          // XCODE bans
 
-
+*/
 /*****************************************************************************
 * declarations for subroutines in command structure declaration
 ***************************************************************************/
@@ -260,16 +137,18 @@ uint set_psw  (CPS*); uint set_lay  (CPS*);
 
 // string options for SETOPTS and CLROPTS
 
-const char *optstrs[15] =
+CSTR optstrs[] =
 
-{ "default"    ,"sceprt", "tabnames"  , "funcnames", "ssubnames" ,
-  "labelnames" ,"manual", "intrnames" , "subnames" , "signatures", "acomments",
-  "sympresets" ,"8065"  , "cptargs"   , "dataxtnd" };
+{ //"default",
+   3,"sceprt",3, "tabnames" ,3 , "funcnames",3, "ssubnames" ,
+  3,"labelnames",3 ,"manual",3, "intrnames" ,3, "subnames" ,3, "signatures", 3, "acomments",
+  3,"sympresets",3 ,"8065" ,3 , "cptargs" ,3  , "dataxtnd",
+0,0 };
 
 // add param options ??
 
-int mopts [15] = {
-  PDEFLT  ,     // default
+int mopts [] = {
+ // PDEFLT  ,     // default
   1       ,     // sceprt  print source code
   2       ,     // auto table names
   0x200   ,     // auto func names
@@ -293,18 +172,32 @@ int mopts [15] = {
 
 //special function strings for subroutines
 
-const char *spfstrs[13] =
+CSTR spfstrs[] =
 
-{ empty    ,"uuyflu", "usyflu" , "suyflu", "ssyflu" ,
-            "uuwflu", "uswflu" , "suwflu", "sswflu" ,
-            "uytlu" , "sytlu"
+{ 6, empty ,
+  3,"uuyflu",
+  3,"usyflu" ,
+  3,"suyflu",
+  3,"ssyflu",
+
+  3,"uuwflu",
+  3,"uswflu",
+  3,"suwflu",
+  3,"sswflu",
+
+  3,"uytlu" ,
+  3,"sytlu" ,
+  3,"uwtlu" ,
+  3,"swtlu" ,
+  0       , 0,
 };
 
 
-const char *cmds[23] =
+CSTR cmds[] =
 
-{"fill", "byte", "word", "triple", "long", "text", "vect",  "table","func","struct",
- "timer", "code", "args", "xcode", "subr", "scan", "rbase","symbol", "bank", "setopt", "clropt", "pswset", "layout"};
+{3,"fill",3, "byte",3, "word",3, "triple",3, "long",3, "text",3, "vect",3,  "table",3,"func",3,"struct",
+ 3,"timer",3, "code",3, "args",3, "xcode",3, "subr",3, "scan",3, "rbase",3,"symbol",3, "bank",3, "setopt",3, "clropt",3, "pswset",3, "layout",
+ 0,0};
 
 // Params -
 // command processor subr, command printer subr,
@@ -316,32 +209,40 @@ const char *cmds[23] =
 
 // may need address validation type as well ? or array via tcom
 
+//NB cannot have 1 and 2 for DATA, as RZAS series has high ram, outside VAL_ROM constraints.
+
+ // 0 none, 1 start address, 2 end address (same bank) 3 register,
+ // 4 start address (no ROM valid) 5 end address (no ROM valid)
+  // 6 range start 7 range end (can cross banks)
+
+//allow an R to print end value ??
+
 DIRS dirs[23] = {
 
 // these go in cmd chain
 { set_data, pp_dflt,  2, 2,  4,5,0,0,  0,    0,  0, 1,   1, 0,   0,           0    },               // fill  (default) MUST be entry zero
-{ set_data, pp_wdbl,  1, 2,  1,2,0,0,  1,    0,  1, 1,   1, 0,   0,           "PSUXV" },            // byte
-{ set_data, pp_wdbl,  1, 2,  1,2,0,0,  1,    0,  1, 2,   1, 0,   0,           "PSUXV" },            // word
-{ set_data, pp_wdbl,  1, 2,  1,2,0,0,  1,    0,  1, 2,   0, 0,   0,           "PSUXV" },            // triple
-{ set_data, pp_wdbl,  1, 2,  1,2,0,0,  1,    0,  1, 3,   0, 0,   0,           "PSUXV" },            // long
+{ set_data, pp_wdbl,  1, 2,  4,5,0,0,  1,    0,  1, 1,   1, 0,   0,           "PSUXV" },            // byte
+{ set_data, pp_wdbl,  1, 2,  4,5,0,0,  1,    0,  1, 2,   1, 0,   0,           "KPRSUXV/*" },          // word (can be ptr)
+{ set_data, pp_wdbl,  1, 2,  4,5,0,0,  1,    0,  1, 2,   0, 0,   0,           "PSUXV/" },            // triple
+{ set_data, pp_wdbl,  1, 2,  4,5,0,0,  1,    0,  1, 3,   0, 0,   0,           "PSUXV/*" },            // long
 { set_data, pp_text,  2, 2,  4,5,0,0,  0,    0,  0, 1,   1, 0,   0,           0  } ,                // text
-{ set_vect, pp_vect,  1, 2,  1,2,0,0,  1,    0,  1, 2,   0, 0,   0,           "DKQ"},               // vect
-{ set_tab,  pp_stct,  2, 2,  1,2,0,0,  1,    1,  1, 0,   0, 0,   0,           "OPSUVWXY" },         // table
-{ set_func, pp_stct,  2, 2,  1,2,0,0,  1,    1,  2, 0,   0, 0,   0,           "LPSUVWXY" } ,        // func
-{ set_stct, pp_stct,  2, 2,  1,2,0,0,  1,    1, 15, 0,   0, 0,   "QAC",       "DELNOPRSUVWXY|" },   // struct
-{ set_time, pp_timer, 2, 2,  1,2,0,0,  1,    0,  2, 0,   0, 0,   0,           "NTUWY" },            // timer
+{ set_vect, pp_vect,  1, 2,  1,2,0,0,  1,    0,  1, 2,   0, 0,   0,           "DKQ"},               // vect "R" assumed
+{ set_tab,  pp_stct,  2, 2,  4,5,0,0,  1,    1,  1, 0,   0, 0,   0,           "OPSUVWXY/*" },         // table+ word
+{ set_func, pp_stct,  2, 2,  4,5,0,0,  1,    1,  2, 0,   0, 0,   0,           "LPSUVWXY/*" } ,        // func
+{ set_stct, pp_stct,  2, 2,  4,5,0,0,  1,    1, 15, 0,   0, 0,   "QAC",       "DELKNOPRSUVWXY|/*" },   // struct
+{ set_time, pp_timer, 2, 2,  4,5,0,0,  1,    0,  2, 0,   0, 0,   0,           "NTUWY" },            // timer
 { set_code, pp_code,  2, 2,  1,2,0,0,  0,    0,  0, 0,   1, 0,   0,           0  } ,                // code
 
 //these go in aux chain
-{ set_args, pp_dflt,  1, 2,  1,2,0,0,  0,    1, 15, 0,   0, 0,   0,           "DELNOPSUVWXY|" },    // args
-{ set_cdih, pp_dmy,   2, 2,  4,5,0,0,  0,    0,  0, 0,   1, 0,   0,           0  } ,                // xcode
+{ set_args, pp_dflt,  1, 2,  1,2,0,0,  0,    1, 15, 0,   0, 0,   0,           "DELKNOPRSUVWXY/|*" },    // args
+{ set_cdih, pp_dmy,   2, 2,  4,5,0,0,  0,    0,  0, 0,   1, 0,   0,           0  } ,                    // xcode
 
 
-{ set_subr, pp_dmy,   1, 1,  1,0,0,0,  1,    0, 15, 0,   0, 0,   "ACF",       "DELNOPSUVWXY|=" },   // subr
+{ set_subr, pp_dmy,   1, 1,  1,0,0,0,  1,    0, 15, 0,   0, 0,   "ACF",       "DELKNOPRSUVWXY/|=" },   // subr
 { set_scan, pp_dmy ,  1, 1,  1,0,0,0,  0,    0,  0, 0,   0, 0,   0,           0   },                // scan
-{ set_rbas, pp_dmy,   2, 4,  3,4,4,5,  0,    0,  0, 0,   0, 0,   0,           0   },                // rbase
+{ set_rbas, pp_dmy,   2, 4,  3,4,6,7,  0,    0,  0, 0,   0, 0,   0,           0   },                // rbase
 
-{ set_sym,  pp_dmy,   1, 3,  4,4,5,0,  1,    0,  0, 0,   0, 0,   0,           "BFITWN"    },        // sym
+{ set_sym,  pp_dmy,   1, 3,  4,6,7,0,  1,    1,  1, 0,   0, 0,   0,           "BFITWNZ"    },        // sym
 { set_bnk,  pp_dmy,   2, 4,  0,0,0,0,  0,    0,  0, 0,   0, 0,   0,           0 },                  // bank
 
 { set_opts, pp_dmy,   0, 0,  0,0,0,0,  0,    0,  1, 0,   0, 1,   0,           0 },                  // set options (external strings array)
@@ -351,50 +252,6 @@ DIRS dirs[23] = {
 };
 
 
-
-/**********************
- * opcode index to opcode definition table
- * index for opcodes first - points into main opcode table - 0 is invalid
- * main table ordered to put main opcode types together.
- * **********************/
-
-
-uchar opcind[256] =
-{
-// 0    1    2    3    4    5    6    7    8    9    a    b    c    d    e    f
-   80,  89,  96,  91,  0,   98, 100,  93,  4,   1,   5,   0,   6,   3,   7,   94,    // 00 - 0f
-// skip,clrw,cplw,negw,     decw,sexw,incw,shrw,shlw,asrw,     shrd,shld,asrd,norm
-   112, 88,  95,  90,  0,   97,  99,  92,  8,   2,   9,   0,   0,   0,   0,   0,     // 10 - 1f
-// RBNK,CLRB,CPLB,NEGB,----,DECB,SEXB,INCB,SHRB,SHLB,ASRB
-   81,  81,  81,  81,  81,  81,  81,  81,  82,  82,  82,  82,  82,  82,  82,  82,    // 20 - 2f
-// sjmp                                    scall
-   70,  70,  70,  70,  70,  70,  70,  70,  71,  71,  71,  71,  71,  71,  71,  71,    // 30 - 3f
-// jnb                                     jb
-   13,  13,  13,  13,  25,  25,  25,  25,  29,  29,  29,  29,  20,  20,  20,  20,    // 40 - 4f
-// AN3W                AD3W                SB3W                ML3W
-   12,  12,  12,  12,  24,  24,  24,  24,  28,  28,  28,  28,  18,  18,  18,  18,    // 50 - 5f
-// AN3B                AD3B                SB3B                ML3B
-   11,  11,  11,  11,  23,  23,  23,  23,  27,  27,  27,  27,  16,  16,  16,  16,    // 60 - 6f
-// AN2W                AD2W                SB2W                ML2W
-   10,  10,  10,  10,  22,  22,  22,  22,  26,  26,  26,  26,  14,  14,  14,  14,    // 70 - 7f
-// AN2B                AD2B                SB2B                ML2B
-   31,  31,  31,  31,  33,  33,  33,  33,  35,  35,  35,  35,  38,  38,  38,  38,    // 80 - 8f
-// ORW                 XRW                 CMPW                DIVW
-   30,  30,  30,  30,  32,  32,  32,  32,  34,  34,  34,  34,  36,  36,  36,  36,    // 90 - 9f
-// ORB                 XORB                CMPB                DIVB
-   41,  41,  41,  41,  43,  43,  43,  43,  45,  45,  45,  45,  46,  46,  46,  46,    // a0 - af
-// LDW                 ADCW                SBBW                LDZBW
-   40,  40,  40,  40,  42,  42,  42,  42,  44,  44,  44,  44,  47,  47,  47,  47,    // b0 - bf
-// LDB                 ADCB                SBBB                LDSBW
-   49,   0,  49,  49,  48,   0,  48,  48,  50,  50,  50,  50,  52,   0,  52,  52,    // c0 - cf
-// STW (not IM)        STB (not IM)        PUSHW               POPW (not IM)
-   54,  63,  64,  56,  60,  58,  66,  69,  55,  62,  65,  57,  61,  59,  67,  68,    // d0 - df
-// JNST,JLEU,JGT, JNC, NVT, JNV, JGE, JNE, JST, JGTU,JLE, JC,  JVT, JV,  JLT, JE
-   72,   0,   0,   0,   0,   0,   0,  75,   0,   0,   0,   0,   0,   0,   0,  73,    // e0 - ef
-// DJNZ                               JUMP                                    CALL
-   76,  78,  84,  86, 107, 108, 109,   0, 102, 101, 103, 104, 105, 110, 111, 106     // f0 - ff
-// RET, RETI,PSHP,POPP,Bnk0,Bnk1,Bnk2,    CLC, STC, DI,  EI,  CLVT,Bnk3,SIGN,NOP
-};
 
 
 /**********************************************************************
@@ -432,176 +289,254 @@ void php  (SBK *, INST *); void ppp  (SBK *, INST *); void nrm  (SBK *, INST *);
 void clc  (SBK *, INST *); void stc  (SBK *, INST *); void die  (SBK *, INST *); void nop  (SBK *, INST *);
 void clv  (SBK *, INST *);
 
+/****************************************************************************
+ * opcode index to and main opcode definition table
+ * opcind points into main opcode table opctbl.
+ * index 0 is invalid
+ * **********************
+
+ * OPC table - main opcode definition, index for 0-0xff in index table
+ * main table ordered to put similar opcode types together.
+ *
+ * Code Note - in ansi 'C' rules, Octal escape sequences (\nnn) are limited to three digits,
+ * but hex sequences (\xnn..) are not.
+ * Octal is used here in 'psuedo source' strings to embed operand number, below so that -
+ * 1) Letters are not interpreted as part of an embedded number (e.g. 'C' of "CY =").
+ * 2) entry as /007 will enable number next to a hex letter (not actually used here)
+ * '\2x' in the string means print the size and sign flags for operand 'x' (1-3).
+ *****************************************************************************
+ *
+ * 806x bit order. 7 is MS, 0 LS, = bit order is 7,6,5,4,3,2,1,0 as read.
+ *
+ * Operand sizes shown here are 'field end bit', with an implied field start of 0,
+ * with 0x20 (32) for signed, 0x40 (64) for write op,  giving values -
+ *    7,  0xf,   0x17,  0x1f   unsigned read,  byte, word, triple, long
+ * 0x27,  0x2f,  0x37,  0x3f     signed read,  byte, word, triple, long  (+ 0x20)
+ * 0x47,  0x4f,  0x57,  0x5f   unsigned write, byte, word, triple, long  (+ 0x40)
+ * 0x67,  0x6f,  0x67,  0x7f   signed   write, byte, word, triple, long  (+ 0x60)
+ * (note that 'triple' does not exist for opcodes, but many bins use 24 bit (+triple) variables
+ *
+ *
+ * Operands when decoded -
+ *  Op[3] is ALWAYS the WRITE (destination) operand
+ *  internal calcs are always [3] = [2] <op> [1]
+ *  operands [2] and [1] are copied/swopped as reqd. in opcode handlers to achieve this
+ ***********************************************************************
+ * 'Signature index' is used by signature matching to match like opcodes together
+ * values are (0 - 63 max)
+ * 0  special   1  clr    2  neg,cpl   3 shift l   4 shift R   5 and
+ * 6  add       7  subt   8  mult      9 or        10 cmp     11 divide
+ * 12 ldx       13 stx    14 push     15 pop       16 sjmp    17 subr
+ * 18 djnz      19 cjmp   20 ret      21 carry     22 other   23 bit
+ * 24 dec       25 inc
+ * 40+ are classed as 'optional' and skipped by default, but detectable with -
+ * 40 sign     41 pushp    42 popp    43 di       44 ei       45 RAMbnk
+ * 46 ROMbnk   47 nop      48 others
+ *
+ * (sjmp is static jump , cjmp is conditional jump)
+ *
+ * OPC item layout (one row)
+ * signature index,
+ * 'fe' prefix allowed (prefixed version is ALWAYS next table entry),
+ * 8065 opcode only, rombank prefix allowed
+ * updates PSW mask,  number of ops, show_sign,  3 op sizes (1,2,3 as above),
+ * opcode name , pseudo source string
+
+ * PSW mask is    Z N V VT C ST    in order of manual.
+ ***********************************************************************************/
 
 
-// NB. in pseudo source - Octal escape sequences (\nnn)  are limited to three digits,
-// whereas hex (\xnn..) format is not limited (ansi C rules).
-// Octal used in strings below so that letters not interpreted as part of hex number (e.g. 'C' of "CY =").
-// '\2x' in the sring means add size and sign flags to the operand 'x' (1-3).
+uchar opcind[256] =
+{
+// 0    1    2    3    4    5    6    7    8    9    a    b    c    d    e    f
+   76,  89,  96,  91,  0,   98, 100,  93,  4,   1,   5,   0,   6,   3,   7,   94,    // 00 - 0f
+// skip,clrw,cplw,negw,     decw,sexw,incw,shrw,shlw,asrw,     shrd,shld,asrd,norm
+   112, 88,  95,  90,  0,   97,  99,  92,  8,   2,   9,   0,   0,   0,   0,   0,     // 10 - 1f
+// RBNK,CLRB,CPLB,NEGB,----,DECB,SEXB,INCB,SHRB,SHLB,ASRB
+   77,  77,  77,  77,  77,  77,  77,  77,  78,  78,  78,  78,  78,  78,  78,  78,    // 20 - 2f
+// sjmp                                    scall
+   70,  70,  70,  70,  70,  70,  70,  70,  71,  71,  71,  71,  71,  71,  71,  71,    // 30 - 3f
+// jnb                                     jb
+   13,  13,  13,  13,  25,  25,  25,  25,  29,  29,  29,  29,  20,  20,  20,  20,    // 40 - 4f
+// AN3W                AD3W                SB3W                ML3W
+   12,  12,  12,  12,  24,  24,  24,  24,  28,  28,  28,  28,  18,  18,  18,  18,    // 50 - 5f
+// AN3B                AD3B                SB3B                ML3B
+   11,  11,  11,  11,  23,  23,  23,  23,  27,  27,  27,  27,  16,  16,  16,  16,    // 60 - 6f
+// AN2W                AD2W                SB2W                ML2W
+   10,  10,  10,  10,  22,  22,  22,  22,  26,  26,  26,  26,  14,  14,  14,  14,    // 70 - 7f
+// AN2B                AD2B                SB2B                ML2B
+   31,  31,  31,  31,  33,  33,  33,  33,  35,  35,  35,  35,  38,  38,  38,  38,    // 80 - 8f
+// ORW                 XRW                 CMPW                DIVW
+   30,  30,  30,  30,  32,  32,  32,  32,  34,  34,  34,  34,  36,  36,  36,  36,    // 90 - 9f
+// ORB                 XORB                CMPB                DIVB
+   41,  41,  41,  41,  43,  43,  43,  43,  45,  45,  45,  45,  46,  46,  46,  46,    // a0 - af
+// LDW                 ADCW                SBBW                LDZBW
+   40,  40,  40,  40,  42,  42,  42,  42,  44,  44,  44,  44,  47,  47,  47,  47,    // b0 - bf
+// LDB                 ADCB                SBBB                LDSBW
+   49,   0,  49,  49,  48,   0,  48,  48,  50,  50,  50,  50,  52,   0,  52,  52,    // c0 - cf
+// STW (not IM)        STB (not IM)        PUSHW               POPW (not IM)
+   54,  63,  64,  56,  60,  58,  66,  69,  55,  62,  65,  57,  61,  59,  67,  68,    // d0 - df
+// JNST,JLEU,JGT, JNC, NVT, JNV, JGE, JNE, JST, JGTU,JLE, JC,  JVT, JV,  JLT, JE
+   72,   0,   0,   0,   0,   0,   0,  75,   0,   0,   0,   0,   0,   0,   0,  73,    // e0 - ef
+// DJNZ                               JUMP                                    CALL
+   80,  82,  84,  86, 107, 108, 109,   0, 102, 101, 103, 104, 105, 110, 111, 106     // f0 - ff
+// RET, RETI,PSHP,POPP,Bnk0,Bnk1,Bnk2,    CLC, STC, DI,  EI,  CLVT,Bnk3,SIGN,NOP
+};
 
-// bit 7 is most significant, 0 is least, so order is 7,6,5,4,3,2,1,0  as read.
-
-// OPC table items across - signature index, 'fe' prefix allowed (= use next entry),
-// 8065 opcode only, opcode changes PSW, number of ops, write op index, write size,
-// read sizes (operand 1,2,3), opcode name, pseudo source
-
-// op sizes are by 'field end' with an implied field start of 0
-//  7,15,23,31 = unsigned byte,word,triple,long
-// 39,47,55,63 =   signed byte,word,triple,long  (+32 signed)
 
 
 OPC opctbl[] = {                                                               // 113 entries
-{ 0 ,  0, 0,   0, 0, 0,  0,  0,  0,  0, 0     ,"!INV!" , empty },             // zero for invalid opcodes
+{ 0 ,  0, 0, 0,   0, 0,    0 ,    0 ,     0,  0    ,"!INV!" , empty },             // zero for invalid opcodes
 
-{ 3 ,  0, 0,   1, 2, 2, 15,  7, 15,  0, shl   ,"shlw"  , "\2 <<= \1;" },                // 1
-{ 3 ,  0, 0,   1, 2, 2,  7,  7,  7,  0, shl   ,"shlb"  , "\2 <<= \1;" },
-{ 3 ,  0, 0,   1, 2, 2, 31,  7, 31,  0, shl   ,"shldw" , "\22 <<= \1;" },
+{ 3 ,  0, 0, 0,  1, 2,  0x7  , 0xf  , 0x4f , shl   ,"shlw"  , "\3 <<= \1;" },                // 1
+{ 3 ,  0, 0, 0,  1, 2,  0x7  , 0x7  , 0x47 , shl   ,"shlb"  , "\3 <<= \1;" },
+{ 3 ,  0, 0, 0,  1, 2,  0x7  , 0x1f , 0x5f , shl   ,"shldw" , "\23 <<= \1;" },
 
-{ 4 ,  0, 0,   1, 2, 2, 15,  7, 15,  0, shr   ,"shrw"  , "\2 >>= \1;" },                // 4
-{ 4 ,  0, 0,   1, 2, 2, 47,  7, 47,  0, shr   ,"asrw"  , "\22 >>= \1;" },
-{ 4 ,  0, 0,   1, 2, 2, 31,  7, 31,  0, shr   ,"shrdw" , "\22 >>= \1;" },               // 6
-{ 4 ,  0, 0,   1, 2, 2, 63,  7, 63,  0, shr   ,"asrdw" , "\22 >>= \21;" },
-{ 4 ,  0, 0,   1, 2, 2,  7,  7,  7,  0, shr   ,"shrb"  , "\2 >>= \1;" },                // 8
-{ 4 ,  0, 0,   1, 2, 2, 39,  7, 39,  0, shr   ,"asrb"  , "\22 >>= \1;" },
+{ 4 ,  0, 0, 0,  1, 2,  0x7  , 0xf  , 0x4f , shr   ,"shrw"  , "\3 >>= \1;" },                // 4
+{ 4 ,  0, 0, 0,  1, 2,  0x7  , 0x2f , 0x6f , shr   ,"asrw"  , "\23 >>=  \1;" },
+{ 4 ,  0, 0, 0,  1, 2,  0x7  , 0x1f , 0x5f , shr   ,"shrdw" , "\23 >>=  \1;" },               // 6
+{ 4 ,  0, 0, 0,  1, 2,  0x7  , 0x3f , 0x7f , shr   ,"asrdw" , "\23 >>= \1;" },
+{ 4 ,  0, 0, 0,  1, 2,  0x7  , 0x7  , 0x47 , shr   ,"shrb"  , "\3 >>=  \1;" },                // 8
+{ 4 ,  0, 0, 0,  1, 2,  0x7  , 0x27 , 0x67 , shr   ,"asrb"  , "\23 >>= \1;" },
 
-{ 5 ,  0, 0,   1, 2, 2,  7,  7,  7,  0, andx  ,"an2b"  , "\4\2 &= \1;"  },              // 10
-{ 5 ,  0, 0,   1, 2, 2, 15, 15, 15,  0, andx  ,"an2w"  , "\4\2 &= \1;" },
-{ 5 ,  0, 0,   1, 3, 3,  7,  7,  7,  7, andx  ,"an3b"  , "\4\3 = \2 & \1;"  },
-{ 5 ,  0, 0,   1, 3, 3, 15, 15, 15, 15, andx  ,"an3w"  , "\4\3 = \2 & \1;" },
+{ 5 ,  0, 0, 0,  1, 2,  0x7  ,  0x7 , 0x47 , andx  ,"an2b"  , "\4\3 &= \1;"  },              // 10
+{ 5 ,  0, 0, 0,  1, 2,  0xf  ,  0xf , 0x4f , andx  ,"an2w"  , "\4\3 &= \1;" },
+{ 5 ,  0, 0, 0,  1, 3,  0x7  ,  0x7 , 0x47 , andx  ,"an3b"  , "\4\3 = \2 & \1;"  },
+{ 5 ,  0, 0, 0,  1, 3,  0xf  ,  0xf , 0x4f , andx  ,"an3w"  , "\4\3 = \2 & \1;" },
 
-{ 8 ,  1, 0,   1, 2, 2, 15,  7,  7,  0, mlx   ,"ml2b"  , "\22 *= \1;" },                // 14
-{ 8 ,  0, 0,   1, 2, 2, 47, 39, 39,  0, mlx   ,"sml2b" , "\22 *= \1;"},
-{ 8 ,  1, 0,   1, 2, 2, 31, 15, 15,  0, mlx   ,"ml2w"  , "\22 *= \1;"  },
-{ 8 ,  0, 0,   1, 2, 2, 63, 47, 47,  0, mlx   ,"sml2w" , "\22 *= \1;"},
+{ 8 ,  1, 0, 0,  1, 2,  0x7  ,  0x7 , 0x4f , mlx   ,"ml2b"  , "\23 = \22 * \1;" },                // 14
+{ 8 ,  0, 0, 0,  1, 2,  0x27 , 0x27 , 0x6f , mlx   ,"sml2b" , "\23 = \22 * \1;" },
+{ 8 ,  1, 0, 0,  1, 2,  0xf  ,  0xf , 0x5f , mlx   ,"ml2w"  , "\23 = \22 * \1;"  },
+{ 8 ,  0, 0, 0,  1, 2,  0x2f , 0x2f , 0x7f , mlx   ,"sml2w" , "\23 = \22 * \1;" },
 
-{ 8 ,  1, 0,   0, 3, 3, 15,  7,  7,  7, mlx   ,"ml3b"  , "\23 = \22 * \1;"  },          // 18
-{ 8 ,  0, 0,   0, 3, 3, 47, 39, 39, 15, mlx   ,"sml3b" , "\23 = \22 * \1;" },
-{ 8 ,  1, 0,   0, 3, 3, 31, 15, 15, 15, mlx   ,"ml3w"  , "\23 = \22 * \1;"  },
-{ 8 ,  0, 0,   0, 3, 3, 63, 47, 47, 15, mlx   ,"sml3w" , "\23 = \22 * \1;" },
+{ 8 ,  1, 0, 0,  0, 3,  0x7  ,  0x7 , 0x4f , mlx   ,"ml3b"  , "\23 = \22 * \1;"  },          // 18
+{ 8 ,  0, 0, 0,  0, 3,  0x27 , 0x27 , 0x6f , mlx   ,"sml3b" , "\23 = \22 * \1;" },
+{ 8 ,  1, 0, 0,  0, 3,  0xf  ,  0xf , 0x5f , mlx   ,"ml3w"  , "\23 = \22 * \1;"  },
+{ 8 ,  0, 0, 0,  0, 3,  0x2f , 0x2f , 0x7f , mlx   ,"sml3w" , "\23 = \22 * \1;" },
 
-{ 6 ,  0, 0,   1, 2, 2,  7,  7,  7,  0, add   ,"ad2b"  , "\2 += \1;" },                 // 22
-{ 6 ,  0, 0,   1, 2, 2, 15, 15, 15,  0, add   ,"ad2w"  , "\2 += \1;" },
-{ 6 ,  0, 0,   1, 3, 3,  7,  7,  7,  7, add   ,"ad3b"  , "\3 = \2 + \1;"  },
-{ 6 ,  0, 0,   1, 3, 3, 15, 15, 15, 15, add   ,"ad3w"  , "\3 = \2 + \1;" },
+{ 6 ,  0, 0, 0,  1, 2,  0x7  , 0x7  , 0x47 , add   ,"ad2b"  , "\3 += \1;" },                 // 22
+{ 6 ,  0, 0, 0,  1, 2,  0xf  , 0xf  , 0x4f , add   ,"ad2w"  , "\3 += \1;" },
+{ 6 ,  0, 0, 0,  1, 3,  0x7  , 0x7  , 0x47 , add   ,"ad3b"  , "\3 = \2 + \1;"  },
+{ 6 ,  0, 0, 0,  1, 3,  0xf  , 0xf  , 0x4f , add   ,"ad3w"  , "\3 = \2 + \1;" },
 
-{ 7 ,  0, 0,   1, 2, 2,  7,  7,  7,  0, sub   ,"sb2b"  , "\2 -= \1;" },                 // 26
-{ 7 ,  0, 0,   1, 2, 2, 15, 15, 15,  0, sub   ,"sb2w"  , "\2 -= \1;" },
-{ 7 ,  0, 0,   1, 3, 3,  7,  7,  7,  7, sub   ,"sb3b"  , "\3 = \2 - \1;"  },
-{ 7 ,  0, 0,   1, 3, 3, 15, 15, 15, 15, sub   ,"sb3w"  , "\3 = \2 - \1;" },
+{ 7 ,  0, 0, 0,  1, 2,  0x7  , 0x7  , 0x47 , sub   ,"sb2b"  , "\3 -= \1;" },                 // 26
+{ 7 ,  0, 0, 0,  1, 2,  0xf  , 0xf  , 0x4f , sub   ,"sb2w"  , "\3 -= \1;" },
+{ 7 ,  0, 0, 0,  1, 3,  0x7  , 0x7  , 0x47 , sub   ,"sb3b"  , "\3 = \2 - \1;"  },
+{ 7 ,  0, 0, 0,  1, 3,  0xf  , 0xf  , 0x4f , sub   ,"sb3w"  , "\3 = \2 - \1;" },
 
-{ 9 ,  0, 0,   1, 2, 2,  7,  7,  7,  0, orx   ,"orb"   , "\4\2 |= \1;" },               // 30
-{ 9 ,  0, 0,   1, 2, 2, 15, 15, 15,  0, orx   ,"orw"   , "\4\2 |= \1;" },
-{ 9 ,  0, 0,   1, 2, 2,  7,  7,  7,  0, orx   ,"xorb"  , "\4\2 ^= \1;" },
-{ 9 ,  0, 0,   1, 2, 2, 15, 15, 15,  0, orx   ,"xrw"   , "\4\2 ^= \1;" },
+{ 9 ,  0, 0, 0,  1, 2,  0x7  , 0x7  , 0x47 , orx   ,"orb"   , "\4\3 |= \1;" },               // 30
+{ 9 ,  0, 0, 0,  1, 2,  0xf  , 0xf  , 0x4f , orx   ,"orw"   , "\4\3 |= \1;" },
+{ 9 ,  0, 0, 0,  1, 2,  0x7  , 0x7  , 0x47 , orx   ,"xorb"  , "\4\3 ^= \1;" },
+{ 9 ,  0, 0, 0,  1, 2,  0xf  , 0xf  , 0x4f , orx   ,"xrw"   , "\4\3 ^= \1;" },
 
-{ 10,  0, 0,   1, 2, 0,  0,  7,  7,  0, cmp   ,"cmpb"  , empty },                       // 34
-{ 10,  0, 0,   1, 2, 0,  0, 15, 15,  0, cmp   ,"cmpw"  , empty },
+{ 10,  0, 0, 0,  1, 2,  0x7  , 0x7  , 0    , cmp   ,"cmpb"  , empty },                       // 34
+{ 10,  0, 0, 0,  1, 2,  0xf  , 0xf  , 0    , cmp   ,"cmpw"  , empty },
 
-{ 11,  1, 0,   1, 2, 2,  7,  7, 15,  0, dvx   ,"divb"  , "\22 /= \1;" },                // 36
-{ 11,  0, 0,   1, 2, 2, 39, 39, 47,  0, dvx   ,"sdivb" , "\22 /= \1;"},
-{ 11,  1, 0,   1, 2, 2, 15, 15, 31,  0, dvx   ,"divw"  , "\22 /= \1;" },
-{ 11,  0, 0,   1, 2, 2, 47, 47, 63,  0, dvx   ,"sdivw" , "\22 /= \1;"},
+{ 11,  1, 0, 0,  1, 2,  0x7  , 0xf  , 0x47 , dvx   ,"divb"  , "\13"  },          //36    special 2 line print
+{ 11,  0, 0, 0,  1, 2,  0x27 , 0x2f , 0x67 , dvx   ,"sdivb" , "\13"  },
+{ 11,  1, 0, 0,  1, 2,  0xf  , 0x1f , 0x4f , dvx   ,"divw"  , "\13"  },
+{ 11,  0, 0, 0,  1, 2,  0x2f , 0x3f , 0x6f , dvx   ,"sdivw" , "\13"  },
 
-{ 12,  0, 0,   0, 2, 2,  7,  7,  7,  0, ldx   ,"ldb"   , "\4\2 = \1;" },                // 40
-{ 12,  0, 0,   0, 2, 2, 15, 15, 15,  0, ldx   ,"ldw"   , "\4\2 = \1;" },
+{ 12,  0, 0, 0,  0, 2,  0x7  , 0x7  , 0x47 , ldx   ,"ldb"   , "\4\3 = \1;" },                // 40
+{ 12,  0, 0, 0,  0, 2,  0xf  , 0xf  , 0x4f , ldx   ,"ldw"   , "\4\3 = \1;" },
 
-{ 6 ,  0, 0,   1, 2, 2,  7,  7,  7,  0, add   ,"adcb"  , "\2 += \1 + CY;" },            // 42
-{ 6 ,  0, 0,   1, 2, 2, 15, 15, 15,  0, add   ,"adcw"  , "\2 += \1 + CY;" },
-{ 7 ,  0, 0,   1, 2, 2,  7,  7,  7,  0, sub   ,"sbbb"  , "\2 -= \1 - CY;" },
-{ 7 ,  0, 0,   1, 2, 2, 15, 15, 15,  0, sub   ,"sbbw"  , "\2 -= \1 - CY;" },
+{ 6 ,  0, 0, 0,  1, 2,  0x7  , 0x7  , 0x47 , add   ,"adcb"  , "\3 += \1+CY;" },            // 42
+{ 6 ,  0, 0, 0,  1, 2,  0xf  , 0xf  , 0x4f , add   ,"adcw"  , "\3 += \1+CY;" },
+{ 7 ,  0, 0, 0,  1, 2,  0x7  , 0x7  , 0x47 , sub   ,"sbbb"  , "\3 -= \1-CY;" },
+{ 7 ,  0, 0, 0,  1, 2,  0xf  , 0xf  , 0x4f , sub   ,"sbbw"  , "\3 -= \1-CY;" },
 
-{ 12,  0, 0,   0, 2, 2, 15,  7,  7,  0, ldx   ,"ldzbw" , "\22 = \21;" },                // 46
-{ 12,  0, 0,   0, 2, 2, 47,  7,  7,  0, ldx   ,"ldsbw" , "\22 = \21;" },
+{ 12,  0, 0, 0,  0, 2,  0x7  , 0x7  , 0x4f , ldx   ,"ldzbw" , "\23 = \21;" },                // 46
+{ 12,  0, 0, 0,  0, 2,  0x7  , 0x7  , 0x6f , ldx   ,"ldsbw" , "\23 = \21;" },
 
-{ 13,  0, 0,   0, 2, 1,  7,  7,  7,  0, stx   ,"stb"   , "\1 = \2;" },                  // 48
-{ 13,  0, 0,   0, 2, 1, 15, 15, 15,  0, stx   ,"stw"   , "\1 = \2;" },
+{ 13,  0, 0, 0,  0, 2,  0x7  , 0x7  , 0x47 , stx   ,"stb"   , "\3 = \2;" },                  // 48 swop operands in handler
+{ 13,  0, 0, 0,  0, 2,  0xf  , 0xf  , 0x4f , stx   ,"stw"   , "\3 = \2;" },
 
-{ 14,  1, 0,   0, 1, 0,  0, 15,  0,  0, pshw  ,"push"  , "push(\1);" },                 // 50
-{ 14,  0, 1,   0, 1, 0,  0, 15,  0,  0, pshw  ,"pusha" , "pusha(\1);" },
-{ 15,  1, 0,   0, 1, 1, 15, 15,  0,  0, popw  ,"pop"   , "\1 = pop();" },               // 52
-{ 15,  0, 1,   0, 1, 1, 15, 15,  0,  0, popw  ,"popa"  , "\1 = popa();" },
+{ 14,  1, 0, 0,  0, 1,  0xf  ,  0   , 0    , pshw  ,"push"  , "push(\1);" },                 // 50
+{ 14,  0, 1, 0,  0, 1,  0xf  ,  0   , 0    , pshw  ,"pusha" , "pusha(\1);" },
+{ 15,  1, 0, 0,  0, 1,  0xf  ,  0   , 0x4f , popw  ,"pop"   , "\3 = pop();" },               // 52
+{ 15,  0, 1, 0,  0, 1,  0xf  ,  0   , 0x4f , popw  ,"popa"  , "\3 = popa();" },
 
-{ 19,  0, 0,   0, 1, 0,  0,  0, 0, 0, cjm   ,"jnst"  , "if (STK = 0) \x9" },          // 54  to 71 cond jumps
-{ 19,  0, 0,   0, 1, 0,  0,  0, 0, 0, cjm   ,"jst"   , "if (STK = 1) \x9" },          // 55
+{ 19,  0, 0, 0,  0, 1,  0    ,  0   , 0    , cjm   ,"jnst"  , "if (STK = 0) \x9" },          // 54  to 71 cond jumps
+{ 19,  0, 0, 0,  0, 1,  0    ,  0   , 0    , cjm   ,"jst"   , "if (STK = 1) \x9" },          // 55
 
-{ 19,  0, 0,   0, 1, 0,  0,  0, 0, 0, cjm   ,"jnc"   , "\10CY = 0) \x9" },            // 56
-{ 19,  0, 0,   0, 1, 0,  0,  0, 0, 0, cjm   ,"jc"    , "\10CY = 1) \x9" },            // 57
+{ 19,  0, 0, 0,  0, 1,  0    ,  0   ,  0   , cjm   ,"jnc"   , "\10CY = 0) \x9" },            // 56
+{ 19,  0, 0, 0,  0, 1,  0    ,  0   ,  0   , cjm   ,"jc"    , "\10CY = 1) \x9" },            // 57
 
-{ 19,  0, 0,   0, 1, 0,  0,  0, 0, 0, cjm   ,"jnv"   , "\10OVF = 0) \x9" },           // 58
-{ 19,  0, 0,   0, 1, 0,  0,  0, 0, 0, cjm   ,"jv"    , "\10OVF = 1) \x9" },           // 59
+{ 19,  0, 0, 0,  0, 1,  0    ,  0   , 0    , cjm   ,"jnv"   , "\10OVF = 0) \x9" },           // 58
+{ 19,  0, 0, 0,  0, 1,  0    ,  0   , 0    , cjm   ,"jv"    , "\10OVF = 1) \x9" },           // 59
 
-{ 19,  0, 0,   0, 1, 0,  0,  0, 0, 0, cjm   ,"jnvt"  , "if (OVT = 0) \x9" },          // 60
-{ 19,  0, 0,   0, 1, 0,  0,  0, 0, 0, cjm   ,"jvt"   , "if (OVT = 1) \x9" },          // 61
+{ 19,  0, 0, 0,  0, 1,  0    ,  0   ,  0   , cjm   ,"jnvt"  , "if (OVT = 0) \x9" },          // 60
+{ 19,  0, 0, 0,  0, 1,  0    ,  0   ,  0   , cjm   ,"jvt"   , "if (OVT = 1) \x9" },          // 61
 
-{ 19,  0, 0,   0, 1, 0,  0,  0, 0, 0, cjm   ,"jgtu"  , "\7>"   },                     // 62
-{ 19,  0, 0,   0, 1, 0,  0,  0, 0, 0, cjm   ,"jleu"  , "\7<="  },                     // 63
+{ 19,  0, 0, 0,  0, 1,  0    ,  0   ,  0   , cjm   ,"jgtu"  , "\7>"   },                     // 62
+{ 19,  0, 0, 0,  0, 1,  0    ,  0   ,  0   , cjm   ,"jleu"  , "\7<="  },                     // 63
 
-{ 19,  0, 0,   0, 1, 0,  0,  0, 0, 0, cjm   ,"jgt"   , "\7>"       },                 // 64
-{ 19,  0, 0,   0, 1, 0,  0,  0, 0, 0, cjm   ,"jle"   , "\7<="      },                 // 65
+{ 19,  0, 0, 0,  0, 1,  0    ,  0   ,  0   , cjm   ,"jgt"   , "\7>"       },                 // 64
+{ 19,  0, 0, 0,  0, 1,  0    ,  0   ,  0   , cjm   ,"jle"   , "\7<="      },                 // 65
 
-{ 19,  0, 0,   0, 1, 0,  0,  0, 0, 0, cjm   ,"jge"   , "\7>="      },                 // 66
-{ 19,  0, 0,   0, 1, 0,  0,  0, 0, 0, cjm   ,"jlt"   , "\7<"       },                 // 67
+{ 19,  0, 0, 0,  0, 1,  0    ,  0   ,  0   , cjm   ,"jge"   , "\7>="      },                 // 66
+{ 19,  0, 0, 0,  0, 1,  0    ,  0   ,  0   , cjm   ,"jlt"   , "\7<"       },                 // 67
 
-{ 19,  0, 0,   0, 1, 0,  0,  0, 0, 0, cjm   ,"je"    , "\7="       },                 // 68
-{ 19,  0, 0,   0, 1, 0,  0,  0, 0, 0, cjm   ,"jne"   , "\7!="      },                 // 69
+{ 19,  0, 0, 0,  0, 1,  0    ,  0   ,  0   , cjm   ,"je"    , "\7="       },                 // 68
+{ 19,  0, 0, 0,  0, 1,  0    ,  0   ,  0   , cjm   ,"jne"   , "\7!="      },                 // 69
 
-{ 23,  0, 0,   0, 2, 0,  0, 15,  7,  7, bjm   ,"jnb"   , "if (\3\2 = 0) \x9" },         // 70
-{ 23,  0, 0,   0, 2, 0,  0, 15,  7,  7, bjm   ,"jb"    , "if (\3\2 = 1) \x9" },         // 71
+{ 23,  0, 0, 0,  0, 2,  0xf  ,  0x7 ,  0   , bjm   ,"jnb"   , "if (\3\2 = 0) \x9" },         // 70
+{ 23,  0, 0, 0,  0, 2,  0xf  ,  0x7 ,  0   , bjm   ,"jb"    , "if (\3\2 = 1) \x9" },         // 71
 
-{ 18,  0, 0,   0, 2, 2,  7,  7,  7, 0, djm   ,"djnz"  , "\2--;\xbif (\2 != 0) \x9" },  // 72
+{ 18,  0, 0, 0,  0, 2,  0x7  ,  0x7 , 0x47 , djm   ,"djnz"  , "\3--;\nif (\3 != 0) \x9" },  // 72
 
-{ 17,  1, 0,   0, 1, 0,  0, 0, 0, 0, cll   ,"call"  , "\5" },                        // 73   Long jumps
-{ 17,  0, 1,   0, 2, 0,  0, 0, 0, 0, cll   ,"calla" , "\5" },                        // 74
-{ 16,  0, 0,   0, 1, 0,  0, 0, 0, 0, ljm   ,"jump"  , "\x9" },                       // 75
+{ 17,  1, 0, 0,  0, 1,    0  ,  0   , 0    , cll   ,"call"  , "\5" },                        // 73   Long jumps
+{ 17,  0, 1, 0,  0, 1,    0  ,  0   , 0    , cll   ,"calla" , "\5" },                        // 74
+{ 16,  0, 0, 0,  0, 1,    0  ,  0   , 0    , ljm   ,"jump"  , "\x9" },                       // 75
 
-{ 20,  1, 0,   0, 0, 0,  0, 0, 0, 0, ret   ,"ret"   , "return;" },                   // 76  returns
-{ 20,  0, 1,   0, 0, 0,  0, 0, 0, 0, ret   ,"reta"  , "return;" },
-{ 20,  1, 0,   0, 0, 0,  0, 0, 0, 0, ret   ,"reti"  , "return;" },
-{ 20,  0, 1,   0, 0, 0,  0, 0, 0, 0, ret   ,"retia" , "return;" },                   // 79
+{ 16,  0, 0, 0,  0, 0,    0  ,  0   , 0    , skj   ,"skip"  , "\x9" },                       // 76 skip (= sjmp [pc+2])
+{ 16,  0, 0, 0,  0, 1,    0  ,  0   , 0    , sjm   ,"sjmp"  , "\x9" },                       // 77     short jumps
+{ 17,  1, 0, 0,  0, 1,    0  ,  0   , 0    , scl   ,"scall" , "\5" },                        // 78
+{ 17,  0, 0, 0,  0, 1,    0  ,  0   , 0    , scl   ,"sclla" , "\5" },                        // 79
 
-{ 16,  0, 0,   0, 0, 0,  0, 0, 0, 0, skj   ,"skip"  , "\x9" },                       // 80 skip (= sjmp [pc+2])
-{ 16,  0, 0,   0, 1, 0,  0, 0, 0, 0, sjm   ,"sjmp"  , "\x9" },                       // 81     short jumps
-{ 17,  1, 0,   0, 1, 0,  0, 0, 0, 0, scl   ,"scall" , "\5" },                        // 82
-{ 17,  0, 0,   0, 1, 0,  0, 0, 0, 0, scl   ,"sclla" , "\5" },                        // 83
+{ 20,  1, 0, 0,  0, 0,    0  ,  0   , 0    , ret   ,"ret"   , "return;" },                   // 80  returns
+{ 20,  0, 1, 0,  0, 0,    0  ,  0   , 0    , ret   ,"reta"  , "return;" },
+{ 20,  1, 0, 0,  0, 0,    0  ,  0   , 0    , ret   ,"reti"  , "return;" },
+{ 20,  0, 1, 0,  0, 0,    0  ,  0   , 0    , ret   ,"retia" , "return;" },                   // 83
 
-{ 41,  1, 0,   0, 0, 0,  0, 0, 0, 0, php   ,"pushp" , "push(PSW);" },                // 84 push psw
-{ 41,  0, 1,   0, 0, 0,  0, 0, 0, 0, php   ,"pshpa" , "pusha(PSW);" },
-{ 42,  1, 0,   1, 0, 0,  0, 0, 0, 0, ppp   ,"popp"  , "PSW = pop();" },              // 86
-{ 42,  0, 1,   1, 0, 0,  0, 0, 0, 0, ppp   ,"poppa" , "PSW = popa();" },             // 87
-
-
-{ 1 ,  0, 0,   0, 1, 1,  7,  7, 0, 0, clr   ,"clrb"  ,  "\4\1 = 0;" },                // 88
-{ 1 ,  0, 0,   0, 1, 1, 15, 15, 0, 0, clr   ,"clrw"  ,  "\4\1 = 0;" },
-
-{ 2 ,  0, 0,   1, 1, 1,  7,  7, 0, 0, neg   ,"negb"  ,  "\1 = -\1;" },                // 90
-{ 2 ,  0, 0,   1, 1, 1, 15, 15, 0, 0, neg   ,"negw"  ,  "\1 = -\1;" },
-
-{ 25,  0, 0,   1, 1, 1,  7,  7, 0, 0, inc   ,"incb"  ,  "\1++;"  },                   // 92
-{ 25,  0, 0,   1, 1, 1, 15, 15, 0, 0, inc   ,"incw"  ,  "\1++;" },                    // 93
-{ 22,  0, 0,   1, 2, 1,  7,  7, 31, 0, nrm   ,"norm"  ,  "\1 = normalize(\22);" },
-{ 2 ,  0, 0,   1, 1, 1,  7,  7, 0, 0, cpl   ,"cplb"  ,  "\1 = ~\1;" },                // 95
-{ 2 ,  0, 0,   1, 1, 1, 15, 15, 0, 0, cpl   ,"cplw"  ,  "\1 = ~\1;" },
-
-{ 24,  0, 0,   1, 1, 1,  7,  7, 0, 0, dec   ,"decb"  ,  "\1--;" },                    // 97
-{ 24,  0, 0,   1, 1, 1, 15, 15, 0, 0, dec   ,"decw"  ,  "\1--;"  },
-{ 22,  0, 0,   1, 1, 1, 47,  7, 0, 0, sex   ,"sexb"  ,  "\21 = \1;" },
-{ 22,  0, 0,   0, 1, 1, 63, 15, 0, 0, sex   ,"sexw"  ,  "\21 = \1;" },                // 100
+{ 41,  1, 0, 0,  0, 0,    0  ,  0   , 0    , php   ,"pushp" , "push(PSW);" },                // 84 push psw
+{ 41,  0, 1, 0,  0, 0,    0  ,  0   , 0    , php   ,"pshpa" , "pusha(PSW);" },
+{ 42,  1, 0, 0,  1, 0,    0  ,  0   , 0    , ppp   ,"popp"  , "PSW = pop();" },              // 86
+{ 42,  0, 1, 0,  1, 0,    0  ,  0   , 0    , ppp   ,"poppa" , "PSW = popa();" },             // 87
 
 
-{ 21,  0, 0,   1, 0, 0,  0, 0, 0, 0, stc   ,"stc"   ,  "CY = 1;" },                  // 101
-{ 21,  0, 0,   1, 0, 0,  0, 0, 0, 0, clc   ,"clc"   ,  "CY = 0;" },                  // 102
-{ 43,  0, 0,   0, 0, 0,  0, 0, 0, 0, die   ,"di"    ,  "interrupts OFF;" },
-{ 44,  0, 0,   0, 0, 0,  0, 0, 0, 0, die   ,"ei"    ,  "interrupts ON;" },
-{ 48,  0, 0,   0, 0, 0,  0, 0, 0, 0, clv   ,"clrvt" ,  "OVT = 0;" },
-{ 47,  0, 0,   0, 0, 0,  0, 0, 0, 0, nop   ,"nop"   ,  empty },
+{ 1 ,  0, 0, 0,  0, 1,  0x7  ,  0   , 0x47 , clr   ,"clrb"  ,  "\4\3 = 0;" },                // 88
+{ 1 ,  0, 0, 0,  0, 1,  0xf  ,  0   , 0x4f , clr   ,"clrw"  ,  "\4\3 = 0;" },
 
-{ 45,  0, 1,   0, 0, 0,  0, 0, 0, 0, bka   ,"regbk"  ,  empty },                     // 107
-{ 45,  0, 1,   0, 0, 0,  0, 0, 0, 0, bka   ,"regbk"  ,  empty },
-{ 45,  0, 1,   0, 0, 0,  0, 0, 0, 0, bka   ,"regbk"  ,  empty },                     // 109
-{ 45,  0, 1,   0, 0, 0,  0, 0, 0, 0, bka   ,"regbk"  ,  empty },                     // 110
+{ 2 ,  0, 0, 0,  1, 1,  0x7  ,  0   , 0x47 , neg   ,"negb"  ,  "\3 = -\1;" },                // 90
+{ 2 ,  0, 0, 0,  1, 1,  0xf  ,  0   , 0x4f , neg   ,"negw"  ,  "\3 = -\1;" },
 
-{ 46,  0, 1,   0, 1, 0,  0, 7, 0, 0, 0     ,"rombk"  ,  empty },                     // 111 bank prefix (8065)
-{ 40,  0, 0,   0, 0, 0,  0, 0, 0, 0, 0     ,"!PRE!"  ,  empty }                      // 112 signed prefix
+{ 25,  0, 0, 0,  1, 1,  0x7  ,  0   , 0x47 , inc   ,"incb"  ,  "\3++;"  },                   // 92
+{ 25,  0, 0, 0,  1, 1,  0xf  ,  0   , 0x4f , inc   ,"incw"  ,  "\3++;" },                    // 93
+{ 22,  0, 0, 0,  1, 2,  0x7  , 0x1f , 0x5f , nrm   ,"norm"  ,  "\21 = normalize(\22);\n\23 <<= \1;" },
+{ 2 ,  0, 0, 0,  1, 1,  0x7  ,  0   , 0x47 , cpl   ,"cplb"  ,  "\3 = ~\1;" },                // 95
+{ 2 ,  0, 0, 0,  1, 1,  0xf  ,  0   , 0x4f , cpl   ,"cplw"  ,  "\3 = ~\1;" },
+
+{ 24,  0, 0, 0,  1, 1,  0x7 ,   0   , 0x47 , dec   ,"decb"  ,  "\3--;" },                    // 97
+{ 24,  0, 0, 0,  1, 1,  0xf ,   0   , 0x4f , dec   ,"decw"  ,  "\3--;"  },
+{ 22,  0, 0, 0,  1, 1,  0x7 ,   0   , 0x6f , sex   ,"sexb"  ,  "\23 = \1;" },
+{ 22,  0, 0, 0,  0, 1,  0xf ,   0   , 0x7f , sex   ,"sexw"  ,  "\23 = \1;" },                // 100
+
+
+{ 21,  0, 0, 0,  1, 0,     0,   0   , 0    , stc   ,"stc"   ,  "CY = 1;" },                  // 101
+{ 21,  0, 0, 0,  1, 0,     0,   0   , 0    , clc   ,"clc"   ,  "CY = 0;" },                  // 102
+{ 43,  0, 0, 0,  0, 0,     0,   0   , 0    , die   ,"di"    ,  "interrupts OFF;" },
+{ 44,  0, 0, 0,  0, 0,     0,   0   , 0    , die   ,"ei"    ,  "interrupts ON;" },
+{ 48,  0, 0, 0,  0, 0,     0,   0   , 0    , clv   ,"clrvt" ,  "OVT = 0;" },
+{ 47,  0, 0, 0,  0, 0,     0,   0   , 0    , nop   ,"nop"   ,  empty },
+
+{ 45,  0, 1, 0,  0, 0,     0,   0   , 0    , bka   ,"regbk"  ,  empty },                     // 107
+{ 45,  0, 1, 0,  0, 0,     0,   0   , 0    , bka   ,"regbk"  ,  empty },
+{ 45,  0, 1, 0,  0, 0,     0,   0   , 0    , bka   ,"regbk"  ,  empty },                     // 109
+{ 45,  0, 1, 0,  0, 0,     0,   0   , 0    , bka   ,"regbk"  ,  empty },                     // 110
+
+{ 46,  0, 1, 0,  0, 1,     7,   0   , 0    , 0     ,"rombk"  ,  empty },                     // 111 bank prefix (8065)
+{ 40,  0, 0, 0,  0, 0,     0,   0   , 0    , 0     ,"!PRE!"  ,  empty }                      // 112 signed prefix
 
 };
 
@@ -609,16 +544,16 @@ OPC opctbl[] = {                                                               /
 // extra opcode pseudo sources for replace of R0 opcodes,
 // carry, ldx, goto
 
-const char *scespec[] = {
-  "\x2 += CY;",         // R0 + carry replace
-  "\x2 -= CY;",
-  "\2 = \1;",           // LDX for reduced 3 op, XOR
-  "\x9"                 // 'bare' goto
+cchar *scespec[] = {
+  "\3 = \2 + CY;",         // opctbl[42].sce  // + R0 + carry replace
+  "\3 = \2 - CY;",         //opctbl[44].sce
+  "\3 = \1;",           // opctbl[40].sce+1     skip bitwise LDX for reduced 3 op, XOR
+  "\x9"                 // opctbl[80].sce      'bare' goto
  };
 
 //  for swopping over cmp (R0, x) operands
 
-const char *swopcmpop[] = {
+cchar *swopcmpop[] = {
 
  "<" ,        // jgtu '>'  (62) to 'jltu' and JC std
  ">=",        // jleu '<=  (63) to 'jgeu' and JNC std
@@ -687,7 +622,7 @@ NAMES inames[] = {
 
 
 // Auto names - appended with address.
-// option cmd mask, size in, size out, name
+// option cmd mask, fend in, fend out, name
 // sizes are for function and table subroutine names as opcode table
 
 AUTON anames [] = {
@@ -697,20 +632,22 @@ AUTON anames [] = {
  { 0x200,  0, 0, "Func"    },          // 3   PFUNC   function data names
  { 0x2  ,  0, 0, "Table"   },          // 4   PTABL   table data names
 
- { 0x4  ,   7,  7, "UUYFuncLU" },      // 5   PSTRS   auto subroutine names for function and table lookup procs
- { 0x4  ,   7, 39, "USYFuncLU" },
- { 0x4  ,  39,  7, "SUYFuncLU" },
- { 0x4  ,  39, 39, "SSYFuncLU" },
+ { 0x4  ,     7,    7, "UUYFuncLU" },      // 5   PSTRS   auto subroutine names for function and table lookup procs
+ { 0x4  ,     7, 0x27, "USYFuncLU" },
+ { 0x4  ,  0x27,    7, "SUYFuncLU" },
+ { 0x4  ,  0x27, 0x27, "SSYFuncLU" },
 
- { 0x4  ,  15, 15, "UUWFuncLU" },        // 9
- { 0x4  ,  15, 47, "USWFuncLU" },
- { 0x4  ,  47, 15, "SUWFuncLU" },
- { 0x4  ,  47, 47, "SSWFuncLU" },
+ { 0x4  ,  0xf ,  0xf, "UUWFuncLU" },        // 9
+ { 0x4  ,  0xf , 0x2f, "USWFuncLU" },
+ { 0x4  ,  0x2f,  0xf, "SUWFuncLU" },
+ { 0x4  ,  0x2f, 0x2f, "SSWFuncLU" },
 
- { 0x4  ,   7,  7, "UYTabLU"  },         // 13
- { 0x4  ,  39, 39, "SYTabLU"  },
+ { 0x4  ,     7,    7, "UYTabLU"  },         // 13
+ { 0x4  ,  0x27, 0x27, "SYTabLU"  },
+ { 0x4  ,   0xf,  0xf, "UWTabLU"  },         // 15
+ { 0x4  ,  0x2f, 0x2f, "SWTabLU"  },
 
- { 0    ,   7,  7, "Timer"    }          // 15   used as a SPECIAL for timers.
+ { 0    ,     7,    7, "Timer"    }          // 17   used as a SPECIAL for timers.
  };
 
 
@@ -720,81 +657,158 @@ AUTON anames [] = {
  * added to analysis if PRSYM set
  * fixed names for special regs as Ford Handbook
  * Params in order -
- * for 8061
- * for 8065 (both can be set)
- * read sym 0, write 1
- * whole 0, bit 1
- * bitnumber (0-7)
- * address
- * name
+  start bit number (0-7)
+  end bit number   with write,sign, whole
+  address (byte)
+  no_olap        // SFR word does not overlap into next byte
+  name;        // name
+*/
+
+ // 8061 SFR list
+DFSYM d61syms [] = {
+
+
+ { 6,  0x6 , 0x2, 0, "CPU_OK"        },     // 2->6 are byte only
+ { 0,  0x87, 0x2, 0, "LSOut_Port"      },
+ // LSO 0-7
+
+ { 0,  0x87, 0x3, 0, "BIDI_Port"      },
+ { 0,  0xc7, 0x3, 0, "BIDO_Port"      },       //write
+ //only 0 and 1 ??   2-7 don't care ??
+ { 0,  0x87, 0x4, 0, "AD_Result_Lo"  },     //read
+ { 0,  0xc7, 0x4, 0, "AD_Cmd"        },     // Write
+
+ //    {0, 0, 3, 0x4, "AD_Channel"      },
+ //4,5 don't care 0xffc0 is max.
+    // {4 7, 32, 0x4, "AD_Low"      },
+    // {1, 0, 3, 0x4, "AD_Cmd"       },          // Write symbols from here test with 4 bits
+    // {0, 6, 15, 0x4, "AD_Result"      },       // TEST !! crosses bytes
+
+ { 0,  0x87, 0x5, 0, "AD_result_Hi"  },     // read
+ { 0,  0xc7, 0x5, 0, "WDG_Timer"     },     // write
+ { 0,  0x8f, 0x6, 0, "IO_Timer"      },     // word only, 7  not valid by itself
+ { 0,  0x87, 0x8, 0, "INT_Mask"      },
+
+/*
+0 HSO_PORT_2 enabled           AND 9  (next)
+1 I?O timer ovf
+2 A?D ready
+3 HSI data ready
+4 External int
+5 HSO PORT-1
+6 HSI 1
+7 HSI 2
+*/
+
+ { 0,  0x87, 0x9, 0, "INT_Pend"      },
+
+
+ /*
+0 HSO_PORT_2 pending
+1 I?O timer ovf
+2 A?D ready
+3 HSI data ready
+4 External int
+5 HSO PORT-1
+6 HSI 1
+7 HSI 2
 */
 
 
-DFSYM defsyms [] = {
-
- {1, 0, 0,  6,  6, 0x2, "CPU_OK"   },      // 8061 only and not sure if this should be kept.
- {1, 1, 0, 32, 32, 0x2, "LSO_Port"    },
- {1, 1, 0, 32, 32, 0x3, "LIO_Port"    },
- {1, 1, 0, 32, 32, 0x4, "AD_Low"      },
- {1, 1, 0, 32, 32, 0x5, "AD_High"     },
- {1, 1, 0, 32, 32, 0x6, "IO_Timer"    },
- {1, 0, 0, 32, 32, 0x7, "IO_Timer_Hi" },       // 8061 only
- {0, 1, 0, 32, 32, 0x7, "AD_Timed_Lo"  },      // 8065 only
- {1, 1, 0, 32, 32, 0x8, "INT_Mask"     },
- {1, 1, 0, 32, 32, 0x9, "INT_Pend"     },
-
- {1, 1, 0,  0,  0, 0xa, "HSO_OVF"      },      // both, bit 0
- {1, 1, 0,  1,  1, 0xa, "HSI_OVF"      },
- {1, 1, 0,  2,  2, 0xa, "HSI_Ready"    },
- {1, 1, 0,  3,  3, 0xa, "AD_Ready"     },      // both, bit 3
- {1, 0, 0,  4,  4, 0xa, "INT_Handling" }  ,           // 8061 only
- {0, 1, 0,  4,  4, 0xa, "MEM_Expand"    },            // 8065 only
- {1, 0, 0,  5,  5, 0xa, "INT_Priority"  },
- {0, 1, 0,  5,  6, 0xa, "HSO_Pcnt_OVF"  },
-
- {0, 1, 0,  6,  6, 0xa, "Timed_AD_Ready"},  // bits 6,7 not used in 8061
- {0 ,1, 0,  7,  7, 0xa, "HSO_Port_OVF"  },
 
 
- {1, 1, 0, 32, 32, 0xa, "IO_Status"     },
- {1, 1, 0, 32, 32, 0xb, "HSI_Sample"    },
- {1, 1, 0, 32, 32, 0xc, "HSI_Mask"  },
- {1, 1, 0, 32, 32, 0xd, "HSI_Data"  },
- {1, 1, 0, 32, 32, 0xe, "HSI_Time"  },
- {1, 0, 0, 32, 32, 0x10, "StackPtr"   },        // 8061 stack
 
- {0, 1, 0, 32, 32, 0xf, "AD_Timed_HI" },       // with 007 above
+ { 0,     0, 0xa, 0, "HSO_OVF"       },
+ { 1,     1, 0xa, 0, "HSI_OVF"       },
+ { 2,     2, 0xa, 0, "HSI_Ready"     },
+ { 3,     3, 0xa, 0, "AD_Ready"      },
+ { 4,     4, 0xa, 0, "Int_Servicing" },
+ { 5,     5, 0xa, 0, "Int_Priority"  },
+ { 0,  0x87, 0xa, 0, "IO_Status"     },
+
+ { 0,  0x87, 0xb, 0, "HSI_Sample"    },
+ { 0,  0x87, 0xc, 0, "HSI_Mask"      },
+ { 0,  0x87, 0xd, 0, "HSI_Data"      },     // read
+ { 0,  0xc7, 0xd, 0, "HSO_Cmd"       },     // write
+ { 0,  0x8f, 0xe, 0, "HSI_Time"      },     // word only, 0xf not valid by itself
+ { 0,  0x8f, 0x10,0, "StackPtr"     }
+
+};
 
 
- {0, 1, 0, 32, 32, 0x10, "HSO_IntPend1" },        // 8065 only
- {0, 1, 0, 32, 32, 0x11, "BANK_Select"  },
- {0, 1, 0, 32, 32, 0x12, "HSO_IntMask1" },
- {0, 1, 0, 32, 32, 0x13, "IO_Timer_Hi"  },
- {0, 1, 0, 32, 32, 0x14, "HSO_IntPend2" },
- {0, 1, 0, 32, 32, 0x15, "LSSI_A"       },
- {0, 1, 0, 32, 32, 0x16, "HSO_IntMask2" },
- {0, 1, 0, 32, 32, 0x17, "LSSI_B"       },
- {0, 1, 0, 32, 32, 0x18, "HSO_Status"   },
- {0, 1, 0, 32, 32, 0x19, "LSSI_C"       },
- {0, 1, 0, 32, 32, 0x1a, "HSI_Mode"     },
- {0, 1, 0, 32, 32, 0x1b, "HSO_UsedCnt"  },
- {0, 1, 0, 32, 32, 0x1c, "HSO_TimeCnt"  },
- {0, 1, 0, 32, 32, 0x1d, "LSSI_D"       },
- {0, 1, 0, 32, 32, 0x1e, "HSO_LastUsed" },
- {0, 1, 0, 32, 32, 0x1f, "HSO_SlotSel"  },
- {0, 1, 0, 32, 32, 0x20, "StackPtr"     },        // 8065 stacks
- {0, 1, 0, 32, 32, 0x22, "StackPtr2"    },
+//8065 SFR list
 
- {1, 1, 1, 32, 32, 0x4, "AD_Cmd"       },           // Write symbols from here
- {1, 1, 1, 32, 32, 0x5, "WDG_Timer"    },
- {0, 1, 1, 32, 32, 0x7, "AD_Timed_Cmd" },
- {0, 1, 1, 32, 32, 0xb, "IDDQ_Test"    },
- {1, 1, 1, 32, 32, 0xd, "HSO_Cmd"      },
- {0, 1, 1, 32, 32, 0xe, "HSO_Time"     },
- {0, 1, 1, 32, 32, 0x15, "LSSO_A"      },
- {0, 1, 1, 32, 32, 0x17, "LSSO_B"      },
- {0, 1, 1, 32, 32, 0x19, "LSSO_C"      },
- {0, 1, 1, 32, 32, 0x1d, "LSSO_D"      },
+//NB we meed some kind of marker here to stop runover into next byte for certain SFR registers.
+
+// 7 F 11 13 15 17 19 1D
+
+
+DFSYM d65syms [] = {
+
+ { 6,     6, 0x2 , 0, "CPU_OK"              },
+ { 0,     7, 0x2 , 0, "LSO_Port"            },
+ { 0,     7, 0x3 , 0, "LIO_Port"            },
+ { 0,   0x7, 0x4 , 0, "AD_Imm_Result_Lo"    },      // as byte
+ { 0,  0x8f, 0x4 , 0, "AD_Imm_Result"       },      // as word
+ { 0,  0xc7, 0x4 , 0, "AD_Cmd"              },      // Write
+ { 0,  0x87, 0x5 , 0, "AD_Imm_Result_High"  },
+ { 0,  0xc7, 0x5 , 0, "WDG_Timer"           },      // write
+
+ { 0,  0x87, 0x6 , 0, "IO_Timer_Lo"         },      // as byte
+ { 0,  0x8f, 0x6 , 1, "IO_Timer"            },      // overlap
+ { 0,  0x87, 0x7 , 0, "AD_Timed_Result_Lo"  },      // read
+ { 0,  0xc7, 0x7 , 0, "AD_Timed_Cmd"        },      // write
+
+ { 0,  0x87, 0x8 , 0, "INT_Mask"            },
+ { 0,  0x87, 0x9 , 0, "INT_Pend"            },
+
+ { 0,    0, 0xa, 0, "HSO_OVF"             },
+ { 1,    1, 0xa, 0, "HSI_OVF"             },
+ { 2,    2, 0xa, 0, "HSI_Ready"    },
+ { 3,    3, 0xa, 0, "AD_Imm_Ready"     },
+ { 4,    4, 0xa, 0, "MEM_Expand"    },
+ { 5,    5, 0xa, 0, "HSO_Read_OVF"  },
+ { 5,    6, 0xa, 0, "HSO_Pcnt_OVF"  },
+ { 6,    6, 0xa, 0, "Timed_AD_Ready"},
+ { 7,    7, 0xa, 0, "HSO_Port_OVF"  },
+
+ { 0,  0x87, 0xa , 0, "IO_Status"     },
+ { 0,  0x87, 0xb , 0, "HSI_Sample"    },
+ { 0,  0xc7, 0xb , 0, "IDDQ_Test Mode"    },       //write
+ { 0,  0x87, 0xc , 0, "HSI_Trans_Mask"  },
+ { 0,  0x87, 0xd , 0, "HSI_Data"  },
+ { 0,  0xc7, 0xd , 0, "HSO_Cmd"      },
+
+ { 0,  0x8f, 0xe , 1, "HSI_Time_Hold"  },
+ { 0,  0x87, 0xf , 0, "AD_Timed_Result_Hi" },
+
+ { 0,  0x8f, 0x10, 1, "HSO_Intpend1" },
+ { 0,  0x87, 0x11, 0, "BANK_Select"  },         //mem expand only
+
+ { 0,     3, 0x11, 0, "Data_Bank"    },  // mem expand only
+ { 4,     7, 0x11, 0, "Stack_Bank"   },
+
+ { 0,  0x8f, 0x12, 1, "HSO_IntMask1" },
+ { 0,  0x87, 0x13, 0, "IO_Timer_Hi"  },
+ { 0,  0x8f, 0x14, 1, "HSO_IntPend2" },
+ { 0,  0x87, 0x15, 0, "LSSI_A"       },       // read
+ { 0,  0xc7, 0x15, 0, "LSSO_A"       },       // write
+ { 0,  0x8f, 0x16, 1, "HSO_IntMask2" },
+ { 0,  0x87, 0x17, 0, "LSSI_B"       },
+ { 0,  0xc7, 0x17, 0, "LSSO_B"       },       // write
+ { 0,  0x8f, 0x18, 1, "HSO_State"    },
+ { 0,  0x87, 0x19, 0, "LSSI_C"       },
+ { 0,  0xc7, 0x19, 0, "LSSO_C"       },      // write
+ { 0,  0x87, 0x1a, 0, "HSI_Mode"     },
+ { 0,  0x87, 0x1b, 0, "HSO_UsedCnt"  },
+ { 0,  0x8f, 0x1c, 1, "HSO_TimeCnt"  },
+ { 0,  0x87, 0x1d, 0, "LSSI_D"       },
+ { 0,  0xc7, 0x1d, 0, "LSSO_D"       },       // write
+ { 0,  0x87, 0x1e, 0, "HSO_LastSlot" },
+ { 0,  0x87, 0x1f, 0, "HSO_SlotSel"  },
+
+ { 0,  0x8f, 0x20, 0, "StackPtr"     },
+ { 0,  0x8f, 0x22, 0, "AltStackPtr"  }
 
 };
 
@@ -812,17 +826,13 @@ HDATA fldata;                 // files data holder (declared in shared.h)
 * Regs (< 0x400) are mapped to Bank 8. Single banks are mapped completely in bank 8.
 */
 
-BANK bkmap[BMAX];               // 16 banks max.
+BANK bkmap[BMAX];               // 16 banks max.  15 if doing the +1 trick....
 
 // opcode and data bit arrays - each 0x8000 bytes malloced
 
-uint  *opcbit;       // opcode start
+//uint  *opcbit;       // opcode start
 //uint  *opdbit;       // opcode data
 
-// bit array for RBINV. Allows for 0-0x400 only
-// speeds up rbase searches, as most are invalid
-
-uint  rbinv[0x20];
 
 /* positions of print columns in printout
 *
@@ -864,21 +874,20 @@ uint  tscans  = 0;            // total scan count, for safety
 int   xscans  = 0;            // main loop (for investigation)
 uint  lowscan = 100000;       // rescan from here in scan_all
 int   opcnt   = 0;            // opcode count for emulate
-int   cmdopts    = 0;         // command options
-int   anlpass    = 0;         // number of passes done so far
+uint   cmdopts    = 0;         // command options              //maybe make this a long ?
+uint   anlpass    = 0;         // number of passes done so far
 
 int   numbanks;               // number of banks-1  (so 8061 is always 0)
 
 //int indent;               // TEST for code print layout
 uint  gcol;                   // where main print is at (no of chars = colno)
-uint  lastpad;                // last padded to (column)
-uint  lastcmt;                // last cmt state for end
 uint  wcol;                   // where warning output is at
+uint  glastpad;                // main last padded to (column)
+uint  wlastpad;                // warn last padded to (column)
+uint  lastcmt;                // last cmt state for end
+
 
 BASP basepars;
-
-//CMNT  fcmnt;               // comments holder from cmnts file
-//CMNT  acmnt;               // auto comments holder
 
 // instance holders (each hold one analysed opcode and all its operand data)
 
@@ -897,12 +906,12 @@ LBK  *emuargs[EMUGSZ];        // tracking argument LBKs, created in emulate, for
 char  flbuf [256];            // for directives and comment file reads
 char  nm    [128];            // for temp name construction, string hacking, etc.
 uint  plist [32];             // generic param list and column positions for structs
-SYM  *bitnames[16];           // sym names for bitwise ops
 
 FSTK  scanstack[STKSZ];       // fake stack holder for previous subr calls (for arg tracking)
 FSTK  emulstack[STKSZ];       // fake stack for emulation - emulate all parameter/argument getters
 CPS   cmnd;                   // command structure
 
+uchar *fbinbuf;               // bin file goes in here. Now not freed until end so that FM20M06 ...
 
 int recurse  = 0;             // recurse count check
 
@@ -955,6 +964,26 @@ uint wnprt (uint nl, const char *fmt, ...)
   while (nl--) fprintf(fldata.fl[2], "\n");
   return chars;             // useful for if statements
 }
+
+
+void w_pad(uint c)
+{
+// List file.  Pad out to required column number if not already there
+// and not already padded to. Add spaces if pstr (gcol) > lastpad
+uint i;
+
+  if  (c <= wcol && wcol > wlastpad) c = gcol+2;          // add 2 spaces...
+  for (i = wcol; i < c; i++)  fputc(' ',fldata.fl[2]);   // fprintf(fldata.fl[1], " ");
+  wcol = c;
+  wlastpad = c;                         // last padded column
+}
+
+
+
+
+
+
+
 
 float rnd(float fv)
 {
@@ -1011,10 +1040,10 @@ void p_pad(uint c)
 // and not already padded to. Add spaces if pstr (gcol) > lastpad
 uint i;
 
-  if  (c <= gcol && gcol > lastpad) c = gcol+2;          // add 2 spaces...
+  if  (c <= gcol && gcol > glastpad) c = gcol+2;          // add 2 spaces...
   for (i = gcol; i < c; i++)  fputc(' ',fldata.fl[1]);   // fprintf(fldata.fl[1], " ");
   gcol = c;
-  lastpad = c;                         // last padded column
+  glastpad = c;                         // last padded column
 }
 
 void wrap()
@@ -1023,8 +1052,8 @@ void wrap()
   // or lastpad column if not
   fprintf(fldata.fl[1], "\n");
   gcol = 0;
-  if (lastpad > CMNTPOSN)  lastpad = CMNTPOSN;
-  p_pad(lastpad);
+  if (glastpad > CMNTPOSN)  glastpad = CMNTPOSN;
+  p_pad(glastpad);
  }
 
 void p_run(char c, uint num)
@@ -1035,9 +1064,16 @@ void p_run(char c, uint num)
  if (gcol >= WRAPPOSN) wrap();
 }
 
+void p_run(uint nl, char c, uint num)
+{
+ uint i;
 
-
-
+ for (i = 0; i < num; i++) fprintf(fldata.fl[1], "%c",c);
+ gcol +=num;
+ if (gcol >= WRAPPOSN) wrap();
+ if (nl) gcol = 0;         // newline
+ while (nl--) fprintf(fldata.fl[1], "\n");
+}
 
 
 void pchar(char z)
@@ -1070,29 +1106,13 @@ uint pstr (uint nl,const char *fmt, ...)
 uint pbin(uint val, uint fend)
 {  // print val in binary
    // not sure about pfw yet ...
-  uint i, tval, pfw;    //, places;
+  uint i, tval, pfw;
 
-/*  tval = val;
-  i = 1;
-  places = 0;
-
-// where is
- while (tval)
-  {  // find ms '1' bit
-    if (tval & 1)  places = i;
-    tval >>= 1;
-    i++;
-  }
-
- if (pfw < cnv[size].bytes*8) pfw = cnv[size].bytes*8;  //min size
- if (pfw < places) pfw = places;   */
-
-//simpler
+// simple approach
 
 if (val & 0xf000)  pfw = 16;
 else if (val & 0x0f00)  pfw = 12;
 else if (val & 0x00f0)  pfw = 8;
-//else if (val & 0x000f)  pfw = 4;
 else pfw = 4;                // temp
 
  tval = val;
@@ -1110,78 +1130,33 @@ return pfw;
 
 }
 
-/*
-uint pdec(int val, uint size)
-{
-  // print val in decimal can be -ve
-   // not sure about pfw yet ...
-  uint i, pfw, base;    //, places;
-  int tval;
- const char digits[] = "01234567890ABCDEF";
- char *p;
-
-*  tval = val;
-  i = 1;
-  places = 0;
-
-// where is
- while (tval)
-  {  // find ms '1' bit
-    if (tval & 1)  places = i;
-    tval >>= 1;
-    i++;
-  }
-
- if (pfw < cnv[size].bytes*8) pfw = cnv[size].bytes*8;  //min size
- if (pfw < places) pfw = places;   /
-
-//simpler
-
-
- base = 10;
- tval = val;
- p = nm+127;
- *p-- = 0;
-
- do
-  {  // have to build digits backwards !!
-    i = tval % base;
-    tval /= base;
-    *p-- = digits[i];
-  } while (tval);
- pstr (0,"%s",p+1);
-
-
-*
-if (i <= pfw)
-      {
-       if ((i/4*4) == i) pchar(' ');    //space every 4
-       if (tval & 0x8000)  pchar('1'); else pchar('0');
-      }
-    tval <<= 1;
-  }
-
-return pfw; /
-
-}
-*/
 
 
 
-void paddr(uint addr,uint sp, uint (*prt) (uint,const char *, ...) )
+void paddr(uint addr,uint pfw, uint (*prt) (uint,const char *, ...) )
 {
   // printer for addresses with or without bank.
   // if single bank or no bank drop bank
   // For listing or debug output
 
+  // NOTE pfw used for listing layout.
+
+ uint chars;
+ chars = 0;
  if (!numbanks || g_bank(addr) == 0)
-     prt(0,"%x", nobank(addr));       // no leading zero
+     chars = prt(0,"%x", nobank(addr));       // no leading zeroes
  else
     {    // bank+1 used internally, leading zeroes
      prt(0,"%0x", (addr >> 16) -1);
      prt(0,"%04x", nobank(addr));
+     chars = 5;
     }
-  while (sp--) prt(0," ");
+
+    while (chars < pfw)
+     {
+       prt(0," ");
+       chars++;
+     }
 }
 
 
@@ -1206,7 +1181,7 @@ void closefiles(void)
 
 }
 
-// 32 bit flag setters (int array)
+/* 32 bit flag setters (int array)
 
 void set_flag(uint addr, uint *x)
  {
@@ -1228,6 +1203,7 @@ uint get_flag (uint addr, uint *x)
   return x[addr] & (1 << bit);
 }
 
+*/
 
 
 uint val_bank(uint bk)
@@ -1254,17 +1230,18 @@ BANK *mapbank(uint addr)
 
 uint bytes(uint fend)
 {  //size in bytes. From field end (assumes start at 0)
- fend &= 31;         //drop sign
- if (!fend) return 0;
+ fend &= 31;         // drop sign
+ //if (!fend) return 0;        //zero is valid !!
 
  return (fend / 8) + 1;
 }
 
-
+/*
 void set_opstart (uint ofst)
 {
   // 1 for code start
   BANK *b;
+
   b = mapbank(ofst);
   if (!b->bok) return;     // invalid
   set_flag(ofst,b->opcbt);
@@ -1279,60 +1256,6 @@ uint get_opstart (uint ofst)
   if (!b->bok) return 0;     // invalid
   return get_flag(ofst, b->opcbt);
 }
-
-
-/*
-void set_opdata (uint ofst, uint fend)
-{
-  // for opcode data
-  BANK *b;
-  uint i;
-
-  b = mapbank(ofst);
-  if (!b->bok) return;     // invalid
-  for (i = 0; i < bytes(fend); i++)
-      set_flag(ofst+i,b->opdbt);
-}
-
-
-void set_opdatar (uint start, uint end)
-{
-  // for opcode data
-  BANK *b;
-  uint i;
-
-  b = mapbank(start);
-  if (!b->bok) return;     // invalid
-  for (i = start; i <= end; i++)
-      set_flag(i,b->opdbt);
-}
-
-
-uint get_opdatar (uint start, uint end)
-{
-  // for all data and opcodes
-  BANK *b;
-  uint i;
-
-  b = mapbank(start);
-  if (!b->bok) return 0;     // invalid
-  for (i = start; i <= end; i++)
-     {
-      if (get_flag(i,b->opdbt)) break;
-     }
-  if (i <= end) return i;
-  return 0;
-}
-
-uint get_opdata (uint ofst)
-{
-  // for opcode data
-  BANK *b;
-
-  b = mapbank(ofst);
-  if (!b->bok) return 0;     // invalid
-  return get_flag(ofst, b->opdbt);
-}
 */
 
 
@@ -1344,25 +1267,17 @@ uint minadd(uint addr)
  BANK *b;
  b = mapbank(addr);
  if (!b->bok) return 0xffff;           // invalid
- return b->minpc;
+ return b->minromadd;
 }
 
-uint maxpcadd (uint addr)
+uint maxadd (uint addr)
 {   // max program address for this bank
  BANK *b;
  b = mapbank(addr);
  if (!b->bok) return 0;           // invalid
- return b->maxpc;
+ return b->maxromadd;
 }
 
-uint maxbkadd (uint addr)
-{   // max bank address for this bank
- BANK *b;
- b = mapbank(addr);
- if (!b->bok) return 0;           // invalid
-
- return b->maxbk;
-}
 
 
 uint val_rom_addr(uint addr)
@@ -1377,8 +1292,8 @@ uint val_rom_addr(uint addr)
 
  if (!b->bok) return 0;           // invalid
 
- if (addr < b->minpc) return 0;   // minpc = PCORG
- if (addr > b->maxpc) return 0;   // where fill starts
+ if (addr < b->minromadd) return 0;   // minpc = PCORG
+ if (addr > b->maxromadd) return 0;   // where fill starts
 
  return 1;        // within valid range, OK
  }
@@ -1571,7 +1486,7 @@ uchar* map_addr(uint *addr)
 
   b = mapbank(x);
 
-  if (!b->bok || x > b->maxbk) return NULL;
+  if (!b->bok || x > b->maxromadd) return NULL;
 
   return b->fbuf;         // valid address, return pointer
 
@@ -1656,15 +1571,11 @@ int upd_ram(uint add, int val, uint fend)
   uint i, sz;
   uchar *b;
 
-  // not right for later bins ??
-
-  if (add > minadd(add)) return 0;    // No writes to ROM
-  if ((add & 0xfe) == 0) return 0;    // R0/1, 100/1, 200, 300 all fixed at zero
+  if (nobank(add) <= max_reg() && (add & 0xfe) == 0) return 0;  // R0/1, 100/1, 200, 300 all fixed at zero
+  if (val_rom_addr(add)) return 0;                                // No writes to ROM
 
   b = map_addr(&add);
   if (!b) return 0;        // safety
-
-  add = nobank(add);
 
   ans = 0;
   sz = bytes(fend);                            // size in bytes
@@ -1703,29 +1614,24 @@ uint get_pn_opstart (uint ofst, int d)
   // get previous or next opcode start
   // d = 0 for previous, 1 for next
 
-  int cnt;
-  uint end;
-  BANK *b;
+  //this doesn't work if opcode not scanned !!
 
-  b = mapbank(ofst);
-  end = maxpcadd(ofst);
-  cnt = 0;
+  uint ix;
+  TOPC *c;
 
-// CAN scan THIS opcode if forwards, but not if backwards
-// max possible code length is 8 (bank+fe+long index)
+  get_opc(ofst);     // this opcode
 
-  while (ofst > 0 && ofst <= end)
-   {
-    if (d) ofst++;  else ofst--;
-    cnt++;
-    if (get_flag(ofst,b->opcbt)) break;
-    if (cnt > 8) break;          // no opcodes here
-   }
+  ix = chopcd.lastix;
 
-  if (ofst > end)  return 0;
-  if (cnt > 8) return 0;
+ if (d) ix++; else ix--;
 
-  return ofst;
+  if (ix >= chopcd.num) return 0;
+
+  c = (TOPC*) chopcd.ptrs[ix];
+
+  if (!bankeq(c->ofst,ofst)) return 0;
+
+  return c->ofst;
 
 }
 
@@ -1735,11 +1641,15 @@ uint find_opcode(int d, uint xofst, OPC **opl)
   // d = 0 for previous, 1 for next
   int x, indx;
 
-  *opl = 0;
+  if (opl) *opl = 0;
   xofst = get_pn_opstart (xofst, d);      // previous or next
 
   if (!xofst) return 0;
-  if (!val_rom_addr(xofst)) return 0;
+  if (!val_rom_addr(xofst)) return 0;     //probably redundant ??
+
+  if (!opl) return xofst;      //no opcode processing
+
+
 
   x = g_byte(xofst);
   indx = opcind[x];                       // opcode table index
@@ -1766,11 +1676,14 @@ uint find_opcode(int d, uint xofst, OPC **opl)
       else indx = 0;                    // prefix not valid
      }
 
-  if ((*opl)->p65 && !P8065) return 0;     // 8065 check only
+  if ((*opl)->p65 && !P8065) return 0;     // 8065 only
   if (!indx) return 0;
   *opl = opctbl + indx;                 // set opl for return
   return xofst;
  }
+
+
+
 
 void clr_inst(INST *x)
 {
@@ -1781,14 +1694,15 @@ void clr_inst(INST *x)
 }
 
 
-void do_one_opcode(uint xofst)
+void do_one_opcode(uint xofst, SBK* ts, INST *dest)
   {
-   tmpscan.curaddr = xofst;
-   tmpscan.start   = xofst;
-   tmpscan.stop    = 0;
-   do_code(&tmpscan,&sinst);
+   memset(ts,0,sizeof(SBK));    // safety clear
+   ts->curaddr  = xofst;
+   ts->nextaddr = xofst;
+   ts->start    = xofst;
+ //  set_scan_banks(ts,0);
+   do_code(ts,dest);
   }
-
 
 
 int find_pn_opcodes(int d, uint addr, int num, uint n, ...)     // number back from start
@@ -1807,24 +1721,26 @@ int find_pn_opcodes(int d, uint addr, int num, uint n, ...)     // number back f
     va_list ix;
 
     // assemble opcode sigixs into array
-    va_start(ix,n);
+ //   va_start(ix,n);
 
-    memset(plist,0,sizeof(plist));
+ //   memset(plist,0,sizeof(plist));
 
-    if (n > NC(plist)) n = NC(plist);
+ //   if (n > NC(plist)) n = NC(plist);
 
-    i = n;
-    while (i--)
-     {
-      plist[i] = va_arg(ix, int);
-     }
 
-    va_end(ix);
+// va arg not safe if subroutine calls happen
+  //  i = n;
+  //  while (i--)
+  //   {
+  //    plist[i] = va_arg(ix, int);
+  //  }
+
+ //   va_end(ix);
 
     // OK -now see if we can find a match
 
     xofst = addr;
-    if (d)  xofst--;        // allow use of supplied xofst if going forwards, not backwards
+ //   if (d)  xofst--;        // allow use of supplied xofst if going forwards, not backwards
     ans = 0;
     cnt = 0;
     // x->ofst must fall within specifed range (backwards from current). Allow for curinst
@@ -1843,30 +1759,31 @@ int find_pn_opcodes(int d, uint addr, int num, uint n, ...)     // number back f
 
       if (d && opl->sigix == 16)
         {        //allow jumps forwards
-          do_one_opcode(xofst);
+          do_one_opcode(xofst, &tmpscan, &sinst);
           xofst = sinst.opr[1].addr;
           xofst--;
         }
 
+      va_start(ix,n);                   //this seems to work
       for (i = 0; i < n; i++)
         {
-         if (opl->sigix == plist[i])  ans = xofst;
+           if (opl->sigix == va_arg(ix, int))
+              {ans = xofst; break;}
+     //    if (opl->sigix == plist[i])  ans = xofst;
         }
+      va_end(ix);
      }
 
     if (ans)
       {
-       do_one_opcode(xofst);
+       do_one_opcode(xofst, &tmpscan, &sinst);
       }
     else
       {
-       clr_inst(&sinst);
-
-//       memset(&sinst,0,sizeof(INST));
-//       sinst.opr[1].rgf = 1;
-//       sinst.opr[2].rgf = 1;
-//       sinst.opr[3].rgf = 1;
+       clr_inst(&sinst);         // just in case...
       }
+
+       //   va_end(ix);
     return ans;
  }
 
@@ -1900,7 +1817,7 @@ int mark_emu(SBK *s, uint ofst)
  return ans;
 }
    // CALL,
-   do_one_opcode(ofst);
+   do_one_opcode(ofst, &tmpscan, &sinst);
    x = get_scan(sinst.opr[1].addr, sinst.opr[1].addr);
 
    sub = get_subr(sinst.opr[1].addr);
@@ -1963,7 +1880,7 @@ void check_args(SBK *s, INST *c)
    r->inc = 1;                         // set inc
    set_rgsize(r,15);                   // incs are ALWAYS word
 
-   if (!s->scanning) return;
+   if (!s->proctype) return;                //scanning) return;
 
 #ifdef XDBGX
    DBGPRT(1,"R%x check args", o->addr);
@@ -2044,21 +1961,21 @@ int cellsize(ADT *a)
 }
 
 
-int listsize(CHAIN *x, uint start, int seq)
+int listsize(void *x)
 {
  // list size to next newline (last par).
  // may continue (via seq) from last newline
  // use chain.lastix in case it hits end
 
- return adtchnsize(x, start, seq, 1);
+ return adtchnsize(x, 1);
 
 }
 
-int totsize(CHAIN *x, uint start)
+int totsize(void *x)
 {
  // total size of aditional data chain
  // ignore newlines
- return adtchnsize(x, start, 0, 0);
+ return adtchnsize(x, 0);
 }
 
 
@@ -2080,7 +1997,7 @@ int add_args(LBK *l, int dreg, int args)
   DBGPRT(1,"in add_args");
   #endif
 
-  size = args - totsize(&chadnl,l->start);          // new args required
+  size = args - totsize(vconv(l->start));          // new args required
   reg = dreg;
   addr = l->start;
 
@@ -2089,7 +2006,7 @@ int add_args(LBK *l, int dreg, int args)
   while (size > 0)
    {
       ADT *a;
-      a = add_adt(&chadnl, l->start,256);   //new one
+      a = append_adt(vconv(l->start),0);   //new one
       if (a)
           {
 #ifdef XDBGX
@@ -2106,12 +2023,13 @@ int add_args(LBK *l, int dreg, int args)
            addr += a->cnt;
            reg  += a->cnt;           // next reg if list
            size -= a->cnt;
+   //        l->adt = 1;
           }
       else break;                    // not found
    }
 
    l->end  = l->start+args-1;        // set size correctly
-   l->size = totsize(&chadnl,l->start);             // safety check
+   l->size = totsize(vconv(l->start));             // safety check
   return 1;
 }
 
@@ -2159,7 +2077,7 @@ void do_args(SBK *s, FSTK *t)
 
    l = get_aux_cmd(t->origadd,0);                   // any command here ?
 
-   if (l && l->cmd)
+   if (l && l->usrcmd)
     {
       #ifdef XDBGX
         DBGPRT(0,"ARGS CMD SET for %x (%x-%x)", t->origadd, l->start, l->end);
@@ -2176,7 +2094,7 @@ void do_args(SBK *s, FSTK *t)
          #ifdef XDBGX
           DBGPRT(1,"Found ARGS %x-%x (%d)", l->start, l->end, l->size);
         #endif
-        tsz = totsize(&chadnl,l->start);         //debug test
+        tsz = totsize(vconv(l->start));         //debug test
          if (tsz != l->size)
            {
 #ifdef XDBGX
@@ -2207,67 +2125,80 @@ void do_args(SBK *s, FSTK *t)
 
 
 
-void do_rbcheck(SBK *s, INST *c)
+uint do_rbcheck(SBK *s, INST *c)
 {
   OPS *o;
   RBT *b;
   uint val;
 
-   if (!s->scanning) return;      // only in scan mode
-   if (!c->wop) return;           // no writes
+   //ans 1 to stop updates
 
-   o = c->opr + c->wop;           // destination operand (wop)
+   if (s->proctype != 1)  return 1;         //   scanning) return 1;        // only in scan mode
 
-// BUT with STW, c->wop could be indirect or indexed and be in [4]
+   o = c->opr + 3;                  // destination operand (NOT IF STX indirect !!)
+
+   if (!o->fend) return 1;            //not a write
+
+//still need to check for stw as it could be inx....
+
+/* BUT with STW, c->wop could be indirect or indexed and be in [4]
 // but the 'find' will always be full default range...........
-
   if (c->wop == 1)
      {
        if (c->opcsub == 2 && c->opr[1].inc) o = c->opr + 4;    // c->inc move to true register
-       if (c->opcsub == 3) return;                    // ignore indexed stx
+       if (c->opcsub == 3) return 0;                    // ignore indexed stx
      }
+  */
 
-   if (!o->rgf) return;
-   if (!val_general_reg(o->addr)) return;
-   if (get_flag(o->addr, rbinv)) return;    // already marked as invalid
+
+   if (!o->rgf) return 0;
+   if (!val_general_reg(o->addr)) return 0;
 
    b = get_rbt(o->addr,0);                 // is it an rbase (default)?
 
-   if (b && b->cmd)
+   if (b && b->usrcmd)
      {
        #ifdef XDBGX
-        DBGPRT(1,"cmd bans rbase update %x", o->addr);
+        DBGPRT(1,"usrcmd bans rbase update %x", o->addr);
        #endif
-       return;
+       return 1;
      }
 
-    val = databank(o->val,c);          // if val is an address, add bank
+    val = databank(o->val,c);          // val is an address, add bank
 
    // only add an RBASE if ldw or stw, immediate,WORD, not zero and not invalid
    // AD3w allowed for NEW rbase if other op is an rbase already (A9L 7096 ad3w)
 
    if (!b)
    {
-   if (c->opcsub == 1 && o->val > (int) max_reg() && bytes(o->wfend) == 2)           //o->wsize == 2)
+    if (c->opcsub == 1 && o->val > (int) max_reg() && bytes(o->fend) == 2)           //o->wsize == 2)
       {
        // ldw, stw or ad3w and immediate - new rbase candidate
        if (c->opcix == 41 || c->opcix == 49 || (c->opcix == 25 && c->opr[2].rbs))
-        b = add_rbase(o->addr, val,0,0xfffff);
+            b = add_rbase(o->addr, val,0,0xfffff);
       }
+    return 0;  // no rbase, or new one, update allowed
    }
-   else
-       {   // rbase already exists, invalidate if not same value or not immediate
 
-        if (b->val != val || c->opcsub != 1)
-           {
-             b->inv = 1;      // not same value
-             set_flag(o->addr, rbinv);
+// b is set,  rbase already exists, invalidate if not same value or not immediate
+
+    if (b->val != val || c->opcsub != 1)
+      {
+        b->ucnt++;
+        if (b->ucnt > 2)
+            {
+             if (!b->lock) b->inv = 1;      // not same value
+
              #ifdef XDBGX
-               DBGPRT(1,"Inv rbase R%x (%x)", o->addr, c->ofst);
+               DBGPRT(1,"Inv r%x (%x)", o->addr, c->ofst);
              #endif
-           }
-       }         // end check rbase
-   }
+            }
+       return 0;          //update allowed
+      }         // end check rbase
+  return 1;        //no update
+}
+
+
 
 
 void upd_watch(SBK *s, INST *c)
@@ -2276,29 +2207,31 @@ void upd_watch(SBK *s, INST *c)
 
   if (anlpass >= ANLPRT) return;            // ignore if in print phase
 
-  o = c->opr + c->wop;                      // destination entry (wop)
+  o = c->opr + 3;             //c->wop;                      // destination entry (wop)
 
-  do_rbcheck(s,c);
+  //but some opcodes update other things too....(norm, div)
 
-  if (s->scanning || s->emulating)
+  if (s->proctype)
     {
-       if (c->wop)
+       do_rbcheck(s,c);
+       if (o->fend)          // wop)
        {
-        upd_ram(o->addr,o->val,o->wfend);
+        upd_ram(o->addr,o->val,o->fend);
 
         #ifdef XDBGX
 
         if (anlpass < ANLPRT)
           {
            DBGPRT(0,"%05x ",s->curaddr);
-           if (s->emulating) DBGPRT(0, "E");
-           DBGPRT(0, "RAM %x = %x (%d)", o->addr, o->val, o->wfend);
+           if (s->proctype == 4) DBGPRT(0, "E");             //    emulating) DBGPRT(0, "E");
+           DBGPRT(0, "RAM %x = %x (%d)", o->addr, o->val, o->fend);
            if (c->opcsub == 2)  DBGPRT(0, "[%x]", c->opr[4].addr);      // for indirect
 
            //only place wop = 1 is for stx....
 
-           if (c->opcsub == 3 && c->wop != 1)  DBGPRT(0, "[%x]", c->opr[1].addr);      // for indexed
-           if (nobank(o->addr) >= PCORG) DBGPRT(0," WROM !!");
+           if (c->opcsub == 3 )  DBGPRT(0, "[%x]", c->opr[1].addr);      // for indexed
+            if (o->addr > minadd(o->addr) && o->addr < maxadd(o->addr)) DBGPRT(0," WROM !!");
+//  if (nobank(o->addr) >= PCORG) DBGPRT(0," WROM !!");
 
            DBGPRT(1,0);
           }
@@ -2317,9 +2250,17 @@ void upd_watch(SBK *s, INST *c)
        }
 
      if (o->inc)    // c->inc can only be set within opcsub == 2
-       {     // auto increment set - update value
-
-        o->val += bytes(o->rfend);       // autoinc is by op size
+       {     // auto increment set - update value - kill rbase if increment
+        RBT *b;
+        b = get_rbt(o->addr,0);
+        if (b && !b->usrcmd && !b->lock)
+          {
+           b->inv = 1;      // cannot increment an rbase
+                #ifdef XDBGX
+               DBGPRT(1,"Inv r%x (%x) ++", o->addr, c->ofst);
+             #endif
+           }
+        o->val += bytes(o->fend);       // autoinc is by op size
 
         // o->val &= getsizemask...camk[o->ssize];    // allow for overflow ?
         upd_ram(o->addr,o->val,15);         //word update
@@ -2358,9 +2299,10 @@ void prt_banks(uint (*prt) (uint,const char *, ...))
      if (x->bprt)
        {
         prt(0,"# bank  %d %5x ", x->dbank-1, x->filstrt);
-        paddr(x->minpc,1,prt);
-        paddr(x->maxbk,1,prt);
-        if (x->cmd) prt (0,"  # by user command");
+        paddr(x->minromadd,0,prt);
+        prt(0," ");
+        paddr(x->maxromadd,0,prt);
+        if (x->usrcmd) prt (0,"   # by user command");
 
         if (!x->bok) prt (0,"** ignored **");
         prt(1,0);
@@ -2383,8 +2325,8 @@ else
       x = bkmap + i;
       if (x->bok)
        {
-         DBGPRT(0,"%2d %5x %5x %5x %5x (%5x)", i, x->filstrt, x->minpc, x->maxbk,x->maxpc, x->filend);
-         DBGPRT(1,"  %x %x %x %x %x %x", x->bok, x->cmd,x->bkmask, x->cbnk, x->P65, x->dbank);
+         DBGPRT(0,"%2d %5x %5x %5x (%5x)", i, x->filstrt, x->minromadd, x->maxromadd, x->filend);
+         DBGPRT(1,"  %x %x %x %x %x %x", x->bok, x->usrcmd,x->bkmask, x->cbnk, x->P65, x->dbank);
        }
     }
   DBGPRT(1,0);
@@ -2393,10 +2335,10 @@ else
   for (i = 0; i < BMAX; i++)
     {
       x = bkmap + i;
-      if (!x->bok && x->minpc)
+      if (!x->bok && x->minromadd)
         {
-      DBGPRT(0,"%2d %5x %5x %5x %5x (%5x)", i, x->filstrt, x->minpc, x->maxbk,x->maxpc, x->filend);
-         DBGPRT(1,"  %x %x %x %x %x %x", x->bok, x->cmd,x->bkmask, x->cbnk, x->P65, x->dbank);
+      DBGPRT(0,"%2d %5x %5x %5x  (%5x)", i, x->filstrt, x->minromadd, x->maxromadd, x->filend);
+         DBGPRT(1,"  %x %x %x %x %x %x", x->bok, x->usrcmd,x->bkmask, x->cbnk, x->P65, x->dbank);
         }
      }
  DBGPRT(1,0);
@@ -2405,6 +2347,271 @@ else
 #endif
 
 }
+
+
+void find_data_bank(void)
+{
+    //set up a bank 1 (must only be a bank 8 to get here) via rbase registers........
+
+    /*
+    if bok bank1 then return;
+
+
+
+    */
+
+
+}
+
+
+void rbasp(SIG *sx, SBK *b)
+{
+
+  //add rbase entries from signature match
+
+  uint add, add2, reg, i, cnt;   //,xcnt,rcnt;
+  RBT *r;
+  uint  pc;
+  LBK* l;
+  ADT *a;
+
+  if (b) return;                  // no processing if subr set
+
+ // rcnt = chbase.num;              // may have rbases already. start at 'NEW' point
+  reg = (sx->vx[1] & max_reg());
+  add = sx->vx[3];
+  cnt = g_byte(add);              // no of entries in list
+
+  #ifdef XDBGX
+  DBGPRT(1,"In rbasp - begin reg %x at %x, cnt %d", reg, add, cnt);
+  #endif
+
+  add_cmd(add, add+1, C_BYTE|C_SYS,0);
+  l = add_cmd(add+2, add+(cnt*2)+1, C_WORD|C_SYS, 0);
+
+  if (chcmd.lasterr)
+   {
+     #ifdef XDBGX
+      DBGPRT(1,"Rbase Already Processed");
+     #endif
+    return ;
+   }
+
+
+  if (l)
+    { a = append_adt(vconv(l->start),0);
+  if (a)
+   { a->fend = 15;
+     a->vaddr = 1;
+     a->prdx = 0;
+     a->bank = basepars.datbnk >> 16;               // add + default data bank
+       a->pfw   = get_pfwdef(a);
+   }
+    }
+
+
+  pc= add+2;
+
+ //  check bank is correct ?
+    add = g_word(pc);                       // register pointer
+    add |= basepars.datbnk;                 // + default data bank
+    add2 = g_word(add);                     // check pointer is consistent with next entry
+    i = g_word(pc+2);                       // next in list
+
+  #ifdef XDBGX
+  if (i != add2)
+    {
+     // rbases point to different bank
+     DBGPRT(1,"RBASEDBNK %x != %x", i, add2);      //i = 3130
+     find_data_bank();
+    }
+  #endif
+
+  for (i = 0; i < cnt; i++)
+   {
+    add = g_word(pc);                       // register pointer
+    add |= basepars.datbnk;               // add + default data bank
+
+   if (nobank(add) < 0x2020) break;
+   add_cmd(add, add+1, C_WORD|C_SYS,0);
+   add2 = g_word(add);                     // check pointer is consistent with next entry
+    // also valid for last pointer for xcode
+
+   r =  add_rbase(reg,add,0,0xfffff);                     // dbg message in here....
+   if (r) r->lock = 1;                                    // not as high as user, next level
+   upd_ram(reg,add,15);
+   add_aux_cmd(add,add2-1, C_XCODE|C_SYS,0);          // and add an XCODE as this is data
+
+    reg+=2;
+    pc+=2;
+   }
+
+ /* now check pointers for XCODE directives for newly added entries
+
+ if (rcnt == chbase.num)  return ;     // nothing added
+
+ for (i = rcnt; i < rcnt+cnt; i++)
+   {
+     if (i >= chbase.num)  break;
+    r = (RBT*) chbase.ptrs[i];
+    n = (RBT*) chbase.ptrs[i+1];
+    pc = n->rval & 0xffff;
+
+    xcnt =0;
+
+    if (i >= rcnt+cnt-1)
+     {
+      n = (RBT*) chbase.ptrs[i-1];                  // get bank of last pointer
+      r->rval = (r->rval & 0xffff) | (n->rval & 0xf0000);
+      pc = g_word(r->rval);
+     }
+    else
+     {
+       while (pc != g_word(r->rval) && xcnt < BMAX && i < rcnt+cnt-1)
+       {
+        xcnt++;             // try to find matching bank...
+        if (bkmap[xcnt].bok)  r->rval = (r->rval & 0xffff) | (xcnt << 16);
+       }
+     }
+
+    if (xcnt >= BMAX)
+    {
+		#ifdef XDBGX
+        DBGPRT(1,"Matching rbase addr not found !");
+		#endif
+    }
+    else
+      {
+   //     if (xcnt) DBGPRTN("Rbase %x = %x",r->radd, r->rval);
+      //  set_cmd(r->rval, r->rval+1, C_WORD);
+     //   set_auxcmd(r->rval,pc-1, C_XCODE);          // and add an XCODE as this is data
+        add_data_cmd(val, val+1, C_WORD|C_CMD,0);
+        add_code_cmd(val,val2-1, C_XCODE);          // and add an XCODE as this is data
+      }
+   }
+   sx->done = 1;
+   #ifdef XDBGX
+   DBGPRT(1,"end rbasp");
+   #endif
+   return ;*/
+}
+
+
+/*
+void check_rbase(void)       //SIG *sx, SBK *dummy)
+{
+
+// rewrite to ditch the sig scan
+// CAN'T DO THIS - 0FAB does not use f0 as start point !!!
+ // must go back to signature !!
+
+  //check if rbase caclcon pointer entries are present
+  // 2020 num of levels (always 8)
+  // 2021 no of calibrations (1)
+  // 2022-20A1 cal pointers = 7f 0r 64 pointers
+  // presume 2060 for 8065.
+
+  int i, cnt,bank, bf;
+  RBT *r;
+  uint  pc, addr, val, val2;
+
+ #ifdef XDBGX
+  DBGPRT(1,"In chk_rbasp");
+  #endif
+
+// do NOT use numbanks, as CAN have single bank 8065 !!
+  if (P8065) addr = 0x82060; else addr = 0x82020;
+
+  cnt = g_byte(addr);                     // no of entries
+  bf = 0;
+  pc = addr+2;
+  val2 = g_word(pc);
+
+  if (cnt != 8)
+   {             // may be a bigger number somewhere....
+    #ifdef XDBGX
+     DBGPRT(1,"Not Found");
+    #endif
+   return;
+   }
+
+  bank = 8;
+
+  for (i = 1; i < cnt; i++)
+   {
+    addr = val2 | (bank << 16);
+    if (!val_data_addr(addr)) break;  // cancel all
+
+    val = g_word(addr);                    // value at pointed to
+    pc += 2;                               // still in bank 8
+    val2 = g_word(pc);                     // get next match (was addr)
+
+    if (val != val2)
+     {
+      if (!numbanks)  break;
+      // check if rbase points to another bank (typically b1)
+      if (!bf)
+        {
+         // not checked yet
+          for (bank = 0; bank < BMAX; bank++)
+              {
+                if (bkmap[bank].bok)
+                 {          // bank is OK
+                   addr = nobank(addr) | (bank << 16);
+                   val = g_word(addr);                    // value at pointed to
+                  if (val == val2) {bf = 1; break;}                      // bank found
+                 }
+              }
+        }
+     }
+   }
+
+  if (i < cnt)
+   {
+    #ifdef XDBGX
+    DBGPRT(1,"Not Found");
+    #endif
+    return;
+   }
+
+
+  #ifdef XDBGX
+    DBGPRT(1,"FOUND RBASE, points to bank %d", bank);
+  #endif
+
+  // OK, matched list and bank................
+
+  if (P8065) addr = 0x82062; else addr = 0x82022;
+
+  add_data_cmd(addr-2, addr-1, C_BYTE|C_CMD, 0);
+  add_data_cmd(addr, addr+(cnt*2)-1, C_WORD|C_CMD, 0);
+
+  pc = 0xf0;                                // always 0xf0 ?? NO !!!!
+  for (i = 0; i < cnt; i++)
+   {
+    val   = g_word(addr);                    // value at pointed to
+    val  |= (bank << 16);
+    val2  = g_word(val);
+    val2 |= (bank << 16);
+
+    r = add_rbase(pc,val,0,0);             // message in here....
+    if (r)
+      {
+       r->cmd = 1;
+       upd_ram(pc,val,2);                           // and set register
+       add_data_cmd(val, val+1, C_WORD|C_CMD,0);
+       add_code_cmd(val,val2-1, C_XCODE);          // and add an XCODE as this is data
+      }
+
+    pc+=2;
+    addr+=2;
+   }
+
+   #ifdef XDBGX
+   DBGPRT(1,"end rbasp");
+   #endif
+   return ;
+}*/
 
 
 
@@ -2447,7 +2654,7 @@ void prt_radix(ADT *a, int drdx, uint (*prt) (uint,const char *, ...))
 }
 
 
-void prt_adt(CHAIN *x, uint start, int drdx, uint (*prt) (uint,const char *, ...))
+void prt_adt(void *fid, int drdx, uint (*prt) (uint,const char *, ...))
 {
   // print additional params for any attached ADT chain, LBK mainly
   // the 'prt' argument allows print to debug or message files
@@ -2456,28 +2663,19 @@ void prt_adt(CHAIN *x, uint start, int drdx, uint (*prt) (uint,const char *, ...
 ADT *a;
 int nl;
 
-  a = start_adnl_loop(x,start);       //(ADT*) chmem(x,0);
-
-
-//if (start == 0x9279c)
-//{
-//DBGPRT(1,0);
-//}
-
-
   nl = 0;
 
-while ((a = get_next_adnl(x,a)))
+while ((a = get_adt(fid,0)))
   {
     if (a->cnt || prt != wnprt)
      {    // ignore if zero size, and not debug
        if (nl) prt(0,"| "); else prt(0,": ");
        if (a->newl) nl = 1; else nl = 0;      // newline is for END of block
 
-       if (a->ans)
-        {        //subroutine answer definition
-         prt(0," = %x ", a->data);
-        }
+    //   if (a->ans)
+     //   {        //subroutine answer definition
+   //      prt(0," = %x ", a->data);
+   //     }
 
        if (a->cnt > 1) prt(0,"O %d ", a->cnt);
        if (a->foff) prt(0,"D %x ", a->data);
@@ -2495,29 +2693,29 @@ while ((a = get_next_adnl(x,a)))
        prt_pfw(a,prt);                         // print fieldwidth if not default
        prt_radix(a,drdx,prt);                  // print radix if not default
 
-       if (a->flt) flprt("V ", a->fldat, prt);
+       if (a->div) flprt("/ ", a->fldat, prt);
        if (a->fnam) prt(0,"N ");
 
        #ifdef XDBGX
          if (prt == DBGPRT) prt (0,"[R%x, csz %d] ", a->dreg, cellsize(a));
        #endif
      }
-
+       fid = a;
   }
 }
 
 
 void prtflgs(int flgs,  uint (*prt) (uint,const char *, ...))
 {
-  // stop dupls by removing matched flags
+
  uint i;
 
  for (i = 0; i < NC(mopts); i++)
    {
-     if ((flgs & mopts[i]) == mopts[i])
+     if (flgs & mopts[i])
      {
-       prt(0, ": %s ", optstrs[i]);
-       flgs &= ~mopts[i];
+       prt(0, ": %s ", optstrs[i].str);
+   //    flgs &= ~mopts[i];
       }
    }
 }
@@ -2528,6 +2726,10 @@ void prt_opts(void)
  // print opt flags to msg file
  wnprt(0,"setopts  " );
  prtflgs(cmdopts, wnprt);
+  wnprt(2,0);
+  wnprt(0,"# not set " );
+ prtflgs(~cmdopts, wnprt);
+
  wnprt(2,0);
 }
 
@@ -2559,16 +2761,56 @@ void prt_glo(SUB *sub, uint (*prt) (uint,const char *, ...))
         x = 1;
        }
 
-  s = get_spf(sub->start);
+  s = get_spf(vconv(sub->start));
 
   if (!s) return;          // no special funcs
 
   if (!x) prt(0," $");
+/*
+{ empty , 6,
+  "uuyflu", 3,
+  "usyflu" ,3,
+  "suyflu", 3,
+  "ssyflu", 3,
 
-  prt(0," F %s %x", spfstrs[s->spf-4],s->addrreg);
+  "uuwflu", 3,
+  "uswflu", 3,
+  "suwflu", 3,
+  "sswflu", 3,
+
+  "uytlu" , 3,
+  "sytlu" , 3,
+  "uwtlu" , 3,
+  "swtlu" , 3,
+  0       , 0,
+};*/
+
+if (prt == wnprt)
+{
+   if (s->spf == 4)
+   {
+    x = 1;                        //  base of func names
+    if ((s->fendin  & 31) > 7)   x += 4;   //  word row
+   }
+   if (s->spf == 5)
+   {
+   x =  9;
+   if ((s->fendin  & 31) > 7)   x += 2;   //  word row
+   }
+   if (s->fendout & 32) x += 1;          // sign out
+   if (s->fendin & 32)  x += 2;          // sign in
+  prt(0," F %s %x", spfstrs[x].str      , s->addrreg);
 
   // tab subroutines need extra par
-  if (s->spf > 12) prt (0," %x", s->sizereg);
+  if (s->spf == 5) prt (0," %x", s->sizereg);
+}
+else
+{     // debug
+prt(0, "F %d,  %x, %x  ", s->spf, s->addrreg, s->sizereg);
+prt(1, "I %x, O %x,  (%x)",s->fendin, s->fendout, s->fromadd);
+}
+
+
 
 }
 
@@ -2576,38 +2818,40 @@ void prt_glo(SUB *sub, uint (*prt) (uint,const char *, ...))
 void prt_rbt ( uint (*prt) (uint,const char *, ...))
 {
   RBT *r ;
-  uint ix, v;
+  uint ix;
 
   for (ix = 0; ix < chbase.num; ix++)
    {
     r = (RBT*) chbase.ptrs[ix];
 
-    v = get_flag(r->reg,rbinv);
+
 // if (get_flag(o->addr, rbinv)) return;    // already marked as invalid
 
         if (prt == wnprt)
           {
-           if (!r->inv && !v)
+           if (!r->inv)
              {      //not invalid or flagged invalid
               prt(0,"rbase %x " , r->reg);
-              paddr(r->val,1,prt);
+              paddr(r->val,0,prt);
               if (r->rstart)
                {
                 prt(0,"  ");
-                paddr(r->rstart,1,prt);
+                paddr(r->rstart,0,prt);
+                prt(0,"  ");
                 paddr(r->rend,0,prt);
                }
-              if (r->cmd) prt(0,"       # cmd");
+              if (r->usrcmd) prt(0,"        # user cmd");
               prt(1,0);
             }
          }
         else
           {
            prt(0,"rbase %x %x" , r->reg , r->val);
-           prt(0,"  %x %x", r->rstart, r->rend);
-           if (r->inv) prt (0, "  INV");
-           if (v) prt(0,"  INVFLAG");
-           if (r->cmd) prt(0,"       # cmd");
+           prt(0,"  %x %x  (%d)", r->rstart, r->rend, r->ucnt);
+
+           if (r->inv) prt (0, " INV");
+           if (r->usrcmd) prt(0," cmd");
+            if (r->lock)   prt(0," rbase");
         prt(1,0);
           }
    }
@@ -2640,7 +2884,8 @@ void prt_psw (void)
     r = (PSW*) chpsw.ptrs[ix];
 
     wnprt(0,"pswset ");
-    paddr(r->jstart,1,wnprt);
+    paddr(r->jstart,0,wnprt);
+    wnprt(0,"  ");
     paddr(r->pswop ,0,wnprt);
     wnprt(1,0);
    }
@@ -2652,27 +2897,30 @@ void prt_psw (void)
  *  Symbols
  ************************************************/
 
-int new_symname (SYM *xsym, const char *fnam)
+int new_symname (SYM *xsym, cchar *fnam)
  {
    // replace symbol name
    // symname cannot be NULL
 
   int oldsize;
 
-  if (xsym->cmd) return 0;                  // can't rename if set by CMD
   if (!fnam || !*fnam) return 0;
+  if (xsym->usrcmd && xsym->name) return 0;                  // can't rename if set by CMD
 
-  oldsize = xsym->tsize;                    // old size
-  xsym->tsize = strlen (fnam) + 1;          // include null, strlen does not...
 
-  if (xsym->tsize > SYMSZE) xsym->tsize = SYMSZE;   // max storage size is 64
+  oldsize = xsym->symsize;                    // old size
+  xsym->symsize = strlen (fnam) + 1;          // include null, strlen does not...
 
-  xsym->name = (char *) mem (xsym->name,oldsize,xsym->tsize);  // get new sym size
+  if (xsym->symsize > SYMSZE) xsym->symsize = SYMSZE;   // max storage size is 64
 
-  if (xsym->name)  strncpy (xsym->name, fnam, xsym->tsize);    // and replace it
-  xsym->name[xsym->tsize-1] = '\0';                            // safety
+  xsym->name = (char *) mem(xsym->name,oldsize,xsym->symsize);  // get new sym size
 
-  return xsym->tsize;
+  if (xsym->name)
+     {
+      strncpy (xsym->name, fnam, xsym->symsize-1);                   // and replace it
+      xsym->name[xsym->symsize-1] = '\0';                            // safety
+     }
+  return xsym->symsize;
  }
 
 
@@ -2686,24 +2934,16 @@ void prt_cmd(LBK *c, uint (*prt) (uint,const char *, ...))
        {         // real printout
          if (nobank(c->start) < PCORG) return;    // safety
          if (c->fcom == C_TIMR) prt (0,"# ");
-         prt(0,"%-7s ", cmds[c->fcom]);
-         paddr(c->start,1,prt);
+         prt(0,"%-7s ", cmds[c->fcom].str);
+         paddr(c->start,0,prt);
+           prt(0,"  ");
          paddr(c->end  ,0,prt);
        }
      else
       {   // debug printout
-          prt(0,"%-7s %x %x", cmds[c->fcom], c->start,c->end);
+          prt(0,"%-7s %x %x", cmds[c->fcom].str, c->start, c->end);
       }
 
-/*     if (t->namex)         // name expected
-      {
-       x = get_sym(0, c->start,-1,0);
-       if (x)
-        {
-         prt(0,"  %c%s%c  ", '\"', x->name, '\"');  // TEMP
-         x->noprt = 1;        // printed this symbol
-        }
-      }  */
 
    // global options here
 
@@ -2722,10 +2962,10 @@ void prt_cmd(LBK *c, uint (*prt) (uint,const char *, ...))
        prt (0," A");
       }
 
-   if (c->fcom == C_TABLE || c->fcom == C_FUNC) prt_adt(&chadnl, c->start,1, prt);
-   else   prt_adt(&chadnl, c->start,0, prt);
+   if (c->fcom == C_TABLE || c->fcom == C_FUNC) prt_adt(vconv(c->start),1, prt);
+   else   prt_adt(vconv(c->start),0, prt);
 
-   if (c->sys) { prt(0,"     # auto");}
+   if (c->usrcmd) { prt(0,"     # user cmd");}
    prt(1,0);
   }
 
@@ -2740,8 +2980,9 @@ void prt_cmds(uint (*prt) (uint,const char *, ...))
  LBK *cmd, *aux;
 
  ixa = 0;
+ aux = 0;
 
- aux = (LBK*) chaux.ptrs[ixa];           // first aux
+if (chaux.num > 0) aux = (LBK*) chaux.ptrs[ixa];           // first aux (what if there isn't any ??
 
  for (ixc = 0; ixc < chcmd.num; ixc++)
     {
@@ -2767,34 +3008,51 @@ SYM *new_autosym (uint ix, int addr)
 
 // add auto sym with address
 // all of these are whole read symbols
+// add markers to ix
+
+// anames has 17 entries
+
+/*
+#define C_SIGN   0x20     //  symbols and fields signed
+#define C_WRT    0x40     // write flag
+#define C_NBT    0x80     // 'no bits' flag for symbols
+
+
+#define C_USR    0x200     // by user command (can't change or merge)
+#define C_SYS    0x400     // for system 'base generated' cmds
+#define C_REN    0x800     // rename of symbol is allowed, even if duplicate
+
+*/
+
+
 
   SYM *xsym;
-  int c;
+  int c, opts;
 
   if (anlpass >= ANLPRT) return 0;
+
+
+  opts = (ix & 0xf00);
+  opts |= C_SYS;
+  opts |= C_WHL;
+  ix &= 0xff;
 
   if (ix >= NC(anames)) return NULL;              // safety check
 
   if (!(cmdopts & anames[ix].mask)) return NULL;  // autoname option not set
+
 
   // make name first
 
   c =  sprintf(nm,   "%s", anames[ix].pname);
   // add address
   c += sprintf(nm+c, "_");
-  if (numbanks)  c += sprintf(nm+c, "%x", (addr >> 16) -1);
-  c += sprintf(nm+c, "%04x", nobank(addr));
-  //else           c += sprintf(nm+c, "_%05x", addr);                 // include bank
+  if (numbanks)  c += sprintf(nm+c, "%x", (addr >> 16) -1);      // bank
+  c += sprintf(nm+c, "%04x", nobank(addr));                     //address
 
-  xsym = add_sym(nm, C_SYS, addr,32, 32, 0,0xfffff);     // add new (read) symbol
+  xsym = add_sym(nm, addr,0, opts|7, 0,0xfffff);     // add new (whole,read) symbol
 
-  if (xsym->cmd) return xsym;               // can't change a cmd sym
-
-  if (ix > xsym->xnum)
-    {     //only if higher level autonumber
-      new_symname (xsym, nm);
-      xsym->xnum = ix;
-    }
+  if (xsym->usrcmd) return xsym;               // can't change a cmd sym
 
   return xsym;
 }
@@ -2852,7 +3110,7 @@ int do_table_sizes(uint start, int scols, uint *apnd, uint maxend)
 
 #ifdef XDBGX
   DBGPRT(2,0);
-  DBGPRT(1,"do data table sizes for %x-%x cols %d, max %x", start, apend, scols, maxend);
+  DBGPRT(1,"do table data sizes for %x-%x cols %d, max %x", start, apend, scols, maxend);
  #endif
 
  for (j = 0; j < 2; j++)
@@ -3007,17 +3265,17 @@ if (ansrow > 16 || ansscore == 0) ansrow = 0;
  return ansrow;
 }
 
-LOOP l;
+//LOOP l;
 
 void turn_dtk_into_data(void)
 {
 
-  uint ix, cix, dix, dcmd, start,lstart;    //, end;
+  uint ix, dcmd, start,lstart;    //cix,dix , end;
   uint push;
-  TRK *d, *n;
+  TRK *d;         //, *n;
   DTD *a;
   LBK *k, *p;
-  JMP* j, *m;
+ // JMP  *m;
 
 #ifdef XDBGX
   DBGPRT(2,0);
@@ -3095,7 +3353,7 @@ void turn_dtk_into_data(void)
   for (ix = 0; ix < chdtk.num; ix++)
    {
     d = (TRK*) chdtk.ptrs[ix];
-    dcmd = bytes(opctbl[d->opcix].rfend1);       //may add an fcom instead...
+    dcmd = bytes(opctbl[d->opcix].fend1);       //may add an fcom instead...
     if (opctbl[d->opcix].sigix == 14) push = 1; else push = 0;
 
     // find attached data start(s)
@@ -3129,7 +3387,7 @@ void turn_dtk_into_data(void)
                if (p->fcom == dcmd)
                 {
 #ifdef XDBGX
-                 DBGPRT(1,"duplicate command %x %s", start, cmds[dcmd]);
+                 DBGPRT(1,"duplicate command %x %s", start, cmds[dcmd].str);
 #endif
                  start = 0;                         // kill insert
                  break;
@@ -3138,7 +3396,7 @@ void turn_dtk_into_data(void)
                if ( dcmd >= C_BYTE && dcmd <= C_LONG && p->fcom >= C_TABLE && p->fcom <= C_TIMR)
                 {
 #ifdef XDBGX
-                 DBGPRT(1,"overlap struct %x %s", start, cmds[dcmd]);
+                 DBGPRT(1,"overlap struct %x %s", start, cmds[dcmd].str);
 #endif
                  start = 0;
            //      a->olp = 1;
@@ -3147,7 +3405,7 @@ void turn_dtk_into_data(void)
                else
                 {
 #ifdef XDBGX
-                 DBGPRT(1,"overlap %x %s from %x with %x-%x %s", a->stdat, cmds[dcmd], d->ofst, p->start, p->end,cmds[p->fcom]);
+                 DBGPRT(1,"overlap %x %s from %x with %x-%x %s", a->stdat, cmds[dcmd].str, d->ofst, p->start, p->end,cmds[p->fcom].str);
 #endif
                  if (p->fcom == C_CODE && !push)         //push
                    {
@@ -3176,10 +3434,10 @@ if (p->end-start < 16 )  //&& start > 0x9201f)
 
 
 
-        if (start && d->ainc)
+      /*  if (start && d->ainc)
           {
             // inc is set, look for a loop. may be better after an imd ??? will be before the inc ??
-            j = 0;
+        //    j = 0;
             cix = get_jump(&chjpf,d->ofst);       // from jump (after inc opcode)
             while (cix < chjpf.num)
              {
@@ -3195,7 +3453,7 @@ if (p->end-start < 16 )  //&& start > 0x9201f)
 
              }
 
-           //    j = (JMP*) chjpt.ptrs[cix];   // candidate jump
+         *    j = (JMP*) chjpt.ptrs[cix];   // candidate jump
 
 
                if (j && j->back)          // && j->fromaddr > d->ofst)
@@ -3235,7 +3493,7 @@ while (dix && dix < chdtk.num)
 
 }
 
-}
+} */
 /*go back to find start address of designated register..............
 // so this must be FROM ordered..............
 
@@ -3288,7 +3546,7 @@ while (dix && dix < chdtk.num)
         if (!k)
           {
 #ifdef XDBGX
-           DBGPRT(1,"no cmd [%d] (%x %s)", ix, start, cmds[dcmd]);
+           DBGPRT(1,"no cmd [%d] (%x %s)", ix, start, cmds[dcmd].str);
 #endif
           }
        }
@@ -3408,7 +3666,7 @@ void add_opr_data(INST *c)
 
   if (addr)
      {            // addr must be val_rom_addr
-      k = add_cmd (addr,  addr+bytes(o->rfend)-1, bytes(o->rfend), c->ofst);       // add data entry
+      k = add_cmd (addr,  addr+bytes(o->fend)-1, bytes(o->fend), c->ofst);       // add data entry
   //    if (k)
  //      {    // add offset and type for later checks
  //        k->opcsub = c->opcsub;
@@ -3493,9 +3751,12 @@ void end_scan (SBK *s)
 
 
   #ifdef XDBGX
+   if (s->proctype)                       // scanning || s->emulating)
+     {
    DBGPRT(0,"END scan %x at %x", s->start, s->nextaddr);
    if (s->inv)  DBGPRT (0," Invalid Set");
    DBGPRT(1,0);
+     }
   #endif
 
 }
@@ -3506,10 +3767,38 @@ for varibale bit fields (0-31)
 Auto negates via sign (fend & 32) if required
 ***********************************/
 
+
+int scale_val (int val, uint fstart, uint fend)
+{
+  // separate 'scale_value' used for pp_adt as well as g_val
+
+  int mask, sign;
+
+  sign = (fend & 0x20);                        // keep sign state
+
+  if (fstart == fend) sign = 0;                // no sign for single bit
+
+  if (fstart) val >>= fstart;                  // shift down (start bit -> bit 0)
+  mask = 0xffffffff >> (31 + fstart - fend);   // make mask
+  val &= mask;                                 // and extract required field value
+
+  if (sign)
+    {                                          // signed set
+     sign = 1 << fend;                         // sign mask
+     if (val & sign)
+       {                                        // if negative
+        mask = ~mask;                           // flip for set negative
+        val = val | mask;                       // add mask for -ve
+       }
+    }
+
+return val;
+}
+
+
 int g_val (uint addr, uint fstart, uint fend)
 {                   // addr is encoded bank | addr
-  int val, start,stop;
-  uint mask, sign;
+  int val, start,end;
   uchar *b;
   uchar *t;
 
@@ -3518,47 +3807,36 @@ int g_val (uint addr, uint fstart, uint fend)
   if (!b)  return 0;               // map to required bank
   t = (uchar*) &val;
 
-  fstart &= 31;                    // max field
-  sign = (fend & 32);
-  fend &= 31;
+  start = (fstart & 0x1f);        // max fields
+  end   = (fend   & 0x1f);        // use end (fend has sign)
 
-  if (fstart > fend) return 0;     // safety
+  if (start > end)  return 0;     // safety check
 
-  stop   = fend   /8;
-  start  = fstart /8;
-
-  if (fend == fstart) sign = 0;         // no sign for single bit
+  start = start / 8;
+  end   = end   / 8;
 
   val = 0;
 
-  while (start <= stop)
+  while (start <= end)
     {
      t[start] = b[addr+start];
      start++;
     }
 
-  // do the field extract and sign
+  val = scale_val(val, fstart, fend);
 
- // size = (fend - fstart) + 1;      // field width
- // mask = 0xffffffff >> (32 - size);              // make mask
-
-
-  if (fstart) val >>= fstart;                  // shift down (start bit -> bit 0)
-  mask = 0xffffffff >> (31 + fstart - fend);   // make mask
-  val &= mask;                                 // and extract required field
-
-  // set sign, reusing mask
-
-  if (sign)
-    {
-     mask = ~mask;                           // flip for set negative
-     sign = 1 << fend;                       // sign mask
-     if (val & sign) val = val | mask;
-    }
-
-return val;
+  return val;
 
 }
+
+
+
+int abank(ADT *a, int val)
+{
+   if (val > (int) max_reg()) val |= (a->bank << 16);
+ return val;
+}
+
 
 
 
@@ -3569,7 +3847,7 @@ int decode_addr(ADT *a, uint ofst)
 
   // HERE would be where we go to the subfields setup
 
-// ALSO have to assume that reqd bank is in (top of) data
+// ALSO have to assume that reqd bank is set
 
   val = g_val (ofst, a->fstart, a->fend);   // offsets may be SIGNED
 
@@ -3579,16 +3857,21 @@ int decode_addr(ADT *a, uint ofst)
   if (a->foff)
     {   // fixed offset (assume bank in a->data)
      val += a->data;
-     return val;
+     val &= 0xffff;           // wrap in 16 bits
+
+  //   return val;            // no, may have bank
     }
 
-  switch (a->enc)
+  if (a->enc)
    {
+       // set a->vaddr ??
+     switch (a->enc)
+     {
     case 1:           // 1 and 3 - only if top bit set
     case 3:
      if (! (rb & 0x8000))
        {
-        if (val > (int) max_reg()) val |= g_bank(a->data);
+        val = abank(a,val);            // if (val > (int) max_reg()) val |= g_bank(a->bank);
         return val;
        }
      off = val & 0xfff;
@@ -3611,28 +3894,20 @@ int decode_addr(ADT *a, uint ofst)
 
     default:
      break;
-   }
+     }
 
-  if (a->enc)
-   {
     r = get_rbt((a->data & 0xff) + rb, ofst);
     if (r)   val = off + r->val;        // reset op
     #ifdef XDBGX
     else
     DBGPRT(1,"No rbase for address decode! %x (at %x)", a->data+rb, ofst);
     #endif
-   }
+   }           //end a->enc
 
- else
-  if (a->vaddr)
-   {    // value is  address
-   // val |= g_bank(a->data);   // add bank from start addr....not necessarily right
- if (val > (int) max_reg()) val |= g_bank(a->bank);
-     // g-bank(a->addr);  ?
+  if (a->vaddr || a->fnam)           // address or name
+   {    // value is  an address
+     val = abank(a,val);        // if (val > (int) max_reg()) val |= g_bank(a->bank << 16);
    }
-
-// if (val > max_reg()) val |= g_bank(a->data);
- // if (!numbanks && val > max_reg() ) < 0x400) val = nobank(val) | 0x80000;    //   force bank 8 for regs
 
   return val;
 }
@@ -3641,12 +3916,13 @@ int decode_addr(ADT *a, uint ofst)
 void avcf (SIG *z, SBK *blk)
   {
     int start, addr, val, bk;
+    SBK *x;
     LBK *s;
     ADT *c;
 
-    if (!blk->scanning) return;
+    if (!blk->proctype)  return;          //scanning) return;
 
-    addr = z->v[4];
+    addr = z->vx[4];
     start = addr;
     bk = g_bank(z->start);
     #ifdef XDBGX
@@ -3656,8 +3932,14 @@ void avcf (SIG *z, SBK *blk)
      {
         val = g_word(addr);
         val |= bk;
-        if (!val_rom_addr(val)) break;
-        add_scan(val, J_SUB,0);
+        x = add_scan(val, J_SUB,0);
+
+        if (!x)
+        {     //invalid scan for last addr value.
+            addr +=2;
+            break;
+        }
+
         addr -= 2;
      }
     s = add_cmd (addr, start, C_VECT, z->start);
@@ -3665,8 +3947,9 @@ void avcf (SIG *z, SBK *blk)
     if (s)
      {
      // do bank here......
-       c = add_adt(&chadnl, s->start,1);    // only one
+       c = append_adt(vconv(s->start),0);
        if (c) {
+   //        s->adt = 1;
        if (bk == g_bank(addr)) c->cnt = 0;
        c->bank = bk >> 16;                 // always add bank
        }
@@ -3722,7 +4005,7 @@ int find_list_base(INST *c, uint ix, uint num)
                   }
               }
 
-             if (sinst.sigix == 6 && sinst.opr[sinst.wop].addr == reg)   //2].addr == reg)
+             if (sinst.sigix == 6 && sinst.opr[3].addr == reg)          // sinst.opr[sinst.wop].addr == reg)
               {  // ad2w, ad3w
                if (sinst.opcsub == 1)
                  {                              // found add for register
@@ -3755,10 +4038,10 @@ void match_opnd(uint xofst, OPC *opl, SFIND *f)
 
        if (opl->sigix == 12)
         {  // ldw - get operands
-         do_one_opcode(xofst);
-         s = sinst.opr + sinst.wop;       // where the write op is
+         do_one_opcode(xofst, &tmpscan, &sinst);
+         s = sinst.opr + 3;                        // sinst.wop;       // where the write op is
 
-         m = reg_eq(f->rg[ix], s->addr,s->wfend);
+         m = reg_eq(f->rg[ix], s->addr,s->fend);
 
          if (m)
            {        // found register [2] = [1] for ldx
@@ -3786,7 +4069,7 @@ void match_opnd(uint xofst, OPC *opl, SFIND *f)
 
        if (opl->sigix == 6 && opl->nops == 3)
          {      // ad3w (ad2w ??)
-          do_one_opcode(xofst);
+          do_one_opcode(xofst, &tmpscan, &sinst);
 
           if (sinst.opr[3].addr == f->rg[ix])
            {
@@ -3849,17 +4132,19 @@ void set_xfunc(SFIND *f)
 
   ADT *a;
   LBK  *k;
-  AUTON *nm;
+  SPF *p;
+ // AUTON *nm;
 
-  nm = anames+f->spf;
+ // nm = anames+f->spf;                no!!
 
+  p = f->spf;
   #ifdef XDBGX
-  DBGPRT(1,"Check Func %x, I %x, O %x", f->ans[0], nm->fendin, nm->fendout);
+  DBGPRT(1,"Check Func %x, I %x, O %x", f->ans[0], p->fendin, p->fendout);
   #endif
 
 
 
-  fendin = nm->fendin;      //local as it may change
+  fendin = p->fendin;      //local as it may change
   startval = get_startval(fendin);     //cnv[szin].startval;      //(~casg[szin]) & camk[szin];     // start value unsigned
 
   val = g_val(f->ans[0],0, fendin);         // read first input value (as unsigned)
@@ -3877,34 +4162,38 @@ void set_xfunc(SFIND *f)
      if (val != startval)
       {
        #ifdef XDBGX
-         DBGPRT(1,"func %x Invalid start value %x, expect %x", f->ans[0], val, startval);
+         DBGPRT(1,"func %x Invalid %x expect %x", f->ans[0], val, startval);
        #endif
        return ;
       }
     }
 
-    rowsize = bytes(fendin) + bytes (nm->fendout);
+    rowsize = bytes(fendin) + bytes (p->fendout);
 
     k = add_cmd (f->ans[0], f->ans[0] + rowsize-1, C_FUNC, 0);
 
-    if (k && !k->cmd)
-      {                                     // cmd OK, add size etc (2 sets for func)
+  if (!k) return;
+  if (k->usrcmd) return;
+  if (chcmd.lasterr) return;
+
+  // cmd OK, add size etc (2 sets for func)
 
        new_autosym(3,f->ans[0]);            // auto func name, can fail
        k->size = rowsize;                   // size of one row
 
-       a = add_adt(&chadnl,k->start,1);
+       a = append_adt(vconv(k->start),0);
        a->cnt = 1;
        a->fend = fendin;                     // size, word or byte
        a->pfw   = get_pfwdef(a);
        a->prdx = 2;                         // default decimal print
 
-       a = add_adt(&chadnl,k->start,2);
+       a = append_adt(a,0);
        a->cnt = 1;
-       a->fend = nm->fendout;              // size out
+       a->fend = p->fendout;              // size out
        a->pfw =  get_pfwdef(a);
        a->prdx = 2;                         // default decimal print
-      }
+    //   k->adt = 1;
+
 
  }
 
@@ -3925,28 +4214,28 @@ void fnplu (SIG *s,  SBK *blk)
    uint xofst, imask, omask, isize, osize;
 
    if (!s || !blk)     return;
-   if (!blk->scanning) return;
+   if (!blk->proctype) return;                //scanning) return;
    if (!blk->substart) return;
-   if (!s->v[3])       return ;         //sign holder
+   if (!s->vx[3])       return ;         //sign holder
 
    subr = add_subr(blk->substart);  // ok if already exists
    if (!subr) return;
 
-   f = add_spf(subr->start);
-   if (f->spf) return;               // already processed, assume f always OK
+   f = find_spf(vconv(subr->start), 4);
+   if (f) return;               // already processed, assume f always OK
 
-   size  = s->v[2]/2;                // size from sig (unsigned) as BYTES
-   taddr = s->v[4];                  // address register (need +80000 ??)
+   size  = s->vx[2]/2;                // size from sig (unsigned) as BYTES
+   taddr = s->vx[4];                  // address register (need +80000 ??)
 
 
    #ifdef XDBGX
-     DBGPRT(1,"in fnplu for %x", blk->substart);
+     DBGPRT(1,"in fnplu for %x (%x)", blk->substart, s->start);
    #endif
 
    blk->logdata = 0;        // no data to collect (it's where sig found)
-   #ifdef XDBGX
-     DBGPRT(1,"set nodata %x", blk->start);
-   #endif
+ //  #ifdef XDBGX
+ //    DBGPRT(1,"set nodata %x", blk->start);
+ //  #endif
    if (blk->start != blk->substart)
      {
        t = get_scan(blk->substart);
@@ -3961,34 +4250,42 @@ void fnplu (SIG *s,  SBK *blk)
 
    size = (size*8) -1;               // convert to fend style
 
-   osize = (s->v[10] & 0x1000) ? 32 : 0;              // signed out if bit SET, 1000 = signed if NOT set
-   isize = (s->v[11] & 0x1000) ? 32 : 0;              // signed in  if bit SET, 1000 = signed if NOT set
+   osize = (s->vx[10] & 0x1000000) ? 0 : 32 ;              // signed out if bit SET, 1000 = signed if NOT set
+   isize = (s->vx[11] & 0x1000000) ? 0 : 32 ;              // signed in  if bit SET, 1000 = signed if NOT set
    osize |= size;
    isize |= size;
 
-   omask = (s->v[10] & 0xff);                         // bit mask value, sign out flag
-   imask = (s->v[11] & 0xff);                         // bit mask value, sign in  flag
+   omask = 1 << (s->vx[10] & 0xff);                         // bit mask value, sign out flag
+   imask = 1 << (s->vx[11] & 0xff);                         // bit mask value, sign in  flag
 
 // look for OR opcodes if not in 'main' subroutine
 // also look for changed register for address holder (ldx or stx)
 
    xofst = blk->substart;
+
+   // need to include original address as valid - so go back one opcode
+   xofst = find_opcode(0,xofst, 0);
+
+
    while (xofst)
     {
-      if (xofst >= s->start && xofst <= s->end) break;
+      if (xofst >= s->start)  break;             // && xofst <= s->end) break;
 
      // look for an OR, LDX, STX in 22 opcodes from front of subr
+     //
      xofst = find_pn_opcodes (1, xofst, 22, 3, 9, 12, 13);
 
+     if (xofst < blk->substart) break;
      if (xofst)
        {
-        if (sinst.sigix == 9 && sinst.opr[2].addr == s->v[3])
+        if (sinst.sigix == 9 && sinst.opr[2].addr == s->vx[3])
           {
-           #ifdef XDBGX
-             DBGPRT(1,"find OR at %x", sinst.ofst);
-           #endif
            if (omask & sinst.opr[1].val)  osize ^= 32;    // flip sign out if match;
            if (imask & sinst.opr[1].val)  isize ^= 32;    // flip sign in  if match
+
+           #ifdef XDBGX
+             DBGPRT(1,"find OR at %x (I %x, O %x)", sinst.ofst, isize, osize);
+           #endif
           }
 
         if (!sinst.opcsub && sinst.sigix == 12 && sinst.opr[2].addr == taddr)
@@ -3996,8 +4293,6 @@ void fnplu (SIG *s,  SBK *blk)
              // this may also work for args, as they must be loaded via ldx ....
              taddr = sinst.opr[1].addr;
            }
-
-        xofst++;                                      // skip to next instruction
        }
     }
 
@@ -4007,14 +4302,17 @@ void fnplu (SIG *s,  SBK *blk)
      {
       if (anames[i].fendin == isize && anames[i].fendout == osize)
         {
-         new_autosym(i,blk->substart);             // add subr name acc. to type
-         f->spf = i;
+         new_autosym(i|C_SYS|C_REN,blk->substart);             // add subr name acc. to type
+
+         f = append_spf(vconv(subr->start), 4, 0);
+         if (f)                  //f->spf = 4;
+         {
          f->fendin  = isize;
          f->fendout = osize;
          f->addrreg = taddr;  //address
-
+         }
          #ifdef XDBGX
-              DBGPRT(1,"func spf=%d (%x)", i, blk->substart);
+              DBGPRT(1,"func ix=%d (%x)", i, blk->substart);
           #endif
           break;
          }
@@ -4041,30 +4339,44 @@ void set_xtab(SFIND *f)
   cols = nobank(f->ans[1]);
 
   #ifdef XDBGX
-   DBGPRT(1,"SET TAB Add %x cols %x Rows %x inx %x ss %d", ofst, cols, rows, f->spf,anames[f->spf].fendout);
+   DBGPRT(1,"SET TAB Add %x cols %x Rows %x inx %x ss %d", ofst, cols, rows, f->spf->spf,f->spf->fendout);
    #endif
+
+
+
 
   if (cols < 2 || cols > 32) cols = 1;
 
   xend = ofst;
   xend += (rows*cols)-1;
 
-  k = add_cmd(ofst, xend, C_TABLE, 0);
+  k = add_cmd(ofst, xend, C_TABLE|C_SYS, 0);
 
-  if (k && !k->cmd)                       // in case tab by user cmd....
-    {
-     if (PSTCA) k->argl = 1;              // arg layout by default
-     new_autosym(4,ofst);                 // auto table name, can fail
-     a = add_adt(&chadnl,k->start,1);            // just ONE adt
-     k->size = cols;                      // size for one line ( = cols)
+  if (!k) return;
+  if (k->usrcmd) return;
+  if (chcmd.lasterr) return;
+
+  if (PSTCA) k->argl = 1;              // layout by default
+  new_autosym(4,ofst);                 // auto table name, can fail
+
+
+//multiple adts
+
+     a = append_adt(vconv(k->start),0);
+     if (a)
+      {
+     a->fend = f->spf->fendout;  // includes sign
+     k->size = cols * bytes(a->fend);
      a->cnt = cols;
      a->prdx = 2;                         // default decimal print
+  //   a->fend = f->spf->fendout;
     // cnvsstofld(a, anames[f->spf].sizeout);
 
-     a->fend = anames[f->spf].fendout;   // includes sign
-     a->pfw =  get_pfwdef(a);
 
-    }
+     a->pfw =  get_pfwdef(a);
+   //  k->adt = 1;
+      }
+
 
   // probably need some more checks, but simple version works for now...
 
@@ -4084,9 +4396,9 @@ void tbplu (SIG *s,  SBK *blk)
    SPF *f;
 
    if (!s || !blk)     return;
-   if (!blk->scanning) return;
+   if (!blk->proctype) return;            //scanning) return;
    if (!blk->substart) return;
-   if (!s->v[3])       return ;
+   if (!s->vx[3])       return ;
 
    subr = add_subr(blk->substart);  // ok if it already exists
 
@@ -4096,11 +4408,15 @@ void tbplu (SIG *s,  SBK *blk)
      DBGPRT(0,"In TBPLU ");
    #endif
 
-   f = add_spf(subr->start);
-   if (f->spf) return;               // already processed, assume f always OK
 
-   taddr = s->v[4] ;            // table address register
-   tcols = s->v[3] ;            // num cols in this register
+// !! WORD TABLES COME HERE _ NOT SIZED CORRECTLY !!
+
+
+   f = find_spf(vconv(subr->start), 5);
+   if (f) return;               // already processed, assume f always OK
+
+   taddr = s->vx[4] ;            // table address register
+   tcols = s->vx[3] ;            // num cols in this register
    osign = 0;
    omask = 0;
 
@@ -4108,33 +4424,49 @@ void tbplu (SIG *s,  SBK *blk)
    // In tab lookup, sign flag is in the INTERPOLATE subroutine
    // subr call address saved in s->v[0] so look for tabinterp sig there
 
-   t = get_sig(s->v[0]);
-   if (!t) t = scan_asigs (s->v[0]);        // no, so scan for it
+  // t = get_sig(s->vx[0]);
+  // if (!t) t = scan_asigs (s->vx[0]);        // no, so scan for it
 
+   taddr = s->vx[1];                           // subr call baddr
+   t = get_sig(taddr);
 
+   if (!t)
+     {
+        if (s->par1 == 1)  t = do_sig(PATWINTP,taddr);     // scan for word interpolate
+        else               t = do_sig(PATBINTP,taddr);     // scan for byte interpolate (default)
+
+     }
 
    if (t)
      {           //   found tab signed interpolate
       #ifdef XDBGX
-        DBGPRT(1," SIGN Flag = %x", t->v[3]);
+        DBGPRT(1," SIGN Flag = %x", t->vx[3]);
       #endif
 
-      osign = (t->v[10] & 0x1000) ? 0 : 1;
-      omask = (t->v[10] & 0xff);
+//may need more here to chack against a sml2w or not
+      osign = (t->vx[10] & 0x1000000) ? 1 : 0;
+      omask = 1 << (t->vx[10] & 0xff);
      }
 
 
    xofst = blk->substart;
+
+    // need to include original address as valid, so go back one opcode
+    xofst = find_opcode(0,xofst, 0);
+
+
    while (xofst)
     {
-      if (xofst >= s->start && xofst <= s->end) break;
-      if (t && xofst >= t->start && xofst <= t->end) break;   // safety checks
+      if (xofst >= s->start ) break;                       // && xofst <= s->end) break;
+      if (t && xofst >= t->start) break;                   // && xofst <= t->end) break;   // safety checks
+
      // look for an OR, LDX, STX in 22 opcodes from front of subr
+
      xofst = find_pn_opcodes (1, xofst, 22, 3, 9, 12, 13);
 
      if (xofst)
        {
-        if (t && sinst.sigix == 9 && sinst.opr[2].addr == t->v[3])
+        if (t && sinst.sigix == 9 && sinst.opr[2].addr == t->vx[3])
           {                       // found register to match 't'
             #ifdef XDBGX
                DBGPRT(1,"find OR at %x", sinst.ofst);
@@ -4149,14 +4481,13 @@ void tbplu (SIG *s,  SBK *blk)
              if (sinst.opr[2].addr == taddr) taddr = sinst.opr[1].addr;
              if (sinst.opr[2].addr == tcols) tcols = sinst.opr[1].addr;
            }
-        xofst++;                                      // skip to next instruction
        }
     }
 
    blk->logdata = 0;        // no data logging (it's where sig found)
-   #ifdef XDBGX
-      DBGPRT(1,"set nodata %x", blk->start);
-   #endif
+//   #ifdef XDBGX
+ //     DBGPRT(1,"set nodata %x", blk->start);
+ //  #endif
 
    if (blk->start != blk->substart)
      {
@@ -4170,18 +4501,51 @@ void tbplu (SIG *s,  SBK *blk)
          }
      }
 
-   // subr is (blk->substart) from above
-   new_autosym(13 + osign, blk->substart);             // add subr name acc. to type
+   /* subr is (blk->substart) from above
 
-   f->spf = 13 + osign;
-   f->fendin  = 7;                 //1;
-   f->fendout = 7;             //sizeout = 1;                // need better than this ??
-   if (osign) f->fendout |= 32;         //sizeout |= 8;
-   f->addrreg = taddr;           //reg holding address
-   f->sizereg = tcols;           // reg holding cols
+     for (i = 13; i < 17; i++)
+     {
+      if (anames[i].fendin == isize && anames[i].fendout == osize)
+        {
+         new_autosym(i,blk->substart);             // add subr name acc. to type
+         f->spf = i;
+         f->fendin  = isize;
+         f->fendout = osize;
+         f->addrreg = taddr;  //address
 
+         #ifdef XDBGX
+              DBGPRT(1,"func spf=%d (%x)", i, blk->substart);
+          #endif
+          break;
+         }
+*/
+
+
+
+
+if (s->par1)  xofst =  15 + osign;       // word table + size+sign;
+ else         xofst =  13 + osign;       // byte table+size+sign;
+
+
+
+
+
+   new_autosym(xofst|C_SYS|C_REN, blk->substart);             // add subr name acc. to type
+
+   f = append_spf(vconv(subr->start), 5, 0);
+   if (f)
+     {
+       if (s->par1) f->fendin = 15; else f->fendin = 7;                   // size in;
+       f->fendout = f->fendin;              //sizeout = 1;                // need better than this ??
+       if (osign) f->fendout |= 32;         //sizeout |= 8;
+       f->addrreg = s->vx[4];           //reg holding address
+       f->sizereg = s->vx[3];           // reg holding cols
+
+  //   taddr = s->vx[4] ;            // table address register
+ //  tcols = s->vx[3] ;            // num cols in this register
+     }
    #ifdef XDBGX
-     DBGPRT(1,"tab spf=%d (%x)", f->spf, blk->substart);
+     DBGPRT(1,"tab spf=5 (%x)", blk->substart);
    #endif
 }
 
@@ -4193,27 +4557,27 @@ void encdx (SIG *s,  SBK *blk)
   RST *r;
 
   if (!blk || !s) return;
-  if (!blk->emulating) return;
+  if (blk->proctype !=4) return;       //(!blk->emulating) return;
 
   #ifdef XDBGX
 
    DBGPRT(0,"in E encdx");
-   DBGPRT(0," for R%x (=%x) at %x", s->v[8], g_word(s->v[8]), blk->curaddr);
+   DBGPRT(0," for R%x (=%x) at %x", s->vx[8], g_word(s->vx[8]), blk->curaddr);
    DBGPRT(1,0);
   #endif
 
-   enc = s->ptn->vflag + 2;
-   if (enc == 4 && s->v[3] == 0xf)  enc = 2;            // type 2, not 4
-   if (enc == 3 && s->v[3] == 0xfe) enc = 1;            // type 1, not 3
+   enc = s->par1;                                     //ptn->vflag + 2;
+   if (enc == 4 && s->vx[3] == 0xf)  enc = 2;            // type 2, not 4
+   if (enc == 3 && s->vx[3] == 0xfe) enc = 1;            // type 1, not 3
 
 
-  if (s->v[9])
+  if (s->vx[9])
   {
-     reg = s->v[9];
-     if (s->v[1] == 2) reg = g_word(reg);     //is this always indirect ??
+     reg = s->vx[9];
+     if (s->vx[1] == 2) reg = g_word(reg);     //is this always indirect ??
      // and may need to create an rgstat.....
   }
-  else reg = s->v[8];
+  else reg = s->vx[8];
 
   reg = nobank(reg);
   r = get_rgstat(reg);
@@ -4225,7 +4589,7 @@ void encdx (SIG *s,  SBK *blk)
    #endif
    r->enc = enc;
    r->fend = 15;                   // enc is always a word
-   r->data  = nobank(s->v[5]);     // 'start of data' base reg
+   r->data  = nobank(s->vx[5]);     // 'start of data' base reg
    }
 }
 
@@ -4243,23 +4607,23 @@ void ptimep(SIG *x, SBK *blk)
   int val,z;
   uint ofst;
 
-  if (!blk->scanning) return;
-  if (x->done) return ;
+  if (!blk->proctype) return;   //  scanning) return;
+ // if (x->done) return ;
 
  #ifdef XDBGX
   DBGPRT(1,"in ptimep");          //move this later
  #endif
 
-  x->v[0] = g_word(x->v[1]);
+  x->vx[0] = g_word(x->vx[1]);
 
  // size in v[14].  do a 'find end' for the zero terminator
  // cmd size (Y or W) is (2 or 4)= byte  (3 or 5)=word
 
-   start = databank(x->v[0],0);
-   z = x->v[14];
+   start = databank(x->vx[0],0);
+   z = x->vx[14];
 
    #ifdef XDBGX
-    DBGPRT(0,"Timer list %x size %d", x->v[0], z+3);
+    DBGPRT(0,"Timer list %x size %d", x->vx[0], z+3);
     //if (s) DBGPRT(0," Sub %x", s->addr);
     DBGPRT(1,0);
    #endif
@@ -4271,7 +4635,7 @@ void ptimep(SIG *x, SBK *blk)
 
    ofst = start;
 
-   while (ofst < maxpcadd(ofst))
+   while (ofst < maxadd(ofst))
     {
       val = g_byte(ofst);
       if (!val) break;
@@ -4280,12 +4644,12 @@ void ptimep(SIG *x, SBK *blk)
     }
 
     k = add_cmd(start, ofst, C_TIMR, 0);      // this basic works, need to add symbols ?....
-    if (k) a = add_adt(&chadnl,k->start,1);                   // only one (for now)
-    if (a) {a->fend = (z*8) -1;  a->cnt = 1;
+    if (k) a = append_adt(vconv(k->start),0);
+    if (a) {a->fend = (z*8) -1;  a->cnt = 1; //k->adt = 1;
 // a->fnam = 1;
 }
 
-  x->done = 1;
+ // x->done = 1;
 
 }
 
@@ -4404,9 +4768,13 @@ void build_fake_stack(SBK *s)
  // Higher (= older) than its call out.
 
   int i;
- // SBK *x;
+
   FSTK *c, *d;
 
+        #ifdef XDBGX
+  SBK *x;
+x = s;                   //for debug
+#endif
   c = emulstack;
   d = scanstack;
 
@@ -4441,8 +4809,8 @@ void build_fake_stack(SBK *s)
         i++;
       }
           #ifdef XDBGX
-DBG_stack(d);
-DBG_stack(c);
+DBG_stack(x,d);
+DBG_stack(x,c);
 #endif
 }
 
@@ -4500,6 +4868,11 @@ void emulate_blk(SBK *s)
              if (emu->inv) DBGPRT(1," with Invalid at %x", emu->curaddr);
           #endif
 
+
+//and here, somehow, try to sort out arg sizes ???
+
+
+
  clearchain(&chemul);          // clear all emulate scans
 
 }
@@ -4525,7 +4898,7 @@ int check_backw(uint addr, SBK *caller, int type)
       if (addr == caller->curaddr)  ans = 3;              // loopstop HERE
 
       // backward jump, scanned already and conditional
-      if (type == J_COND && jump < 0 && get_opstart(addr)) ans = 2;
+      if (type == J_COND && jump < 0 && get_opc(addr)) ans = 2; // start(addr)) ans = 2;
 
       if (type == J_STAT)
        {
@@ -4540,7 +4913,7 @@ int check_backw(uint addr, SBK *caller, int type)
        }
      }
 
-  if (ans > 2 && caller->emulating)
+  if (ans > 2 && caller->proctype == 4)        //emulating)
     {    // only check for real loopstops in emulate
         #ifdef XDBGX
      DBGPRT(1,"Loopstop detected (%d) at %x", ans, caller->curaddr);
@@ -4560,25 +4933,9 @@ void do_signatures(SBK *s)
 
   if (anlpass >= ANLPRT) return;
 
-  if (get_opstart(s->curaddr))                // code, has this been scanned already ?
+ // if (get_opstart(s->curaddr))                // code, has this been scanned already ?
+   if (get_opc(s->curaddr))
     {
- //    g = (SIG*) chmem(&chsig,0);
-  //   g->start = s->curaddr;
-
-/*
-void *find(CHAIN *x, void *b)
-{
- // find item with optional extra pars in b
-
- uint ix;
- ix = bfindix(x, b, 0);
- if (x->equal(x,ix,b)) return NULL;    // no match
- return x->ptrs[ix];
-}
-
-*/
-
-
 
  //    g = (SIG*) find(&chsig,g);              // Yes, check for sig at this address
 
@@ -4592,10 +4949,12 @@ void *find(CHAIN *x, void *b)
      #endif
     }
 
-  if (g && g->ptn->pr_sig)
-    {
-     g->ptn->pr_sig(g,s);         // process signature
-    }
+do_sigproc(g,s);
+
+//  if (g && g->ptn->pr_sig)
+  //  {
+  //   g->ptn->pr_sig(g,s);         // process signature
+  //  }
  }
 
 void fix_args(LBK *l, SBK *s)
@@ -4607,18 +4966,13 @@ void fix_args(LBK *l, SBK *s)
   RST *r;
   LBK *k;
   ADT *a;
+  void *fid;
   int i, size;
 
   #ifdef XDBGX
     DBGPRT(1,"\nFIX args");
   #endif
 
- a = start_adnl_loop(&chadnl,l->start);
-
-//if (!a)
-//{
-//DBGPRT(1,0);
-//}
 
  for (i = 0; i < EMUGSZ; i++)
  {
@@ -4627,9 +4981,9 @@ void fix_args(LBK *l, SBK *s)
    if (k && k->start == l->start)
    {
     size = k->size;
-    if (a) a->fkey = set_adt_fkey(k->start,0);
+    fid = vconv(k->start);
 
-    while ((a = get_next_adnl(&chadnl,a)))
+    while ((a = get_adt(fid,0)))
      {          // for each level
       r = get_rgstat(a->dreg); // find register
 
@@ -4675,13 +5029,14 @@ void fix_args(LBK *l, SBK *s)
                   #ifdef XDBGX
       else  DBGPRT(1,"R%x not found for %x", a->dreg, l->start);
       #endif
+      fid = a;
      }
 
        // sanity check here
-     if (size != totsize(&chadnl,k->start))
+     if (size != totsize(vconv(k->start)))
        {
          #ifdef XDBGX
-           DBGPRT(1,"ADDNL SIZE NOT MATCH %d %d- FIX", size, totsize(&chadnl,k->start) );
+           DBGPRT(1,"ADDNL SIZE NOT MATCH %d %d- FIX", size, totsize(vconv(k->start) ));
          #endif
    //     free_adnl(&chadnl,k);            //all chain ??
     //    a = add_adt(&chadnl,k,1);
@@ -4729,7 +5084,7 @@ int do_arg_data (int ofst, ADT *a, int pfwo)
    }
   }
   val = decode_addr(a, ofst);                        // val with decode if nec.  and sign - READS ofst
-  if (a->fnam) sym = get_sym(0, val,-1,ofst);        // READ sym AFTER any decodes - was xval
+  if (a->fnam) sym = get_sym(0, val,0,7,ofst);        // READ sym AFTER any decodes - was xval
 
   if (sym) pstr(0,"%s",sym->name);  // pstr(0,"%*s",-pfw,sym->name); -ve fw doesn't work ??
    else
@@ -4755,19 +5110,19 @@ int do_arg_data (int ofst, ADT *a, int pfwo)
 */
 
 
- void add_arg_data(uint start, uint ofst)
+void add_arg_data(uint start, uint ofst)
   {
    ADT *a;
    uint val, i,sz;
-// LBK *k;
+   void *fid;
 
  //  DBGPRT(1,"XZARG DATA for %x", ofst);
 
-   a = start_adnl_loop(&chadnl,start);    //    (ADT*) chmem(&chadnl,0);
+   fid = vconv(start);         //a = start_adnl_loop(&chadnl,start);    //    (ADT*) chmem(&chadnl,0);
  //  a->fid = fid;
  //  a->seq = 0;
 
- while ((a = get_next_adnl(&chadnl,a)))
+ while ((a = get_adt(fid,0)))    //      next_adnl(&chadnl,a)))
   {
    for (i = 0; i < a->cnt; i++)             // count within each level
     {
@@ -4777,7 +5132,7 @@ int do_arg_data (int ofst, ADT *a, int pfwo)
      add_cmd (val,  val+sz -1, sz, ofst);     //change to dtk ???
      ofst += sz;
     }
-
+    fid = a;
   }
 
 
@@ -4798,6 +5153,16 @@ void skip_args(SBK *s)
      k = get_aux_cmd(s->curaddr,C_ARGS);
      if (k)
        {
+              if (!k->size)
+         {
+          #ifdef XDBGX
+           DBGPRT(1,"precheck ARGSIZE IS ZERO !! %x", s->curaddr);
+         #endif
+         }
+
+
+
+
           fix_args(k,s);
           add_arg_data(k->start, s->curaddr);
 
@@ -4874,13 +5239,6 @@ void scan_blk(SBK *s, INST *c)
          DBGPRT(1,"Ignore Scan %x", s->start);
          #endif
 
-
-
-
-         // BUT could do fnplu or tbplu here !!!
-
-
-
          return;
         }
 
@@ -4906,7 +5264,7 @@ void scan_blk(SBK *s, INST *c)
      do_code (s, c);                           // do opcode
      s->curaddr = s->nextaddr;                 // next opcode address
 
-     if (s->emulating)
+     if (s->proctype == 4)              //emulating)
       {                    // safety check for code loops
        opcnt++;
 
@@ -4922,8 +5280,8 @@ void scan_blk(SBK *s, INST *c)
 
     #ifdef XDBGX
      DBGPRT(0,"Stop ");
-     if (s->scanning)  DBGPRT(0,"scan");
-     if (s->emulating) DBGPRT(0,"Emu");
+     if (s->proctype == 1 ) DBGPRT(0,"scan");   //scanning)
+     if (s->proctype == 4 ) DBGPRT(0,"Emu"); //emulating)
      DBGPRT(1," blk %x at %x", s->start, s->nextaddr);
     #endif
 
@@ -5037,7 +5395,7 @@ void fakepop(SBK *s)
 
   FSTK *t;
 
-  if (s->emulating)  t = emulstack; else t = scanstack;
+  if (s->proctype == 4)   t = emulstack; else t = scanstack;    //emulating)
 
   memmove (t, t+1, sizeof (FSTK) * (STKSZ-1));    // shuffle sce down, (over [0])
   memset  (t+ (STKSZ-1),0, sizeof(FSTK));          // and clear last entry
@@ -5071,13 +5429,13 @@ int get_stack(SBK *s, FSTK *t, int types)
        break;
    }
 
-if (!match && s->emulating)
+if (!match && s->proctype == 4)              //s->emulating)
   {
     ans = t->origadd;
 
     #ifdef XDBGX
     DBGPRT(1,"STACK TYPE not match %x != %x at %x", t->type, types, s->curaddr);
-    DBG_stack(emulstack);
+    DBG_stack(s,emulstack);
     #endif
   }
 
@@ -5100,7 +5458,7 @@ void fakepush(SBK *caller, int addr, int type)
 
    if (!caller) return;
 
-   if (caller->emulating)  t = emulstack;
+   if (caller->proctype == 4)  t = emulstack;           //emulating)
    else
     {
       // don't do immediate pushes in scan mode
@@ -5202,11 +5560,14 @@ void do_sjsubr(SBK *caller, INST *c, int type)
          */
 
          add_jump(caller, addr, type);
+
+         if (c->opcix == 76)  caller->nextaddr++;         //skip fakes extra opcode
+         end_scan (caller);                              // END of this block
          if (check_backw(addr, caller, type)) break;     // backward jump probably a loop
 
          if (PLABEL) new_autosym (2, addr);                 // add autolabel if reqd
 
-         end_scan (caller);                              // END of this block
+
          newsc = add_scan (addr, type, caller);          // new or duplicate scan
          scan_blk(newsc,c);
          break;
@@ -5230,7 +5591,7 @@ void do_sjsubr(SBK *caller, INST *c, int type)
         if (newsc)
          {
            sub = get_subr(newsc->substart);
-           a = get_adnl(&chadnl,sub->start,1);
+           a = get_adt(vconv(sub->start),0);
            if (a)
             {     // args set by user command no args, just skip
                   //note that cannot do multi level args in a command...................
@@ -5311,21 +5672,22 @@ void op_calc (int pc, int ix, INST *c)
 
       // for 8065 direct address word, or greater if odd,
       // change to bank+1 if currently even bank
+      // change back to ALL operands (only ix 1 ?? still not quite nailed down)
 
-      if (P8065 && (o->addr & 1) && bytes(o->rfend) > 1 )
-        {  // add 100 for even banks only
-         // if (!is_special_reg(o->addr) &&             // ALL registers........
-         if ((o->addr & 0x100) == 0) o->addr += 0x100;  // loop 3 -> 0 ??
+      if (P8065 && (o->addr & 1) && bytes(o->fend) > 1 )
+        {  // add 100 for even banks only (= next rambank)
+         // if (!is_special_reg(o->addr) &&             // ALL registers ??
+         if ((o->addr & 0x100) == 0) o->addr += 0x100;
          o->addr ^= 1;         // drop odd bit, even if no bank change
         }
 
-      b = get_rbt(o->addr,c->ofst);
+      b = get_rbt(o->addr,c->ofst);            //THIS !!!
      }         // end rgf
   else   o->addr = databank(o->addr,c);         // generic add (data) bank
 
   if (o->imd || o->bit) o->val = pc;            // immediate or bit flag, so pc is absolute value
 
-  else o->val = g_val(o->addr,0, o->rfend);     // get value from reg address, sized by op
+  else o->val = g_val(o->addr,0, o->fend);     // get value from reg address, sized by op
 
   if (b && c != &einst)
    {                                            // don't do rbase if in emu mode
@@ -5382,10 +5744,11 @@ void do_vect_list(INST *c, uint start, uint end) // SBK *caller
   if (s && basepars.codbnk != basepars.datbnk)
     {
      // bank goes in ONE addn block.
-       a = add_adt(&chadnl,s->start,1);
+       a = append_adt(vconv(s->start),0);
        if (a) {
        a->bank = basepars.codbnk >> 16;                  // add current codbank
        if (g_bank(vcall) == g_bank(start)) a->cnt = 0;  //don't print if match
+    //   s->adt = 1;
        }
     }
      #ifdef XDBGX
@@ -5413,7 +5776,7 @@ int check_vect_list(SBK *caller, uint start, uint sz, INST *c)
 
 
    score = 0;                     // max score
-   lowcadd = maxpcadd(c->ofst);              // bank max for call addresses - multibank ?
+   lowcadd = maxadd(c->ofst);              // bank max for call addresses - multibank ?
    lastiadd = 0;
 
   // check start against curinst+cnt to see if an extra offset needs to be added ?
@@ -5452,7 +5815,7 @@ int check_vect_list(SBK *caller, uint start, uint sz, INST *c)
       if (l)
         {
          #ifdef XDBGX
-           DBGPRT(1,"hit code %x %s",i,cmds[l->fcom]);
+           DBGPRT(1,"hit code %x %s",i,cmds[l->fcom].str);
          #endif
          end = i-1;
          break;
@@ -5562,7 +5925,7 @@ void pp_hdr (int ofst, const char *com,  int cnt)    //, short pad)
   pstr(1,0);                                         // always start at a new line for hdr
   if (sym)
     {                                              // name allowed
-     s = get_sym (0,ofst,32,ofst);                 // is there a symbol here ?(int rw, uint add, uint bitno, uint pc)
+     s = get_sym (ofst,0,C_WHL|7,ofst);                 // is there a symbol here ?
      if (s)
       {
        p_pad(3);
@@ -5596,10 +5959,18 @@ int getpx(CPS *c, int ix, int l);
 int readpunc(CPS *c);
 uint fix_input_addr_bank(CPS *c, int ix);
 
-int get_cmnt (CPS *c, uint flags)
+int get_cmnt (CPS *c, uint *flags)
 {
   int ans;
   char *t;
+
+  if ((*flags) & 4)
+  {                  //  a '|'  detected. stop until next line
+    (*flags) &= 3;   // clear the flag
+    return 0;
+  }
+
+  if (c->cmpos < c->cmend) return 0;       //more to do.... but actually split comments should STOP here!!
 
   ans = 0;
 
@@ -5614,8 +5985,10 @@ int get_cmnt (CPS *c, uint flags)
 
   while (ans < 1 && fgets (flbuf, 255, fldata.fl[4]))
     {
+       flbuf[255] = '\0';                  // safety
+
        t = strchr(flbuf, '\n');            // check for LF
-       if (t) *t = '\0';        //c->cmend = t;                // shorten line
+       if (t) *t = '\0';                   // shorten line
 
        t = strchr(flbuf, '\r');            // check for CR
        if (t)   *t = '\0';        //c
@@ -5625,7 +5998,7 @@ int get_cmnt (CPS *c, uint flags)
        ans = strlen(flbuf);
        c->cmend = flbuf + ans;   // end of line
        c->cmpos = flbuf;                   // start of string
-       flbuf[255] = '\0';                  // safety
+
              // ans = sscanf (flbuf, "%x%n", &pcz, &rlen);    // n is actual no of chars read to %n
     }
 
@@ -5688,79 +6061,92 @@ SYM* symfromcmt(char *s, int *c, uint ofst, uint *bit)
 
 void p_indl (void)
 {
-  if (gcol) pstr(1,0);
+  if (gcol > PSCEPOSN) pstr(1,0);   //newline if > sce begin col
   p_pad(PSCEPOSN);
 
 }
 
 
-int pp_adt (int ofst, ADT *a, int pfwo)
+int pp_adt (int ofst, ADT *a, uint *pfwo)
  {
 
 // print a SINGLE ITEM from *a, even if a->cnt is set
 // done this way for ARGS printouts.
 
-  int pfw, val;
-  SYM* sym;
+  int pfw, val, fend;
 
-  sym = NULL;
   pfw = 1;                               // min field width
 
   // pfw is still not always right in a struct, especially if names appear.
   // also args always needs min fieldwidths, so allow for a->pfw of zero
 
-  if (pfwo) pfw = plist[pfwo];
+  if (pfwo)
+    { pfw = plist[*pfwo]; (*pfwo)++; }  //get from preset list
   else
-  {
-  if (a->pfw)
-   {  // Not set for ARGS, default to preset if too small.
-    val = get_pfwdef(a);
-    if (a->pfw < val) pfw = val;
-    else pfw = a->pfw;
-   }
+   {
+    if (a->pfw)
+     {  // Not set for ARGS, default to preset if too small.
+      val = get_pfwdef(a);
+      if (a->pfw < val) pfw = val;
+      else pfw = a->pfw;
+     }
   }
-  val = decode_addr(a, ofst);                             // val with decode if nec.  and sign - READS ofst
 
+  val = decode_addr(a, ofst);                             // val with decode if nec. and bank.
 
-  if (a->fnam) sym = get_sym(0, val,32,ofst);        // READ sym AFTER any decodes - was xval
-  if (sym) pstr(0,"%*s",-pfw,sym->name);
-   else
-  if (a->flt)
+  if (a->fnam)
+     {
+      SYM* sym;
+      sym = get_sym(val,a->fstart, a->fend,ofst);             // READ sym AFTER any decodes
+      if (sym)
+        {
+         pstr(0,"%*s",-pfw,sym->name);
+         return bytes(a->fend);
+        }
+     }
+
+fend = a->fend;
+  if (a->vaddr)                //address with bank
+    {
+     paddr(val,pfw,pstr);
+     return bytes(a->fend);
+    }
+
+  if (a->foff)  fend |= 0xf;             // make a word (locally)
+  val = scale_val (val, a->fstart, fend);          // rescale as per g->val
+
+  if (a->div)
      {      // float - probably need to extend pfw to make full sense - allow override with X ?
       sprtfl((float) val/a->fldat, pfw+4);         // add 4 for float part
       pstr(0,"%s", nm+64);
+      return bytes(a->fend);
      }
-   else
+
+  if (a->mult)
+     {      // float - probably need to extend pfw to make full sense - allow override with X ?
+      sprtfl((float) val*a->fldat, pfw+4);         // add 4 for float part
+      pstr(0,"%s", nm+64);
+      return bytes(a->fend);
+     }
+
                 // original is %*d, or RIGHT justified (make this a prt_radix ??)
-     {
-       if (a->prdx == 2)
-         { //if (val >= 0) {pchar(' '); pfw--;}           // for negative
-           //pdec(val, a->ssize);
-            pstr(0,"%*d", pfw, val);           // decimal print, need full width if negative
-         }
-       else
-        {
-         if (a->foff) val &= get_sizemask(15);            // word sized if offset
-         else val &= get_sizemask(a->fend);
-         if (a->prdx < 2) pstr(0,"%*x", pfw, val);       // HEX default nobank ?? what about addresses ??
-         if (a->prdx == 3) pbin(val, a->fend);           // binary print, need size.
-        }
- //   else
- //    { // hex prt
- //     //if (!numbanks) don't KNOW whether this is a value or an address...vaddr
- //     val = nobank(val);      // but NOT for bank addresses !
- //     pstr(0,"%*x", pfw, val);
- //    }
-     }
+
+//switch ?
+
+  if (a->prdx == 3) pbin(val, a->fend);                // binary print, need size.
+  if (a->prdx == 2) pstr(0,"%*d", pfw, val);           // decimal print, need full width if negative
+  if (a->prdx < 2)  pstr(0,"%*x", pfw, val);       // HEX default
+
   return bytes(a->fend);
 }
 
 
-
-int pp_lev (uint start, int ofst, uint *seq, uint *mitem)
+int pp_lev (void **fid, uint bix, uint ofst, uint *column)
 {
 
-// ALWAYS stops at a newline.
+  // effectively a compact layout
+
+  // ALWAYS stops at a newline.
 
 // need to add CUTOFF at an end point so it does not overrun
 // unless command verifies and fixes size first (better)
@@ -5768,68 +6154,47 @@ int pp_lev (uint start, int ofst, uint *seq, uint *mitem)
 //start indent at plist[1] and go up from there.
 // in here is Ok as it always does one row
 
- uint i, item;
+// RECURSIVE for sub chains
+
+ uint i, lx;
  ADT *a;
+// void *sfid;      //sub fid
 
  i = 0;
- item = 0;
+ lx = bix;
 
- a = start_adnl_loop(&chadnl,start);     //(ADT*) chmem(&chadnl,0);
- //  a->fid = fid;
-
- a->fkey = set_adt_fkey(start, seq ? *seq : 1);
-
- while ((a = get_next_adnl(&chadnl,a)))
+ while ((a = get_adt(*fid,lx)))
   {
-   if (i) pstr(0,", ");       // true if looping on a
+   lx = 0;                  //only first item ever has non zero
 
-   for (i = 0; i < a->cnt; i++)             // count within each level
+   if (i) { if (bix) pstr(0,"|");  else pstr(0,", "); }  // TEMP
+
+   for (i = 0; i < a->cnt; i++)              // count within each level
     {
      if (i) pstr(0,", ");
-     if (mitem) item = *mitem;           // for column pads
-     pp_adt(ofst, a, item);              // field width is plist[item]
-     if (mitem)
-       {
-        (*mitem)++;
-        item = *mitem;           // for column pads
-       }
+
+     // subfields check
+  //   sfid = a;
+  //   pp_lev (&sfid, 1, ofst, column);       // any sub fields ??
+     pp_adt(ofst, a, column);               // field width is plist[column]
      ofst += bytes(a->fend);
     }
 
-//probably need a wrap check here too.............and comment aligner
-
+   *fid = a;          //done print, move to next fid
 
    if (a->newl)
-    {
-      if (mitem)       // all cols
-       {
-        *mitem = 1;
-         item = 1;           // restart column pads
-       }
+    {  //newline flag, stop at this item, reset count for column
+      if (column) *column = 1;    // restart column pad markers
       pchar(',');
       break;
     }
+
   }      // end of while (a)
 
-// breaks to here for both newline and end.
-
-//i = 1;
-//item = lastpad;
-
-//while (plist[i] > 0 && i < 32) {item +=plist[i]; i++;}
-
-
-//for (i = 1; i <
-
-
- if (seq)
-  {
-   if (a) *seq = a->fkey & 0xff; else *seq = 0;
-  }
-  // return size....?
+if (bix && !lx) pstr(0,"|");         //TEMP
+  // return size ?
   return 0;
 }
-
 
 
 
@@ -5861,7 +6226,7 @@ uint pp_text (uint ofst, LBK *x)
   if (cnt > 15) cnt = 15;              // was 16, for copyright notice
   if (cnt < 1)  cnt = 1;
 
-  pp_hdr (ofst, cmds[x->fcom], cnt);
+  pp_hdr (ofst, cmds[x->fcom].str, cnt);
 
   xofst = ofst;
 
@@ -5889,8 +6254,13 @@ uint pp_wdbl (uint ofst, LBK *x)
 
   // local declares for possible override
   uint com, fend, pfw, val;
+ // uint itn;
+  void* fid;
 
-  a = get_adnl(&chadnl,x->start,1);
+
+ //itn = 1;
+
+  a = get_adt(vconv(x->start),0);
 
   com = x->fcom;
  // d = dirs + com;
@@ -5916,11 +6286,11 @@ uint pp_wdbl (uint ofst, LBK *x)
   }
 
   // no symbol print, do at position 2
-  pp_hdr (ofst, cmds[com], bytes(fend) | P_NOSYM);
+  pp_hdr (ofst, cmds[com].str, bytes(fend) | P_NOSYM);
 
   //if (pfw < cnv[cafw[d->defsze])  pfw = cafw[d->defsze]; // not reqd ??
-
-  if (a) pp_lev(x->start, ofst, 0, 0);       // use addnl block(s)
+ fid = vconv(x->start);
+  if (a) pp_lev(&fid, 0, ofst, 0);       //&itn);        //0, (uint)1);       // use addnl block(s)
   else
    {
      // default print HEX
@@ -5931,7 +6301,7 @@ uint pp_wdbl (uint ofst, LBK *x)
   // add symbol name in source code position
   // but this should only be for SINGLE entries ?
 
-  s = get_sym(0, ofst, 32, ofst);  //(int rw, uint add, uint bitno, uint pc)
+  s = get_sym(ofst, 0 , C_WHL|fend, ofst);
 
   if (s)
     {
@@ -5960,7 +6330,7 @@ uint pp_vect(uint ofst, LBK *x)
   ADT *a;
 
   s = NULL;
-  a = get_adnl(&chadnl,x->start,1);
+  a = get_adt(vconv(x->start),0);
 
   bytes = 2;                   // word (for now)
 
@@ -5970,15 +6340,15 @@ uint pp_vect(uint ofst, LBK *x)
 
   val |= bank;               // add bank to value
 
-  if (get_opstart(val))
+  if (get_opc(val))                //get_opstart(val))
     {   // valid code address
-      pp_hdr (ofst, cmds[x->fcom], bytes);
-      s = get_sym (0, val, 32, val);
+      pp_hdr (ofst, cmds[x->fcom].str, bytes);
+      s = get_sym (val, 0, C_WHL|7, val);
     }
   else
     {
       if (ofst & 1)  bytes = 1;        // byte, safety
-      pp_hdr (ofst, cmds[bytes], bytes);
+      pp_hdr (ofst, cmds[bytes].str, bytes);    //else 'word'
     }
 
   paddr(val,0,pstr);
@@ -6036,7 +6406,7 @@ uint pp_dflt (uint ofst, LBK *x)
   //  }
 
   if (!x->dflt)            //(x->cmd || !x->dflt)
-   pp_hdr (ofst, cmds[0], cnt);
+   pp_hdr (ofst, cmds[0].str, cnt);
   else
    pp_hdr (ofst, "???", cnt);
 
@@ -6055,9 +6425,9 @@ uint pp_timer(uint ofst, LBK *x)
   ADT *a;
 
   sym = 0;
-  a = get_adnl(&chadnl,x->start,1);
+  a = get_adt(vconv(x->start),0);
 
-  if (!a)  a = add_adt(&chadnl,x->start,1);     // safety
+  if (!a)  a = append_adt(vconv(x->start),0);     // safety
 
   xofst = ofst;
 
@@ -6065,7 +6435,7 @@ uint pp_timer(uint ofst, LBK *x)
 
   if (!val)
     {
-      pp_hdr (ofst,cmds[C_BYTE],1);    // end of list
+      pp_hdr (ofst,cmds[C_BYTE].str,1);    // end of list
       pstr(0,"# Terminator", val);
       return xofst;
      }
@@ -6073,11 +6443,11 @@ uint pp_timer(uint ofst, LBK *x)
  // a->fnam = 1;                      // TEMP TEST !!
 
   cnt = (val & 1) ? 3 : 1;           // long or short entry
-  pp_hdr (ofst, cmds[C_TIMR], bytes(a->fend) + cnt);
+  pp_hdr (ofst, cmds[C_TIMR].str, bytes(a->fend) + cnt);
   pstr(0,"%2x, ", val);
   val = g_val (xofst,0, a->fend);
 //val = fix_sbk_addr(val);                    //2nd entry.
-  if (a->fnam) sym = get_sym(0, val,32,xofst);       // syname AFTER any decodes
+  if (a->fnam) sym = get_sym(val,a->fstart, a->fend,xofst);       // syname AFTER any decodes
   if (sym) pstr(0,"%s, ",sym->name);
   else pstr(0,"%5x, ",val);
 
@@ -6090,8 +6460,8 @@ uint pp_timer(uint ofst, LBK *x)
     while (!(i&1) && bit < 16) {i /= 2; bit++;}          // LOOP without bit check !!
     val = g_byte (xofst);
 //val = fix_sbk_addr(val);
-     if (a->fnam) {sym = get_sym(0, val,bit,xofst);
-     if (!sym) sym = get_sym(0,val,32,xofst); }
+     if (a->fnam) {sym = get_sym(val,bit,bit,xofst);
+     if (!sym) sym = get_sym(val,a->fstart, a->fend,xofst); }
     if (sym) pstr(0,"%s, ",sym->name);
     else  pstr(0," B%d_%x",bit, val);
   //  xofst++;                            // more later ??
@@ -6107,12 +6477,12 @@ void p_op (OPS *o)
 {
  // bare single operand - print type by flag markers
 
- if (o->imd) pstr (0,"%x", o->val & get_sizemask(o->rfend));    // immediate (with size)
+ if (o->imd) pstr (0,"%x", o->val & get_sizemask(o->fend));    // immediate (with size)
  if (o->rgf) pstr (0,"R%x",nobank(o->addr));                    // register
  if (o->inc) pstr (0,"++");                                     // autoincrement
  if (o->bit) pstr (0,"B%d",o->val);                             // bit value
  if (o->adr) paddr(o->addr,0,pstr);                               // address - jumps
- if (o->off) pstr (0,"+%x", o->addr & get_sizemask(o->rfend));  // address, as raw offset (indexed)
+ if (o->off) pstr (0,"+%x", o->addr & get_sizemask(o->fend));  // address, as raw offset (indexed)
 
 }
 
@@ -6130,13 +6500,13 @@ void p_oper (INST *c, int ix)
 
   if (o->bkt)  pchar ('[');
   p_op (o);
-  if (ix == 1 && c->opcsub == 3) p_op (c->opr);
+  if (o->inx) p_op (c->opr);
   if (o->bkt)  pchar (']');
   return;
 }
 
 
-void p_sc (INST *x, int ix, int ws)
+void p_sc (INST *x, int ix)
 {
 // single op print for source code for supplied instance index
 // note that cannot use same print as bits, bitno and reg stored
@@ -6149,32 +6519,33 @@ void p_sc (INST *x, int ix, int ws)
   o = x->opr + ix;
   s = 0;
 
-
   if (o->sym)
    {                                     // if symbol was set/found earlier
-     s = get_sym (ws, o->addr, o->bit ? o->val : 32, x->ofst);
+
+     if (o->bit)   s = get_sym (o->addr, o->val, o->val,x->ofst);   // to get bit
+     else          s = get_sym (o->addr, 0, C_WHL|o->fend ,x->ofst);
 
      if (s)
       {
         if (o->off) pchar('+');                    // if offset with symname
 
-        if (s->prtbit) pstr (0,"B%d_", o->val);   // default 'base' name
+        if (o->bit && (s->fend & C_WHL))  pstr (0,"B%d_", o->val);
         pstr(0,"%s", s->name);
+        if (o->inc) pstr (0,"++");
         return;
       }
     }
 
  if (o->imd)                               // immediate operand
     {
-     pstr(0,"%x", o->val & get_sizemask(o->rfend));
+     pstr(0,"%x", o->val & get_sizemask(o->fend));
      return;
     }
 
  if (o->rgf)
     {
-   //  if (!zero_reg(o->addr) || ws) pstr (0,"R");           // non zero reg, or write op
 
-     if (!zero_reg(o) || ws) pstr (0,"R");           // non zero reg, or write op
+     if (!zero_reg(o) || (o->fend & 0x40)) pstr (0,"R");           // non zero reg, or write op
 
      pstr (0,"%x", nobank(o->addr));
      if (o->inc) pstr (0,"++");
@@ -6250,7 +6621,7 @@ int find_last_psw(INST *c, int syms)
 
     while (!ans)
      {
-      ofst = find_opcode(0, ofst, &opl);
+      ofst = find_opcode(0, ofst, &opl);            //backwards
 
       if (cnt > 32) break;
       if (!ofst) break;
@@ -6300,7 +6671,7 @@ int find_last_psw(INST *c, int syms)
 
  if (ans)
        {
-        do_one_opcode(ofst);
+        do_one_opcode(ofst, &tmpscan, &sinst);
         if (syms)  fix_sym_names(0,&sinst);
        }
    else
@@ -6312,7 +6683,7 @@ int find_last_psw(INST *c, int syms)
  }
 
 
-void p_opsc (INST *x, int ix, int ws)
+void p_opsc (INST *x, int ix)           //, int ws)
 {
  // source code printout - include sign and size markers.
  // ws = if set, use write size (equals not printed yet)
@@ -6326,18 +6697,19 @@ void p_opsc (INST *x, int ix, int ws)
        return;
     }
 
-   if (ix >= 0x11 && ix <= 0x13)
+   if (ix >= 0x11 && ix <= 0x14)
       {                 // extra size/sign requested
-       i = ix & 3;      // safety
+  //     i = ix & 3;      // safety
+       i = ix - 0x10;
        if (i == 1 && x->opcsub > 1)  i = 0;
-       if (x->opr[i].sym) i = 0;
+       if (x->opr[i].sym) i = 0;                   //allow for syms?
        if (!x->opr[i].rgf) i = 0;
 
        if (i)
          {
-           if (ws) i = x->opr[i].wfend; else i = x->opr[i].rfend; //(x->opr[i].wsize && ws)
+           i = x->opr[i].fend;    // if (ws) i = x->opr[i].wfend; else i = x->opr[i].rfend; //(x->opr[i].wsize && ws)
            // after an equals, always use read size (ws = 0)
-           if (i & 32)  pstr(0,"s");
+           if (i & 0x20)  pstr(0,"s");
            i &= 31;
            if (i < 8)  pstr(0,"y");
            else if (i < 16)  pstr(0,"w");
@@ -6347,36 +6719,21 @@ void p_opsc (INST *x, int ix, int ws)
          }
       }
 
-  ix &= 3;
+  ix &= 7;
   o = x->opr + ix;                            // set operand
 
 //check if index is to a register
-  if (ix == 1 && x->opcsub == 3 && nobank(o->addr) <= max_reg() && !o->rgf)
+  if (o->inx && x->opcsub == 3 && nobank(o->addr) <= max_reg() && !o->rgf)
       {     // present as register - seems to work OK
        o->bkt = 0;
        o->rgf = 1;
-       p_sc (x, ix, ws);
+       p_sc (x, ix);
        return;
       }
 
-// push check, turn immediate into address printout
-//probably need better check here, to see if 'codebank(addr)' is a code command
-
-  if (ix == 1 && o->imd && x->sigix == 14)
-        {  // immediate - assume current code bank for printout
-           // if valid address, and change print to address
-          o->addr = codebank(o->addr,x);
-          if (val_rom_addr(o->addr))
-            {
-             o->imd = 0;
-             o->adr = 1;
-             o->sym = 1;       //look for symname too
-            }
-        }
-
   if (o->bkt)  pchar ('[');
-  p_sc (x, ix, ws);
-  if (ix == 1 && x->opcsub == 3) p_sc (x, 0,ws);  // indexed, extra op
+  p_sc (x, ix);                    //, ws);
+  if (o->inx) p_sc (x, 0);  // indexed, extra op
   if (o->bkt)  pchar (']');
   return;
 }
@@ -6571,12 +6928,12 @@ SYM *x;
 
 int getpd(CPS*,int,int);
 
-void parse_cmnt(CPS *c, uint flags)
+void parse_cmnt(CPS *c, uint *flags)
 {
   // process any special chars in a comment line
   // use CPS struct here for getpx and getpd etc.
 
-  int go, rs, chars, ans;
+  int chars, ans;
   uint col;
   char *t;
   SYM *x;
@@ -6586,9 +6943,10 @@ void parse_cmnt(CPS *c, uint flags)
 
    if (*c->cmpos != '\\' ) p_pad(CMNTPOSN);  //no special chars, tab to cmnt position
 
-   go = 1;
-   while (c->cmpos < c->cmend && go)
+   while (c->cmpos < c->cmend)
     {
+     if ((*flags) & 4) break;
+
      switch (*c->cmpos)
        {   // top level char check
 
@@ -6601,7 +6959,7 @@ void parse_cmnt(CPS *c, uint flags)
          case 1:                          //  for autocomment embedded - NOTE not chars !!
          case 2:
          case 3:
-           p_opsc (c->minst,*c->cmpos,0);
+           p_opsc (c->minst,*c->cmpos);
            break;
 
          case '\n' :                      // '\n',  ignore it
@@ -6611,14 +6969,19 @@ void parse_cmnt(CPS *c, uint flags)
 
 
          case '\\' :                // special sequences
-           c->cmpos++;                     // skip the backslash, process next char.
 
-           rs = toupper(*c->cmpos);
-           switch (rs)
+           if (c->cmpos == c->cmend) pchar(*c->cmpos);        //print backslash if end of line
+
+           c->cmpos++;                     // skip the backslash, process next char.
+           if (c->cmpos >= c->cmend) break;
+
+
+           //rs = toupper(*c->cmpos);
+           switch (toupper(*c->cmpos))
              {  // special sequences
 
                default:
-                 pchar(*c->cmpos);             // print anything else
+                 pchar(*c->cmpos);
                  break;
 
 // more opcode/operand options ??
@@ -6628,16 +6991,15 @@ void parse_cmnt(CPS *c, uint flags)
                case 0x32:                 // for user embedded operands 1-3
                case 0x33:
 
-                 rs = *c->cmpos - 0x30;   // char to number
-                 if (rs >= 0 && rs <= 3)
+                 ans = *c->cmpos - 0x30;   // char to number
+                 if (ans >= 0 && ans <= 3)
                    {
-                    p_opsc(c->minst,rs,0);
-                    //c++;  done below..........
+                    p_opsc(c->minst,ans);
                    }
                    c->cmpos++;
                  break;
 
-               case 'N' :
+               case 'N' :                //newline
                  pstr(1,0);
                  c->cmpos++;
                  break;
@@ -6651,38 +7013,47 @@ void parse_cmnt(CPS *c, uint flags)
                  x = NULL;
                  t = c->cmpos;         // remember where
 
-                 if (toupper(*c->cmpos) == 'W') {rs = 1; c->cmpos++;}  // write sym
+                 if (toupper(*c->cmpos) == 'W') {c->p[7] |= 64; c->cmpos++;}  // write sym
 
                  ans = getpx(c,1,1);
                  if (fix_input_addr_bank(c,1)) ans = 0;
                  if (ans)
                    {
-                    c->p[2] = 32;
+                    c->p[2] = 0;
                     if (*c->cmpos == ':')
                      {
                       c->cmpos++;         //skip the colon
-                      ans = getpx(c,2,1);                       //bit number
-                      if (!ans || c->p[2] > 31) c->p[2] = 32;
+                      ans = getpd(c,2,1);                       //bit number
+                      if (c->p[2] > 31) c->p[2] = 31;
+                      if (ans < 2) c->p[3] = c->p[2];        //one number, end = start
                      }
+                    else
+                    {
+                     c->p[2]  = 0;             //no bits, default to byte
+                     c->pf[2] = 0;             //reset size to zero
+                     c->p[3]  = 7;
+                    }
 
-                    c->p[3] = 0;
+                    c->p[3] |= c->p[7];
+
+                   c->p[4] = 0;
                     if (*c->cmpos == '@')
                      { //range address
-                       ans = getpx(c,3,1);                       //range
-                       if (!ans) c->p[3] = 0;
+                       ans = getpx(c,4,1);                       //range
+                       if (!ans) c->p[4] = 0;
                      }
 
-                    if (!c->p[3])
+                    if (!c->p[4])
                       {
-                       if (c->minst) c->p[3] = c->minst->ofst;    //get range ofst from code
-                       else c->p[3] = c->p[0];       //address of the comment
+                       if (c->minst) c->p[4] = c->minst->ofst;    //get range ofst from code
+                       else c->p[4] = c->p[0];       //address of the comment
                       }
 
-                    x =  get_sym (rs, c->p[1], c->p[2], c->p[3]);         //c->minst->ofst);
+                    x =  get_sym (c->p[1], c->p[2], c->p[3], c->p[4]);
 
                  if (x)
                      {
-                      if (c->p[2] < 32 && x->prtbit) pstr(0,"B%d_",c->p[2]); // not right for WORDS ?
+                      if (c->pf[2] && (x->fend & C_WHL)) pstr(0,"B%d_",c->p[2]); // not right for WORDS ?
                       pstr(0,"%s",x->name);
                       if (col > gcol) p_pad(col);           // pad to col (from above)
                      }
@@ -6700,12 +7071,15 @@ void parse_cmnt(CPS *c, uint flags)
 //if field read, print ??
 
               //   c->cmpos--;         //= c+chars-1;                                   // skip the sequence + whatever read
+       //        }
+//}
                  break;
 
                case 'T' :
          //      case 't' :
                                 // tab to 'x'
                  c->cmpos++;            //next char
+                                  if (c->cmpos >= c->cmend) break;
                  chars = 0;
 
                  ans = getpd(c,1,1);         //sscanf(c,"%u%n",&addr,&chars);
@@ -6716,17 +7090,18 @@ void parse_cmnt(CPS *c, uint flags)
 
                case 'R' :        // runout
                  c->cmpos++;
+                 if (c->cmpos >= c->cmend) break;
                  chars = 0;
-                 rs = ' ';     //space is default
+                 c->p[2] = ' ';     //space is default
 
                  if (!isdigit(*c->cmpos))
                    {
-                    rs = *c->cmpos;   //new runout char
+                    c->p[2] = *c->cmpos;   //new runout char
                     c->cmpos++;
                    }
                  ans = getpd(c,1,1); //ans = sscanf(c,"%u%n",&addr,&chars);
                  if (ans <= 0) c->p[1] = 1;
-                 p_run(rs, c->p[1]);
+                 p_run(c->p[2], c->p[1]);
              //    c->cmpos = c->cmpos+chars-1;                                   // skip the sequence + whatever read
                  break;
 
@@ -6746,13 +7121,17 @@ void parse_cmnt(CPS *c, uint flags)
 
 
               case 'W' :     // wrap comment, or pad to comment column
-                 if (lastpad >= CMNTPOSN) wrap();
+                 if (glastpad >= CMNTPOSN) wrap();
                  else p_pad(CMNTPOSN);
                  c->cmpos++;
                  break;
 
+
+// add V for 'show value pointed to' ??
+
+
               case '|'  :        // multiple comment lines ? this seems to work............
-                 if (flags & 2) go = 0;
+                 if ((*flags) & 2) (*flags) |= 4;
                  c->cmpos++;
                  break;
 
@@ -6769,13 +7148,10 @@ void parse_cmnt(CPS *c, uint flags)
 
 
        }        // end switch for char
-    // if (*c->cmpos) c->cmpos++;
+
     }
 
-// save char position if in opcode,  else clear string
 
- // if ((flags & 2) && *c->cmpos)  m->ctext = c;             ??
-  //else *c->cmpos = '\0';    //m->ctext = NULL;         // clear string for next cmt
 }
 
 
@@ -6795,15 +7171,15 @@ void pp_comment (uint ofst, uint flags)
  // and remember if newline printed so multiple 'end' set doesn't cause multiple newlines
  // clear flag if end not set
 
-   while (ofst > cmnd.p[0])
+   while (ofst > (uint) cmnd.p[0])
        {
         if ((flags & 1) && cmnd.argl) break;       // do on NEXT call
-        parse_cmnt(&cmnd,flags);                // print it
-        if (!get_cmnt(&cmnd, flags)) break;
+        parse_cmnt(&cmnd,&flags);                  // print it
+        if (!get_cmnt(&cmnd, &flags)) break;       // get next commant
        }
 
    if (flags & 1)
-      {
+      {                 //print newline
        if (!lastcmt)
          {
            pstr(1,0);
@@ -6824,6 +7200,7 @@ int maxsizes(LBK *x)
  SYM *sym;
  int i,item;
  uint ofst, end, val,sz;
+ void * fid;
 
  ofst = x->start;
  memset(&plist,0,sizeof(plist)); // zero the whole thing
@@ -6842,10 +7219,13 @@ int maxsizes(LBK *x)
  //a = (ADT*) chmem(&chadnl,0);
  //a->fid = x;
 
- a = start_adnl_loop(&chadnl,x->start);
- while ((a = get_next_adnl(&chadnl,a)))
+fid = vconv(x->start);
+
+ while ((a = get_adt(fid,0)))
    {
     sz += cellsize(a);
+
+    if (!a->cnt) ofst = end;      // safety to stop loops
 
     // now try to work out widths -not only symsize, but floats as well ?
 
@@ -6855,11 +7235,11 @@ int maxsizes(LBK *x)
        if (a->fnam)
           {
            val = decode_addr(a, ofst);           // val with decode if nec.  and sign - READS ofst
-           sym = get_sym(0, val,32,ofst);        // READ sym AFTER any decodes
+           sym = get_sym(val,a->fstart, a->fend,ofst);        // READ sym AFTER any decodes
           }
        if (sym)
          {
-           val = sym->tsize -1;
+           val = sym->symsize -1;
            if (val > plist[item]) plist[item] = val;
          }
        else
@@ -6867,7 +7247,7 @@ int maxsizes(LBK *x)
            // check pfw in HERE !!
            if (a->pfw) val = a->pfw;
            else val = get_pfwdef(a);
-           if (a->flt) val+= 4;           // floating point
+           if (a->div | a->mult) val+= 4;           // floating point
            if (val > plist[item]) plist[item] = val;
          }
        item++;
@@ -6881,7 +7261,7 @@ int maxsizes(LBK *x)
       sz = 0;                                // for next segment
       item = 1;                              // restart items
      }
-
+    fid = a;
    }
 
  if (sz > plist[0])  plist[0] = sz;     // for last (or only) segment
@@ -6903,43 +7283,46 @@ int maxsizes(LBK *x)
      plist[31] += plist[i]+2;            // space and comma for each item
    }
 
+if (plist[31] > 240) plist[31] = 240;         //safety
+
+
 plist[31] += 5;          // for cmnd string
  return item;
 }
 
 
-int pp_cmpl(uint ofst, uint start, int fcom)
+int pp_cmpl(uint ofst, void *fid, int fcom)
 {
   // print 'compact' layout, all args on one line
   // unless | char, when it's split
 
-  uint tsize, size, end, seq, itn;
+  uint tsize, size, end, itemno;
 
-  tsize = totsize(&chadnl,start);
+  tsize = totsize(fid);
   end = ofst + tsize;
 
 // this is stct format, need a different one for subr (with args afterwards)
- seq = 0;                 // new query
- itn = 1;
+
+ itemno = 1;
 
  while (ofst < end)
   {      //for newline split............
-   size = listsize(&chadnl,start,seq);
+   size = listsize(fid);
 
   if (fcom != C_ARGS)
    {
     pp_hdr (ofst,0,size);        // no title
     p_pad(plist[0]);
-    pstr (0,"%s", cmds[fcom]);
+    pstr (0,"%s", cmds[fcom].str);
     if (gcol < OPNDPOSN) p_pad(OPNDPOSN); else p_pad(gcol+2);
-    pp_lev(start,ofst,&seq, &itn);    // continue from newline
+    pp_lev(&fid,0,ofst, &itemno);    // continue from newline
     ofst += size;
     if (gcol >= CMNTPOSN) p_pad(plist[31]);
     if (ofst < end) pp_comment (ofst,0);    // NOT last item
    }
   else
    { // arguments for subr on same line, no split
-    pp_lev(start,ofst,&seq, 0);
+    pp_lev(&fid,0,ofst, 0);
     ofst += size;
    }
   }
@@ -6951,7 +7334,7 @@ int pp_cmpl(uint ofst, uint start, int fcom)
 
 
 
-int pp_argl (uint ofst, uint start, int fcom, int *argno)
+int pp_argl (uint ofst, void *fid, int fcom, int *argno)
 {
 
 // Print 'argument' layout, 1 arg per line
@@ -6963,17 +7346,14 @@ ADT *a;
 
  pp_comment (ofst,0);            //for any comments BEFORE args
 
- tend = ofst + totsize(&chadnl,start)-1;  // where this 'row' ends
- i = 0;
- a = start_adnl_loop(&chadnl, start);    //(ADT*) chmem(&chadnl,0);
-// a->fid = fid;
+ tend = ofst + totsize(fid)-1;  // where this 'row' ends
 
- while ((a = get_next_adnl(&chadnl,a)))
+ while ((a = get_adt(fid,0)))             //next_adnl(&chadnl,a)))
   {
    for (i = 0; i < a->cnt; i++)             // count within each level
     {
      if (fcom == C_ARGS) sprintf(nm, "      #%s %d", "arg", (*argno)++);
-     else                sprintf(nm, "      #%s %d", cmds[fcom], (*argno)++);
+     else                sprintf(nm, "      #%s %d", cmds[fcom].str, (*argno)++);
 
      pp_hdr(ofst, nm, bytes(a->fend));
      p_pad(PSCEPOSN+3);
@@ -6989,7 +7369,7 @@ ADT *a;
          pp_comment (ofst,0);
        }
     }
-
+   fid = a;
    if (a->newl) break;       //this breaks seq no ??
   }
 
@@ -7028,10 +7408,10 @@ int pp_subargs (INST *c, int ofst)
       {
         if (k->cptl)
            {
-            pp_cmpl(xofst,k->start, k->fcom);
+            pp_cmpl(xofst,vconv(k->start), k->fcom);
             postprt = 1;
            }
-        else  pp_argl(xofst, k->start, k->fcom, &argno);
+        else  pp_argl(xofst, vconv(k->start), k->fcom, &argno);
       }
     xofst += k->size;                     // look for next args
     size += k->size;
@@ -7050,10 +7430,10 @@ int pp_subargs (INST *c, int ofst)
          {
           if (xsub->cptl)
              {
-              pp_cmpl(xofst,xsub->start, C_ARGS);
+              pp_cmpl(xofst,vconv(xsub->start), C_ARGS);
               postprt = 1;
              }
-          else pp_argl(xofst, xsub->start, C_ARGS, &argno);
+          else pp_argl(xofst, vconv(xsub->start), C_ARGS, &argno);
          }
       }
     }
@@ -7072,11 +7452,13 @@ int pp_subargs (INST *c, int ofst)
 // print subroutine params - simpler version
 //func, table, struct go here
 
+
+
 uint pp_stct (uint ofst, LBK *x)
 {
   uint size, end;
   int argno;
-
+  void * fid;
 
 //if (x->start == 0x9c0f8)
 // {
@@ -7084,7 +7466,7 @@ uint pp_stct (uint ofst, LBK *x)
 //}
 
 
-
+  fid = vconv(x->start);
   end =  ofst + x->size;
   argno = 1;                               // can't reset argno !!
 
@@ -7107,13 +7489,13 @@ uint pp_stct (uint ofst, LBK *x)
     {
       if (x->argl)
         {
-         ofst = pp_argl(ofst,x->start,x->fcom,&argno);
+         ofst = pp_argl(ofst,fid,x->fcom,&argno);
          pp_comment (ofst, 1);                  // last item
          pstr(1,0);
         }
       else
         {
-         ofst += pp_cmpl(ofst,x->start,x->fcom);
+         ofst += pp_cmpl(ofst,fid,x->fcom);
          if (gcol >= CMNTPOSN) p_pad(plist[31]);    //before comments.....
         }
     }
@@ -7136,8 +7518,75 @@ void shuffle_ops(const char **tx, INST *c, int ix)
 }
 
 
+void fix_indexed_op(INST *c, uint ix)
+ {
 
+  OPS *b, *o;
+  RBT *r;
+  SYM *s;
+  int addr;
 
+  ix &=3;               //safety
+
+  o = c->opr+ix;             // can be 1 or 3 (stx)
+  if (!o->inx)   return;
+
+  if (ix == 3)
+   {
+     //only if STX.
+     c->opr[1].inx = 0;         // cancel index on op[1] as it was swopped
+   }
+
+  b = c->opr;                       // probably redundant, but safety - cell [0]
+  if (zero_reg(o)) o->val = 0;       // safety
+
+  if (zero_reg(o) || o->rbs)
+    {
+      // Rbase+offset or R0+offset
+      // merge the two operands to fixed addr  and drop register operand
+      // can't rely on o->val always being correct (pop screws it up...) so reset it here
+
+      if (o->rbs)
+        {           // rbase - get true value from rb chain
+          r = get_rbt(o->addr, c->ofst);
+          o->val = r->val;                     // but already done ?
+          }
+
+        addr = c->opr->addr + o->val;          // addr may be NEGATIVE at this point !!
+        if (addr < 0) addr = -addr;                // effective wrap around ? never true ? .......
+        o->addr = databank(addr, c);                       // need bank for index addition (and -ve fix)
+
+        o->rgf = 0;
+        o->sym = 0;
+        o->adr = 1;                                      // [o] is now an address
+        b->off = 0;                                      // no following offset reqd
+
+        s = get_sym(o->addr,0,C_WHL|7,c->ofst);       // and sym for true inx address
+
+        if (s)     //symbol found at (true) addr
+         {
+          o->bkt = 0;       // drop brackets (from [1+0])
+          o->sym = 1;       // mark symbol found
+         }
+      } // end merge (rbs or zero)
+
+     else
+      {
+        // this is an [Rx + offset]. Sort op[0] symbol if not a small offset
+
+        if (!is_special_reg(b->addr) && !b->neg)
+          {
+            // not negative, not reserved register, add databank if > PCORG
+
+            s = get_sym(databank(b->addr,c),0,C_WHL|7,c->ofst);
+            if (s)
+              {
+               if (nobank(b->addr) > PCORG || s->immok)  b->sym = 1;
+              }
+            if (numbanks) b->addr = databank(b->addr,c);         // do bank for printout
+          }
+      }
+    }         // end inx
 
 
 
@@ -7147,36 +7596,33 @@ void fix_sym_names(const char **tx, INST *c)
   // This CHANGES addresses for indexed and RBS for printout purposes
 
   OPS *b, *o;
-  RBT *r;
   SYM *s;
-  int i,w;
-  int addr;
+  int i,  addr;
   const OPC* opl;
 
   opl = opctbl + c->opcix;
 
   // get and flag all sym names FIRST, then can drop them out later as reqd
 
-  for (i = 1; i <= opl->nops; i++)
+  for (i = 1; i < 4; i++)     // always check 3 as it's destination op...
    {
     o = c->opr+i;
-    o->sym = 0;            // no sym
-    s = NULL;
-    if (i == c->wop) w = 1; else w = 0;
+    if (o->fend)
+     {
+      o->sym = 0;            // no sym
+      s = NULL;
 
-    s = get_sym(w, o->addr,32, c->ofst);      // write sym or read sym
-    if (s)
-      {
-       o->sym = 1;  // symbol found
-      }
+      s = get_sym(o->addr,0, C_WHL|o->fend, c->ofst);      // write sym or read sym
+      if (s)  o->sym = 1;  // symbol found
+     }
    }
 
   if (c->opr[3].bit)            // bit jump - if bitname, drop register name
      {
         o = c->opr+2;
-        b = c->opr+3;               // b = bit number entry, get bit/flag name
+        b = c->opr+3;               // special - [3] = bit number entry, get bit/flag name
         b->sym = 0;                 // clear bit name flag
-        s = get_sym (0, o->addr, b->val, c->ofst);  // read sym
+        s = get_sym (o->addr, b->val, b->val,c->ofst);        // read sym
         if (s)
           {
            o->rgf = 0;
@@ -7187,71 +7633,19 @@ void fix_sym_names(const char **tx, INST *c)
      }
 
   //  Shifts, drop sym if immediate
-  if (c->opcix < 10 && c->opr[1].val < 16)  c->opr[1].sym = 0;
+  if (c->opcix < 10 && c->opr[1].imd) c->opr[1].sym = 0;
 
   // indexed - check if RBS, or zero base (equiv of = [imd])
+  // for both 1 and 3 (stx)
 
-  if (c->opcsub == 3)           //indexed, use addr in cell [0] first
-     {
-     b = c->opr;                // probably redundant, but safety - cell [0]
-     o = c->opr+1;
-     if (c->wop == 1) w = 1; else w = 0;
-     if ((o->addr&0x3ff) < 2) o->val = 0;       // safety
+  fix_indexed_op(c, 3);
+  fix_indexed_op(c, 1);
 
-     //if (zero_reg(o->addr) || o->rbs)
-     if (zero_reg(o) || o->rbs)
-      {
-        // Rbase+off  or R0+off
-        // merge the two operands to fixed addr  and drop register operand
-        // can't rely on o->val always being correct (pop screws it up...) so reset here
-
-        if (o->rbs)
-          {           // rbase - get true value from rb chain
-           r = get_rbt(o->addr, c->ofst);
-           o->val = r->val;                     // but already done ?
-          }
-
-        addr = c->opr->addr + o->val;          // addr may be NEGATIVE at this point !!
-        if (addr < 0) addr = -addr;                // effective wrap around ? never true.......
-
-//        o->addr = o->val + c->opr->addr;                 // add [0] to get true address
-        o->addr = databank(addr, c);                       // need bank for index addition
-
-        o->rgf = 0;
-        o->sym = 0;
-        o->adr = 1;                                      // [o] is now an address
-        b->off = 0;                                      // no following offset reqd
-
-        s = get_sym(w, o->addr,32,c->ofst);       // and sym for true inx address
-
-        if (s)     //symbol found at (true) addr
-         {
-          o->bkt = 0;       // drop brackets (from [1+0])
-          o->sym = 1;       // mark symbol found
-         }
-
-      } // end merge (rbs or zero)
-     else
-      {
-        // this is an [Rx + offset]. Sort op[0] symbol if not a small offset
-        if (!is_special_reg(b->addr) && !b->neg)
-          {
-            // not negative, not reserved register, add databank if > PCORG
-
-            s = get_sym(0, databank(b->addr,c),32,c->ofst);
-            if (s)
-              {
-               if (nobank(b->addr) > PCORG || s->immok)  b->sym = 1;
-              }
-            if (numbanks) b->addr = databank(b->addr,c);         // do bank for printout
-          }
-      }
-    }         // end inx
 
   if (c->opcsub == 1)       // immediate - check opcodes etc. for removing symbol names
      {
       // not small values (register names ??)
-      if (nobank(c->opr[1].addr) < max_reg())  c->opr[1].sym = 0;      // not (normally) names for registers
+      if (nobank(c->opr[1].addr) <= max_reg())  c->opr[1].sym = 0;      // not (normally) names for registers
       // sub ??
       // not 5 and, 8 mult, 9 or,xor, 10 cmp, 11 div  - all must be an abs value
       // ldx 12 with rbase - no symname
@@ -7263,8 +7657,8 @@ void fix_sym_names(const char **tx, INST *c)
 
 // TEST !!
 
-if (opl->nops == 2 && c->wop && zero_reg(c->opr + c->wop))
-   {   //   R0 = R0 + something;
+if (opl->nops == 2 && c->opr[3].fend && zero_reg(c->opr + 3) && c->opcix > 9)
+   {   //   R0 = R0 + something;       NOT IF SHIFT !!
       if (tx) *tx = scespec[2];           //opctbl[LDWIX].sce;
     }
 
@@ -7283,7 +7677,7 @@ if (opl->nops == 2 && c->wop && zero_reg(c->opr + c->wop))
        // databank ?
        b->imd = 0;
        b->adr = 1;
-       s = get_sym(0, b->addr,32,c->ofst);
+       s = get_sym(b->addr,0,C_WHL|7,c->ofst);
 
        if (s) b->sym = 1;
        shuffle_ops(tx,c,2);                  // drop op [2]
@@ -7296,13 +7690,13 @@ if (opl->nops == 2 && c->wop && zero_reg(c->opr + c->wop))
 
    }   // end op 3 op checks
 
- //     R3 = R2 + R1 style.  is anything rbase ?? replace with address as an imd
+ //     R3 = R2 + R1 style.  is anything rbase ?? replace with address as an imd, but NOT if it's traget
   if (!c->opcsub && (c->opr[1].rbs || c->opr[2].rbs))
       {
         for (i = 1; i < c->numops; i++)
           {  //  op 1 for 2 ops, 1 & 2 for 3 ops
             b = c->opr + i;
-            if (b->rbs)
+            if (b->rbs && i != 3)        //c->wop
               {
                b->imd = 1;
                b->rgf = 0;
@@ -7319,297 +7713,318 @@ if (opl->nops == 2 && c->wop && zero_reg(c->opr + c->wop))
      if (tx) *tx = scespec[opl->sigix-6];     // drop op [1] via special array
     }
 }
+//--------------------------------------
 
 
 
-
-void make_mask(uint ix)
-{    //make mask of where matching bits are
-
-  SYM *s;
-  uint  i, start, end;
-  plist[ix] = 0;
-  s = bitnames[ix];
-
-  if (!s) plist[ix] |= (1 << ix);
-  else
-    {
-     if (s->prtbit) plist[ix] |= (1 << ix);
-     else
-       {
-         // check for upper byte matches first.
-         start = s->addb & 7;
-         end = s->fend;
-         if (ix > 7)
-          {
-            start += (ix/8) *8;
-            end +=   (ix/8) * 8;;
-          }
-
-         for (i = start; i <= end; i++) plist[ix] |= (1 << i);
-       }
-    }
-}
-
-
-
-
-uint get_bitnames(INST *c)
+uint do_bitnames(INST *c, uint addr, uint vmask, uint *pmask, cchar *op, SYMLIST *list)
  {
-  // get all bit names, count print mask
-  // for later checks.
-  uint pcnt, i, x, sz;      //ncnt
-  OPBIT *m;
-  SYM *s;
+    //do named fields
 
-  m = (OPBIT*) c->opr + 4;
+  uint i, ix, cnt, symmask;
+  CHAIN *x;
+  SYM *d;
 
-  x = m->pmask;                 // print mask
-  sz = c->opr[1].rfend;        // bits to check - not right for variable fields
-  if (sz > 15) sz = 15;        // safety !!
+  if (!list)  return 0;       //safety
 
-  // first, check for 'F' or 'N' in no bit symbol(s)
+  x = &chsym;                //get_chain(CHSYM);
 
-  pcnt = c->opr[m->sceix].addr;    // base addr of op
-
-  for (i = 0; i <= sz/8; i++)
+  i = list->startix;
+  cnt = 0;
+  while (i <= list->endix && *pmask)          //i < 65 && pmask)
     {
-     s = get_sym(m->rw,pcnt+i,32, c->ofst);    // master base name(s)
+  //    if (list[i] >= x->num) break;         // end of list
+      d = (SYM*) x->ptrs[i];
 
-     if (s)
-      {
-       if (s->flags) m->flags = 1;           // flag byte bit
-       if (s->names) m->names = 1;
-      }
-    }
-
-  pcnt = 0;
-
-// x = m->pmask;                 // print mask
-
-  for (i = 0; i <= sz; i++)
-   {
-
-    bitnames[i] = get_sym(m->rw, c->opr[m->sceix].addr, i, c->ofst);
-    make_mask(i);                     // preset matching mask
-
-    if (bitnames[i])
-      {
-       if ((x & plist[i]) && !bitnames[i]->prtbit) m->nmfnd  |= (1 << i);      // matching bit names mask
-       if (bitnames[i]->flags) m->flags = 1;           // 'F' flagsword
-       if (bitnames[i]->names) m->names = 1;           // 'N' names only
-      }
-    if (x & plist[i]) {pcnt++;                // count of matching syms
-    x ^= plist[i];}
-   }
-
- return pcnt;
-}
-
-
-uint prt_bitsym(INST *c, uint ix)
+if (!(d->fend & 0x80))    // full syms (writes) first
 {
-  // print bitname or BX_Rn as last resort
-  // ix is bitno in here....
-  uint addr;
-  SYM *s;
-  OPBIT *m;
+    //no nobit syms
 
-  m = (OPBIT*) c->opr + 4;
-  addr = c->opr[m->sceix].addr;
+      if (d->rstart <= c->ofst && d->rend >= c->ofst )
+       //    && (d->fend & 0x40) == (list->fend & 0x40) )  always read syms ??
 
-  if (bitnames[ix])
-    {
-      s = bitnames[ix];
-      if (s->prtbit) pstr (0,"B%d_", ix);
-      pstr (0,"%s",s->name);      //  print matched sym bit name
-      return 1;
-    }
-
-  if (m->names) return 0;            // names only
-
-  fixbitfield(&addr, &ix, 0);               // fix anything over B7
-  pstr (0,"B%d_R%x", ix, addr);
-  return 1;
-}
-
-
-void prt_bitline(INST *c)
-{
- // print bitnames.
- // use 'm' struct
-
-  uint i, x, sz, vmask;
-  uint pmask;
-  OPBIT *m;
-
-  m = (OPBIT*) c->opr + 4;
-
-  x = 0;
-  // pmask might be REVERSE of vmask (for ands)
-
-  vmask = c->opr[1].val;          // orig (value) mask
-  pmask = m->pmask;               // print mask
-  sz = c->opr[1].rfend + 1;
-  if (sz > 16) sz = 16;            // safety !!
-
-  for (i = 0; i < sz; i++)
-   {
-      if (pmask & plist[i])
       {
-       if (x)
-        {   // indent+new line if not first sym
-         p_indl ();
-         x = 0;
-        }
-
-       x = prt_bitsym(c, i);    //print bit or sym
-
-       if (x)
+          //but this if for chain , not for insert !!
+           //  if olapadd(add)
+      if (d->addr > addr)
         {
-           pchar(' ');
-           if (m->fxor) pstr(0,"^");
-           pstr (0,"= %d;", (vmask & plist[i]) >> i); // ** HERE would be a bit FIELD
-
-           if (pmask == plist[i]) break;          // exit and stop comment check (last entry)
-           pp_comment(c->ofst+1,2);               // otherwise check for comment
+          ix =  (d->addr - addr) * 8;        // bit shift necessary
+          symmask = d->fmask << ix;          // to get to correct sym mask for pmask , vmask
+         }
+      else
+        {
+          ix = 0;
+          symmask = d->fmask;
         }
-       pmask ^= plist[i];
+
+      if (symmask & *pmask)
+        {
+          p_indl();
+
+          pstr(0,"%s %s %x;", d->name, op, (vmask & symmask) >> (d->fstart+ix));  // shift val down to correct bit.
+          cnt++;
+          *pmask ^= symmask;                                    // remove bit(s) after printing
+
+          if (*pmask)   pp_comment(c->ofst+1,2);               // check for comment
+        }
       }
-   }
+      }
+       i++;
+    }
+  return cnt;
 }
 
 
-void bitwise_replace(const char **tx, INST *c)
+uint do_bitdeflt(INST *c, uint addr, uint vmask, uint *pmask, cchar *op, SYMLIST *list)
+   {
+      //  Bx_Rn  printouts.
 
- /* check for bit flag printouts (and or operations)
- * must be immediate op (as flags mask) and at least one name found
- * for ops with a \4 at the front.  WRITE symbols for first try.
- * ops referenced are -
- * c->opr[1].val   is actual mask
- * c->opr[2].addr  is base (sym lookup) addr - same for 2 or 3 op
- * ops[4] overlaid with different struct 'm' for ease of reading
- * m->pmask          // print mask
- * m->nfnd           // names found mask
- * m->fxor           // this is an XOR opcode
- * m->flags          // flags word 'F' in sym or bitsyms
- * m->names          // names      'N' in sym
- * m->sceix          // opc source index
- * m->rw             // look for read or write syms
- */
-// need to rework for fields wider than one bit................
+  //     !! NO READ?WRITE for default??
+  //do need fend to keep track properly
+
+      uint i, cnt, symmask;
+      CHAIN *x;
+      SYM *d;
+
+      x = &chsym;           //get_chain(CHSYM);
+
+      // sort out symname - always write by preference
+
+     d = 0;
+     if (list)
+       {
+     if (list->fend & 40)
+      {       //write
+       if (list->defwr < chsym.num) d = (SYM*) x->ptrs[list->defwr];
+      }
+
+     if (!d && list->defrd < chsym.num) d = (SYM*) x->ptrs[list->defrd];      //read is default
+       }
+
+    cnt = 0;
+     i = 0;
+      while (i < 32)
+        {
+          symmask = (1 << i);
+
+          if (symmask & *pmask)
+            {
+              if (!(*pmask)) break;
+
+             p_indl();
+
+             if (d)
+             pstr(0,"B%d_%s %s %x;", i, d->name, op, (vmask & symmask) >> i);              // shift val down to correct bit.
+             else
+             pstr(0,"B%d_R%x %s %x;", i, addr, op, (vmask & symmask) >> i);              // shift val down to correct bit.
+             cnt++;
+             *pmask ^= symmask;                                    // remove bit(s) after printing
+
+             if (*pmask)   pp_comment(c->ofst+1,2);               // check for comment
+            }
+           i++;
+        }
+   return cnt;
+  }
+
+
+void bitwise_an3x(cchar **tx, INST *c)
+
+// purely for an3x, with a = b & c
+//how to switch on global settings.... ???
+
+
+
+
+//maybe here could better reognize if imd and op[2] have large multifield ??
+
+// prob need subr for each opcode type ???
+
 {
 
-  uint i, x, pcnt, sig;
-  OPBIT *m;
+  uint cnt, vmask, i, ix, symmask;
+  SYMLIST *list;
+  OPS  *o;
+  CHAIN *x;
+  SYM *d;
 
-  if (anlpass < ANLPRT)    return;              // only for  print phase
+  //o = c->opr + 3;                              // destination
+  // if (!o->addr) return;                        // ignore if R0 (why ?)
+
+  vmask = c->opr[1].val;                       // value of read/write for bits OR and AND
+
+  o = c->opr + 2;                              // mask is op[1], but symbol source is op[2]
+
+  list = get_symlist(o->addr, o->fend, c->ofst);  // size via o->fend (write) ....
+
+  if (!list) return;
+  x = &chsym;          //get_chain(CHSYM);
+
+ cnt = 0;
+
+ // cut down version of bitwsie for an3x
+   i = list->startix;                     //2;
+
+  while (i <= list->endix && vmask)              //i < 65 && vmask)
+    {
+ //     if (list[i] >= x->num) break;         // end of list
+      d = (SYM*) x->ptrs[i];
+ //  if olapadd(add)
+      if (d->addr > o->addr)
+        {
+          ix =  (d->addr - o->addr) * 8;        // bit shift necessary
+          symmask = d->fmask << ix;          // to get to correct sym mask for pmask , vmask
+         }
+      else
+        {
+          ix = 0;
+          symmask = d->fmask;
+        }
+
+      if (symmask & vmask)
+        {
+
+          if (cnt == 0)
+           {
+             p_opsc(c,3);
+             pstr(0," = ");
+           }
+          pstr(0,"%s ", d->name);  // shift val down to correct bit.
+
+          cnt++;
+          vmask ^= symmask;                                    // remove bit(s) after printing
+
+          if (vmask)
+           {
+             pchar('|');
+             pp_comment(c->ofst+1,2);
+             p_indl();
+           }
+          else  pchar(';');
+
+      //    if (vmask)   pp_comment(c->ofst+1,2);               // check for comment THIS BUGGERS UP the list !!!
+        }
+       i++;
+    }
+
+
+
+
+
+
+
+
+
+
+  //end of list, but pmask may still have bits set, so do defaults
+
+
+ // if (pmask)      pmask = do_bitdeflt(c, o->addr, 0, pmask, "|", list);
+
+   if (cnt)  *tx = 0;
+
+
+   mfree(list,sizeof(SYMLIST));
+
+}
+
+void bitwise_replace(cchar **tx, INST *c)
+
+// Now works for fields wider than one bit, adjusting val as well as print maks
+//how to switch on global settings.... ???
+
+
+// prob need subr for each opcode type ???
+
+{
+
+  uint cnt, sig, pmask, vmask;
+  SYMLIST *list;
+  OPS  *o;
+  cchar* op;
+  //CHAIN *x;
+
+  if (c->opcsub != 1 && c->sigix != 1) return;      // only if an immediate or clr opcode.
+
   sig = c->sigix;                 // opcode sigix
 
-  // only continue if either imd instruction or clrx
+  if (c->opcix > 31 && c->opcix < 34)  op = "^="; else op = "=";    // xor
 
-  if (c->opcsub != 1  &&  sig != 1) return;      // only if immediate or clr
-  if (c->opr[4].rbs) return;                     // NOT if a shuffled out rbs operand
+  // only continue if either imd instruction or clr
 
-  memset(c->opr+4,0,sizeof(OPS));                // clear ops[4], safety
+  //if it's an3b or an3w, do separately
 
-  m = (OPBIT*) c->opr + 4;                       // overlay opbit onto ops[4]
-  m->pmask = c->opr[1].val;                      // print mask
-  m->sceix = (sig == 1) ? 1 : 2;                 // source op index, 1 for clr
-  m->rw = 1;                                     // write syms by default
-  if (c->opcix >= 32 && c->opcix <= 33) m->fxor = 1;  // XOR Flag
-
-  memset(&bitnames,0,sizeof(bitnames));          // clear bitnames
-
-  // OR, XOR with zero mask
-  if (sig == 9 && !c->opr[1].val)
+  if (sig == 5 && c->numops == 3)
     {
-      c->opr[1] = c->opr[2];
-      *tx = scespec[2]-1;
-      // add "redundant" comment ??
+      bitwise_an3x(tx,c);
       return;
     }
 
-  // AND. reverse print mask if not a 3 op, otherwise set READ
+
+  if (c->opr[4].rbs) return;                   // NOT if an rbs operand (...why?)
+
+  if (sig == 9 && !c->opr[1].val)
+    {
+      const OPC *z;                            // OR, XOR with zero mask - a timewaster ?
+      c->opr[1] = c->opr[2];                   // make operands equal
+
+      z =   opctbl + 40;                       //  ldx
+      *tx = z->sce;                            // add a "redundant" comment ??    ldx  /2 = /1;
+      return;
+    }
+
+  vmask = c->opr[1].val;                       // value of read/write  for bits OR and AND
+
+  o = c->opr + 3;                              // o is write op, [1] is read op
+
+  if (sig == 12 || sig == 1)
+    {                                            // ldb, ldw, clr. etc
+      pmask = fmask(0,c->opr[3].fend);           // for all bits in WRITE operand
+    }
+  else  pmask = vmask;                           // only for bits in value given
 
   if (sig == 5)
-    {
-     if (c->numops < 3)
-       {    // not an3x
-        m->pmask = ~m->pmask;
-        m->pmask &= get_sizemask(c->opr[1].rfend);    // safety
-       }
-     else m->rw = 0;                        // read sym names for an3x
+    {                                            // AND. Reverse print mask.
+       pmask = ~pmask;
+       pmask &= fmask(0,c->opr[3].fend);         // cut back down to right size
     }
 
-  pcnt =  get_bitnames(c);         // pcnt is no of bits in print mask
+ //but may need an 'all bits' option, so would be same as ldb and clr above....
 
-  if (sig == 12 || sig == 10 || sig == 1)
-      {    // ldx, cmp, clr
-       if (m->flags)
-        {
-         m->pmask = get_sizemask(c->opr[1].rfend);  // set all bits to print (wrong ??)
-        }
-       else return;     // do standard print of these ops
-      }
+  list = get_symlist(o->addr, o->fend, c->ofst);  // size via o->fend (write) ....
 
-// STX ????
+  // V4 was at least 2 bit field symbols
 
-//  if (pcnt > 1) c->opr[4].addr = c->opr[4].val;  // printmask = namesmask - only prt sym names
+  //next bit only works if at least one field name found....may need more for single bits ??
 
-  if (pcnt > 1 && !m->nmfnd)  return;
+  if (!list && __builtin_popcount(pmask) != 1)  return;
+ // if (!list) return;    //no matches
 
+  cnt = 0;
 
-  // now print names, one per line
+  cnt = do_bitnames(c, o->addr, vmask, &pmask, op, list);
 
-  if (c->numops < 3)
-   {
-    prt_bitline(c);       // one bitname per line, with =
-    *tx = empty;
-   }
- else
-  {        // an3x a = b|c|d  format
-   int ppos;
+  //end of list, but pmask may still have bits set, so do defaults
 
-   if (sig != 5) return;
-
-   p_opsc(c,3,1);
-   pstr(0," = ");
-   if (pcnt > 1) {pchar ('('); ppos = gcol;}
-
-// newline for | for long lines ?
-
-   sig = c->opr[1].val;      // temp vmask
-   x = 0;
-   i = 0;
-
-   while (i <= c->opr[1].rfend)       //;  i++)
+  if (pmask && (sig == 5 || sig == 9))      //AND, OR only
     {
-     if (!sig) break;    //to stop comment ?? not reqd ??
-     if (sig & plist[i])
-      {
-       if (x)
-         {
-           pchar('|');
-           pp_comment(c->ofst+1,2); // and need a pp_comment here too..........
-           pstr(1,0);
-           p_pad(ppos);
-         }
-       x = prt_bitsym(c, i); //name or Bx_Rn
-       sig ^= plist[i];
-      }
-     i++;
+      cnt += do_bitdeflt(c, o->addr, vmask, &pmask, op, list);
     }
 
-   if (pcnt > 1) pchar (')');
-   if (pcnt) { pchar(';');  *tx = empty; }                 // at least one name substituted return a ptr to null
-  }
+  if (cnt) *tx = 0;
+   //   if (pmask)   pstr (0, " **P %x **", pmask);  /// DEBUG
+
+   mfree(list,sizeof(SYMLIST));
 
  }
 
 
 
+
+
+//----------------------------------------
 /*
+
 void shift_comment(INST *c)
  {
   //  do shift replace here - must be arith shift and not register
@@ -7665,9 +8080,9 @@ void do_carry(INST *c, const char **tx, int ainx)
           // JNC -> JLT  JC -> JGE
 
           *tx = swopcmpop[ainx&1];
-          p_opsc(&sinst,opl->wop,1);           // write
+          p_opsc(&sinst,3);              //opl->wop,1);           // write
           pstr(0," %s ",*tx);
-          p_opsc(0,1,0);
+          p_opsc(0,1);
           pstr(0,") ");
           *tx = scespec[3] -1;     //opctbl[JMPIX].sce - 1;   //jump sce code to follow this - allow for increment
         }
@@ -7682,15 +8097,15 @@ void do_carry(INST *c, const char **tx, int ainx)
 
           if (zero_reg(sinst.opr + 2))                //sinst.opr[2].addr == 0)
             {  // jc/jnc after zero first compare, swop order via swopcmpop 8 and 9
-              p_opsc(&sinst,1,0);                   // operand 1 of compare
+              p_opsc(&sinst,1);                   // operand 1 of compare
               pstr(0," %s ", swopcmpop[ainx - 48]);   // 56 maps to 8
-              p_opsc(&sinst,2,0);                   // operand 2 of compare (zero)
+              p_opsc(&sinst,2);                   // operand 2 of compare (zero)
             }
           else
             {
-              p_opsc(&sinst,2,0);
+              p_opsc(&sinst,2);
               pstr(0," %s ",*tx);
-              p_opsc(&sinst, 1,0);
+              p_opsc(&sinst, 1);
             }
           pstr(0,") ");
           *tx = scespec[3] -1;    //opctbl[JMPIX].sce - 1;   //jump sce code to follow this - allow for increment
@@ -7698,9 +8113,9 @@ void do_carry(INST *c, const char **tx, int ainx)
 
    if (opl->sigix == 6  || opl->sigix == 25)
         {       //  add or inc STANDARD CARRY -  have wop ?
-          p_opsc(&sinst,opl->wop,1);
+          p_opsc(&sinst,3);                                    //opl->wop,1);
           pstr(0," %s", (ainx & 1) ? ">" : "<=");
-          pstr(0," %x) ", get_sizemask(sinst.opr[opl->wop].wfend));
+          pstr(0," %x) ", get_sizemask(sinst.opr[3].fend));               //opl->wop].fend));
           *tx = scespec[3] -1;         //opctbl[JMPIX].sce - 1;   //jump sce code to follow this - allow for increment
         }
 
@@ -7717,13 +8132,13 @@ void do_carry(INST *c, const char **tx, int ainx)
 
            if (opl->sigix == 3)
             {   //shl
-             ans =  sinst.opr[opl->wop].wfend + 1;       //  (sinst.opr[opl->wop].wsize & 7) * 8;        //   casz[sinst.opr[opl->wop].wsize] * 8;          // number of bits
+             ans =  (sinst.opr[3].fend & 0x1f) + 1;       //  (sinst.opr[opl->wop].wsize & 7) * 8;        //   casz[sinst.opr[opl->wop].wsize] * 8;          // number of bits
              ans -= sinst.opr[1].val;                            //shift from MSig
 
              if (ans > 16)
                { // dl shifts ??
                  ans -= 16;
-                 sinst.opr[opl->wop].addr+=2;
+                 sinst.opr[3].addr+=2;        //opl->wop
                }
             }
           else
@@ -7733,7 +8148,7 @@ void do_carry(INST *c, const char **tx, int ainx)
 
           pstr(0,"B%d_", ans);
 
-          p_opsc(&sinst,opl->wop,1);
+          p_opsc(&sinst,3);               //opl->wop
           pstr(0," = %d) ", ainx & 1);
           *tx = scespec[3] -1;         //opctbl[JMPIX].sce - 1;   //jump sce code to follow this - allow for increment
         }
@@ -7749,7 +8164,7 @@ void do_carry(INST *c, const char **tx, int ainx)
 
      if (opl->sigix == 24)
       {       // dec
-          p_opsc(&sinst,opl->wop,1);
+          p_opsc(&sinst,3);                      //opl->wop
           pstr(0," %s 0) ", (ainx & 1) ?  ">=" : "<" );
           *tx = scespec[3] -1;             //opctbl[JMPIX].sce - 1;   //jump sce code to follow this - allow for increment
       }
@@ -7896,9 +8311,9 @@ void do_cond_ops(INST *c, const char **tx, int ainx)
    // if (!ans) return;          // not found
    opl = opctbl + sinst.opcix;  // mapped to found instance
 
-   if (opl->wop)
+   if (opl->fend3)            //wop)
      {            // not a compare
-      if (!nobank(sinst.opr[opl->wop].addr))
+      if (!nobank(sinst.opr[3].addr))            //opl-.wop
         {
          // wop is R0, style"(op) = 0"
          // does not work for shortened ops, i.e. "+="
@@ -7912,29 +8327,29 @@ void do_cond_ops(INST *c, const char **tx, int ainx)
              {  // do opcode after = in brackets
               x += 3;                                // should now be op
               pstr(0,"(");
-              p_opsc(&sinst,2,1);                    // operand 2 of compare (write)
+              p_opsc(&sinst,2);                    // operand 2 of compare (write)
               while (*x > 0x1f) pchar(*x++);         // operator (space & up)
-              p_opsc(&sinst,1,0);                    // operand 1 of compare
+              p_opsc(&sinst,1);                    // operand 1 of compare
               pstr(0,")");
              }
            }
          else
            {
-             p_opsc(&sinst,1,1);                 // operand 1 of compare (write)
+             p_opsc(&sinst,1);                 // operand 1 of compare (write)
            }
          pstr(0," %s ",t);                      // orig compare op
-         p_opsc(0,1,0);                         // orig compare value
+         p_opsc(0,1);                         // orig compare value
         }
       else
        {   // no compare real wop , style [wop] == 0
-        p_opsc(&sinst,opl->wop,1);         // write
+        p_opsc(&sinst,3);          //opl->wop,1);         // write
         pstr(0," %s ",t);
-        p_opsc(0,1,0);
+        p_opsc(0,1);
        }
      }
 
 
-   if (!opl->wop)
+   if (!opl->fend3)      //   wop)
      {      // compare found, style R2 = R1
       if (!nobank(sinst.opr[2].addr))
        {
@@ -7947,16 +8362,16 @@ void do_cond_ops(INST *c, const char **tx, int ainx)
            // cmp has zero first, so swop operands over via special array.
            // NB. NOT same as 'goto' to {} logical swop
            // so R1 <reversed> 0
-           p_opsc(&sinst,1,0);                        // operand 1 of compare
+           p_opsc(&sinst,1);                        // operand 1 of compare
            pstr(0," %s ", swopcmpop[ainx - 62]);        //c->opcix - 62]);
-           p_opsc(&sinst,2,0);                        // operand 2 of compare (zero)
+           p_opsc(&sinst,2);                        // operand 2 of compare (zero)
           }
        }
      else
        {
-         p_opsc(&sinst,2,0);                        // operand 2 of compare (reads)
+         p_opsc(&sinst,2);                        // operand 2 of compare (reads)
          pstr(0," %s ",t);
-         p_opsc(&sinst,1,0);                        // operand 1 of compare
+         p_opsc(&sinst,1);                        // operand 1 of compare
        }
      }
 
@@ -7964,48 +8379,95 @@ void do_cond_ops(INST *c, const char **tx, int ainx)
     *tx = scespec[3] -1; //opctbl[JMPIX].sce - 1;             //set \9 for 'goto' processing
 }
 
+void do_divprt(INST *c, const char **tx)
+{
+
+// do two line print for divides
+//,  0x7  , 0xf  , 0x47 , dvx   ,"divb"  , "\23 = \22 / \1;" },                // 36  \3 = \2 / \1;\n\3 = \2 % \1;"
+
+   OPS *o, *x;
+
+   p_opsc(c,0x13);
+   pstr(0," = ");
+   p_opsc(c,0x12);
+   pstr(0," / ");
+   p_opsc(c,1);
+   pchar(';');
+   p_indl();                 //next line
+
+   // put temp reg value in [4].
+
+   o = c->opr + 2;
+   x = c->opr + 4;
+
+   x->addr = o->addr;
+
+   x->inx = 0;    // make sure printed as register only
+   x->imd = 0;
+   x->ind = 0;
+   x->rgf = 1;
+   x->bkt = 0;
+
+   x->addr++;
+   if ((o->fend & 0x1f) == 0x1f) x->addr ++;
+
+   p_opsc(c,0x14);
+   pstr(0," = ");
+   p_opsc(c,0x12);
+   pstr(0,"%s", " % ");
+   p_opsc(c,1);
+   pchar(';');
+}
+
 
 void pp_answer(INST *c)
 {
   // print answer, if there is one
   uint addr;
-  SUB *s;
-  ADT *a;
+  SUB *sub;
+  SPF *a;
   SYM *sym;
   OPS *o;
+  void *fid;
 
   addr = c->opr[1].addr;
-  s = get_subr(addr);
+  sub = get_subr(addr);
 
-  if (!s) return;
-  a = get_adnl(&chans,s->start,1);
+  if (!sub) return;
+ // a = get_spf(s,0);
 
-  if (!a) return;
 
-//   { // found an answer set up phantom opr[3] (rgf set)
+ fid = vconv(sub->start);
+
+  while ((a = get_spf(fid)))          //if (!a) return;
+  {
+    //if (a->spf > 1) break;           //no answer found
+
+    if (a->spf == 1)
+    {
+
+  // found an answer. set up a phantom opr[3] as write op... (rgf set)
      o = c->opr+3;
      sym = 0;
 
-     o->rfend = a->fend;
-     o->addr = a->data;
+     o->addr =  a->addrreg;      //pars[0].reg;               //addrreg;
 
-      if (o->addr > 0x3ff)
+      if (!val_general_reg(o->addr))
        {
          o->rgf = 0;
          o->adr = 1;
          o->bkt = 1;
        }
 
-     if (a->fnam) sym = get_sym(0, o->addr,32,c->ofst);           // syname AFTER any decodes
+     sym = get_sym(o->addr,0,7,c->ofst);
      if (sym) {o->sym = 1; o->bkt = 0;}
 
-     p_opsc(c,0x13,0);
-
-  pstr(0," = ");
-//  }
+     p_opsc(c,3);
+     pstr(0," = ");
+    }
+    fid = a;
+  }
 }
-
-
 
 
 void do_regstats(INST *c)
@@ -8018,14 +8480,13 @@ void do_regstats(INST *c)
 
    for (i = 1; i <= c->numops; i++)
     {
-     // not wop !
-     if (i != c->wop)
+     if (i < 3)
       {
-     o = c->opr+i;
-     r = get_rgstat(o->addr);
-     if (r && r->arg)
-     {
-       set_rgsize(r, o->rfend);
+       o = c->opr+i;
+       r = get_rgstat(o->addr);
+       if (r && r->arg)
+         {
+          set_rgsize(r, o->fend);
   //      r->used = 1;
 
      }
@@ -8052,16 +8513,58 @@ void do_regstats(INST *c)
 }
 
 
+void cpy_op (INST *c, uint dst, uint sce)
+{
+   // straight copy, but keep the orig size for write op.
+   uint fend;
+
+   fend = c->opr[dst].fend;
+   *(c->opr+dst) = *(c->opr+sce);
+   c->opr[dst].fend = fend;
+}
+
+ void do_other_ops(uint xofst, INST *c)
+  {
+   OPS *w;
+   w = c->opr+3;               // write op, fend set if there is one
+
+   if (c->numops == 1 && w->fend)
+     {
+       cpy_op(c,3,1);        //op_calc (g_byte(xofst + 1), 3,c);     //calc [1] as write op [3]
+     }
+
+    if (c->numops > 1)
+     {                                      // calc op[2] as read op
+       op_calc (g_byte(xofst + 2), 2,c);
+     }
+
+   if (c->numops == 2 && w->fend)
+     {
+        // [3] = [2] op [1]  calc op[3] from [2]
+        cpy_op(c, 3,2);        //op_calc (g_byte(xofst + 2), 3,c);          //calc [2] as write op [3]
+        //rg-size already set
+     }
+
+  if (c->numops == 3)
+     {
+       // [3] = [2] op [1] calc op 3 (always write)
+       op_calc (g_byte(xofst + 3), 3,c);
+      }
+
+  }
+
+
  void do_dflt_ops(SBK *s, INST *c)
- {  // default - any operands as registers
-    int i;
-    c->opcsub = 0;         // no multiple mode
-    for (i = 1; i <= c->numops; i++)
-        {
-         op_calc (g_byte(s->nextaddr + i), i,c);
-     //    set_opdata(s->nextaddr + i,7);
-        }
-    s->nextaddr += c->numops + 1;
+ {  // default - all operands as registers
+
+   c->opcsub = 0;         // no multiple mode
+
+   op_calc (g_byte(s->nextaddr + 1), 1,c);
+
+   do_other_ops(s->nextaddr,c);
+
+   s->nextaddr += c->numops + 1;
+
 //    if (s->emulating)
  do_regstats(c);
  }
@@ -8084,8 +8587,8 @@ void calc_mult_ops(SBK *s, INST *c)
     * +1   opcsub 1  Word op (immediate)
     ******************************************************/
 
-     int firstb,i, xofst,addr;
-     OPS *o;
+     int firstb,xofst,addr;
+     OPS *o, *cp;
 
      xofst = s->nextaddr;
 
@@ -8093,23 +8596,24 @@ void calc_mult_ops(SBK *s, INST *c)
 
      firstb = g_byte(xofst+1);             // first data byte after (true) opcode
   //   set_opdata(xofst+1,7);
-     o = c->opr+1;                         // most action is for opr[1]
-
+     o  = c->opr+1;                         // most action is for opr[1]
+     cp = c->opr+4;
 
      switch (c->opcsub)
       {
        case 1:                                          // first op is immediate value, byte or word
          op_imd(c);                                     // op[1] is immediate
-         if ((o->rfend & 31) > 7)           // word mode
+         if ((o->fend & 31) > 7)           // word mode
           {                             // recalc op1 as word
            xofst++;
            op_calc (g_word(xofst), 1,c);
-     //      set_opdata(xofst,o->rfend);
+     //      set_opdata(xofst,o->fend);
           }
          else
           {
            op_calc (firstb, 1,c);                       // calc for op[1]
           }
+       *cp = *o;                                        // keep imd
 
        break;
 
@@ -8122,14 +8626,19 @@ void calc_mult_ops(SBK *s, INST *c)
       //     c->inc = 1;
            o->inc = 1;                              // always op[1]
           }
+
          op_calc (firstb, 1,c);                     // calc [1] for new value, always even
+         o->ind = 1;                                // indirect op
          o->bkt = 1;
-         c->opr[4] = c->opr[1];                     // keep register details
-         if (anlpass < ANLPRT)
+         *cp = *o;                     // keep register details
+
+      if (anlpass < ANLPRT)
           {                                         // get actual indirect values for emulation (restore in upd_watch)
            o->addr = g_word(o->addr);               // get address from register, always word
            o->addr = databank(o->addr, c);          // add bank
-           o->val = g_val(o->addr, 0, o->rfend);        // get value from address, sized by op
+           o->val = g_val(o->addr, 0, o->fend);        // get value from address, sized by op
+
+
      //      add_opr_data(s,c);
           }
          break;
@@ -8138,23 +8647,24 @@ void calc_mult_ops(SBK *s, INST *c)
 
          if (firstb & 1)
             {
-             c->opr->rfend = 15;                        // offset is word (unsigned)
+             c->opr->fend = 15;                        // offset is word (unsigned)
              firstb &= 0xFE;                           // and drop flag
             }
           else
             {
-             c->opr->rfend = 39;                        // short, byte offset (signed)
+             c->opr->fend = 39;                        // short, byte offset (signed)
             }
 
-         c->opr->off = 1;                              // op [0] is an address offset
+         c->opr->off = 1;                              // op [0] is an address offset for index
          o->bkt = 1;
+         o->inx = 1;
          op_calc (firstb, 1,c);                        // calc op [1] (always even)
          if (!o->rbs) o->val = g_word(o->addr);                     // ALWAYS a WORD for indexed
-         c->opr[4] = c->opr[1];                          // keep register details - is this right for STW ??
-         c->opr->addr = g_val(xofst+2,0,c->opr->rfend);  // get offset or base value CAN BE NEGATIVE OFFSET
-     //    set_opdata(xofst+2,c->opr->rfend);
+         *cp = *o;                                    // keep register details - is this right for STW ??
+         c->opr->addr = g_val(xofst+2,0,c->opr->fend);  // get offset or base value CAN BE NEGATIVE OFFSET
+     //    set_opdata(xofst+2,c->opr->fend);
          addr = c->opr->addr;
-         if (addr < 0 && (c->opr->rfend & 32)) c->opr->neg = 1;    // flag negative if signed
+         if (addr < 0 && (c->opr->fend & 32)) c->opr->neg = 1;    // flag negative if signed
 
          if (anlpass < ANLPRT)
           {                                            // get actual values for emulation
@@ -8165,27 +8675,27 @@ void calc_mult_ops(SBK *s, INST *c)
              addr = -addr;                             // wrap around ?
            }
            o->addr = databank(addr, c);                // get address and bank
-           o->val = g_val(o->addr,0, o->rfend);           // get value from address, sized by op
+           o->val = g_val(o->addr,0, o->fend);           // get value from address, sized by op
+           //     if (o->addr > maxromadd(o->addr)) c->inv = 1;    //invalid address
           }
 
-         xofst += bytes(c->opr->rfend);                  // size of op zero;
+         xofst += bytes(c->opr->fend);                  // size of op zero;
 
          break;
 
       default:      // direct, all ops are registers
          op_calc (firstb, 1,c);                // calc for op[1]
+         *cp = *o;
          break;
       }
 
      //calc rest of ops - register 1 done
 
-     for (i = 2; i <= c->numops; i++)
-       {
-        op_calc (g_byte(xofst + i), i,c);
-       }
-     s->nextaddr = xofst + c->numops + 1;
+    do_other_ops(xofst, c);
 
-     if (s->scanning) add_dtk(s,c);
+    s->nextaddr = xofst + c->numops + 1;
+
+    if (s->proctype == 1) add_dtk(s,c); // scanning)
 
 //     if (s->emulating)
 do_regstats(c);
@@ -8211,7 +8721,7 @@ void pset_psw(INST *c, int t, int mask)
 
  }
 
-void set_psw(INST *c, int val, int size, int mask)
+void set_psw(INST *c, int val, int fend, int mask)
  {
 
     c->psw &= (~mask);     // clear defined bits
@@ -8231,17 +8741,17 @@ void set_psw(INST *c, int val, int size, int mask)
     if (mask & 2)
         {           // carry
          c->psw &= 0x3d;          // clear CY
-         if (val > (int) get_sizemask(size)) c->psw |= 0x2;            //cnv[size].sizemask) c->psw |= 0x2;      // set CY  camk[size]
+         if (val > (int) get_sizemask(fend)) c->psw |= 0x2;            //cnv[size].sizemask) c->psw |= 0x2;      // set CY  camk[size]
         }
     if (mask & 8)
         {           // OVF
          c->psw &= 0x37;          // clear OVF
-         if (val > (int) get_sizemask(size)) c->psw |= 0x8;      // set OVF
+         if (val > (int) get_sizemask(fend)) c->psw |= 0x8;      // set OVF
         }
 
      if (mask & 4)
         {           // OVT - don't clear, just set it.
-         if (val > (int) get_sizemask(size)) c->psw |= 0x4;      // set OVT
+         if (val > (int) get_sizemask(fend)) c->psw |= 0x4;      // set OVT
         }
 }
 
@@ -8304,6 +8814,10 @@ void pshw (SBK *s, INST *c)
 
   calc_mult_ops(s,c);
 
+ // but push does NOT push databank !! need CODEBANK !!
+
+//  push and pop use current codebank. this is why pushp popp around subrs.
+
   // does not change PSW
 
   // if scanning, check for vect pushes first (list or single)
@@ -8313,17 +8827,21 @@ void pshw (SBK *s, INST *c)
 
   o = c->opr + 1;
 
-  if (anlpass >= ANLPRT) return;
+// still need to fix the address if imd, even if print or sign
 
-  if (s->scanning)
+  if (o->imd)  o->addr = codebank(o->val,c);
+
+  if (!s->proctype) return;
+
+  if (s->proctype == 1)             //scanning)
     {
         // change to a switch on opcsub ?
 
-     if (o->imd && val_rom_addr(o->addr))  // c->opcsub = 1
+     if (o->imd && val_rom_addr(o->addr))
        {   // treat as a subr call, but this could be a return address
            // this uses CODE bank, not data
            //change display to addr, not val
-           add_scan(codebank(o->addr,c), J_SUB,s);
+           add_scan(o->addr, J_SUB,s);
        }
 
      if (c->opcsub == 3)
@@ -8385,7 +8903,7 @@ void pshw (SBK *s, INST *c)
          }
     }    // end of if scanning
 
-  if (s->emulating)
+  if (s->proctype == 4)               //emulating)
     {   // similar to push above, but do args if necessary
         // note that as this is done after each scan or rescan,
         // the stack is already built by sj subr....
@@ -8425,9 +8943,13 @@ void pshw (SBK *s, INST *c)
 
   #ifdef XDBGX
  //   DBG_stack(s->emulating);
+ if (s->proctype)                      //scanning || s->emulating)
+ {
     DBGPRT(0,"%x PUSH a=%x v=%x",c->ofst, o->addr, o->val);
     if (s->substart) DBGPRT(0," sub %x", s->substart);
     DBGPRT(1,0);
+
+ }
  #endif
 
 }
@@ -8446,8 +8968,9 @@ void popw(SBK *s, INST *c)
    calc_mult_ops(s,c);
 
    if (anlpass >= ANLPRT)  return;
+      if (!s->proctype) return;
 
-   o = c->opr+1;      // w operand
+   o = c->opr+3;      // write operand
    o->val = 0;         // safety
 
    // can get throwaway POP to R0. Ignore it.
@@ -8456,17 +8979,17 @@ void popw(SBK *s, INST *c)
 // if scanning, don't actually care that there is no stack entry.
 // this only really matters in emulate.
 
- if (s->emulating) t = emulstack; else t = scanstack;
+ if (s->proctype == 4) t = emulstack; else t = scanstack;
 
    #ifdef XDBGX
-   DBG_stack(t);
+   DBG_stack(s,t);
    #endif
 
      for (i=0; i < STKSZ; i++)
       {           // scan UP callers
        if (!t->type)
          {
-           if (s->scanning)
+           if (s->proctype == 1)               //scanning)
              {
               r = add_rgstat(o->addr, 15,0, 0);
               if (r) {
@@ -8503,22 +9026,25 @@ void clr (SBK *s, INST *c)
     // clear
     do_dflt_ops(s,c);
 
-  c->opr[c->wop].val = 0;
+// as a [3] = [1] to match other opcodes
 
-   if (s->emulating)
+  c->opr[3].val = 0;
+  c->opr[1].val = 0;
+
+   if (s->proctype == 4)              // emulating)
       {
        pset_psw(c, 0, 0x1a);      // clear bits N,V,C
        pset_psw(c, 1, 0x20);      // set Z
       }
   }
 
-void neg  (SBK *s, INST *c)
+void neg (SBK *s, INST *c)
   {
       // negate
 
     do_dflt_ops(s,c);
-    c->opr[1].val = -c->opr[1].val;
-    if (s->emulating) set_psw(c, c->opr[1].val, c->opr[1].wfend,0x2e);
+    c->opr[3].val = -c->opr[1].val;
+    if (s->proctype == 4) set_psw(c, c->opr[3].val, c->opr[3].fend,0x2e);
  }
 
 
@@ -8526,18 +9052,18 @@ void cpl  (SBK *s, INST *c)
   {
     // complement bits
     do_dflt_ops(s,c);
-    c->opr[1].val = (~c->opr[1].val) & 0xffff;         // size ?
+    c->opr[3].val = (~c->opr[1].val) & 0xffff;         // size ?
 
-    if (s->emulating)
+    if (s->proctype == 4)                      //emulating)
      {
       pset_psw(c, 0, 0xa);      // clear bits V,C
-      set_psw(c, c->opr[1].val, c->opr[1].wfend, 0x30);     // N and Z
+      set_psw(c, c->opr[3].val, c->opr[3].fend, 0x30);     // N and Z
      }
   }
 
 
 
-void check_R11(INST *c)
+void check_R11(SBK *s,INST *c)
 {
   // extra handler for write to Reg 11 for both stx and ldx
   // done AFTER assignment, but before upd_watch
@@ -8545,17 +9071,18 @@ void check_R11(INST *c)
   int val;
   OPS *o;
 
+  if (!s->proctype)    return;
   if (c->opcsub != 1)  return;     // immediate only
 
-  o = c->opr + c->wop;              // always 2 ??
+  o = c->opr + 3;                //c->wop;              // always 3
 
   if ((o->addr & 0x3ff) != 0x11) return;
 
   // specifically write to ibuf, to keep it for reads ?
 
-  val = c->opr[1].val & 0xf;
+  val = c->opr[3].val & 0xf;
   val++;
-  upd_ram(0x11,c->opr[1].val,7);
+  upd_ram(0x11,c->opr[3].val,7);
 
   // do this only if it's an imd as this is reliable, else ignore it ???
 
@@ -8575,7 +9102,7 @@ void do_rgargs(INST *c)
 
    RST *org, *nrg;
 //   OPS *sce, *dst;
-   uint screg, scfend, scaddr, scval;
+   uint screg, scfend, scaddr;     //, scval;
    uint dsreg;
 
 
@@ -8587,17 +9114,17 @@ void do_rgargs(INST *c)
      {                   //ldx
       if (!c->opcsub) screg = c->opr[1].addr;
       else screg = c->opr[4].addr;
-      scfend = c->opr[1].rfend;
-      scval =  c->opr[1].val;
+      scfend = c->opr[1].fend;
+   //   scval =  c->opr[1].val;
       scaddr = c->opr[1].addr;
-      dsreg  = c->opr[2].addr;
+      dsreg  = c->opr[3].addr;
      }
 
    if (c->sigix == 13)
      {                   //stx
       screg  = c->opr[2].addr;
-      scfend = c->opr[2].rfend;
-      scval =  c->opr[2].val;
+      scfend = c->opr[2].fend;
+   //   scval =  c->opr[2].val;
       scaddr = c->opr[2].addr;
       dsreg = c->opr[1].addr;
      }
@@ -8644,7 +9171,7 @@ DBGPRT(1,"ORG ENC");
                }
 
              #ifdef XDBGX
-              if (org) DBGPRT(1,"RG %x=%x to %x", screg, scval, dsreg);
+              if (org) DBGPRT(1,"RG %x to %x", screg, dsreg);
              #endif
 
            }
@@ -8678,6 +9205,7 @@ void stx (SBK *s, INST *c)
    /* NB. this can WRITE to indexed and indirect addrs
     * but addresses not calc'ed in print phase
     * does not change PSW
+    * must swop operands from [1] = [2] to [3] = [2];
     */
 
   FSTK *t, *x;
@@ -8687,18 +9215,24 @@ void stx (SBK *s, INST *c)
 
   calc_mult_ops(s,c);
 
-  c->opr[1].val = c->opr[2].val;
+  cpy_op(c,3,1);
+
+  c->opr[3].val = c->opr[2].val;
+
+  // but remember op[1] still has inx flag set.
+  // this is fixed in fix_sym_names in print phase,
+  // but maybe redundant ?
 
   if (anlpass >= ANLPRT)  return;
-
+   if (!s->proctype) return;
   // now check if this is a stack operation
   // if it is a stack register, treat similarly to a PUSH
 
   o = c->opr + 4;             // to check inx register
 
-  if (s->scanning) x = scanstack; else x = emulstack;
+  if (s->proctype == 1) x = scanstack; else x = emulstack;
 
-  if (val_stack_reg(o->addr) && s->emulating)
+  if (val_stack_reg(o->addr) && s->proctype == 4)
     {
       inx = -1;
 
@@ -8721,7 +9255,7 @@ void stx (SBK *s, INST *c)
           {
                  #ifdef XDBGX
            DBGPRT(0,"PSW INV PUSH!! %d ",t->type);
-           DBG_stack(x);
+           DBG_stack(s,x);
            #endif
            return;
           }
@@ -8730,7 +9264,7 @@ void stx (SBK *s, INST *c)
 
   do_rgargs(c);
 
-check_R11(c);
+check_R11(s,c);
  }
 
 
@@ -8748,13 +9282,14 @@ void ldx(SBK *s, INST *c)
 
    calc_mult_ops(s,c);
 
-   o = c->opr+2;
+   o = c->opr+3;
 
-   o->val = c->opr[1].val;        // [2] = [1] as default op
+   o->val = c->opr[1].val;        // [3] = [1] as default op
 
+   if (!s->proctype) return;
    if (anlpass >= ANLPRT)  return;
 
-   if (s->scanning) x = scanstack; else x = emulstack;
+   if (s->proctype == 1) x = scanstack; else x = emulstack;
 
 
   // check if [4] =  stack register. If so this is a load from stack,
@@ -8762,8 +9297,8 @@ void ldx(SBK *s, INST *c)
 
   if (val_stack_reg(c->opr[4].addr))
     {
-           #ifdef XDBGX
-    DBG_stack(x);
+        #ifdef XDBGX
+    DBG_stack(s,x);
     #endif
       inx = -1;
       if (c->opcsub == 2) inx = 0;                    // inr
@@ -8795,7 +9330,7 @@ void ldx(SBK *s, INST *c)
         }
     }
 
-  check_R11(c);
+  check_R11(s,c);
 
  // if (s->emulating)
   //  {
@@ -8825,10 +9360,10 @@ void ldx(SBK *s, INST *c)
               // reg is flagged as arg, so use size
            {
              // really what we are interested in for now is ONLY the SIZE
-             set_rgsize(org,o->rfend);
+             set_rgsize(org,o->fend);
 
              org = find_rgstat(org->sreg);
-             set_rgsize(org,o->rfend);
+             set_rgsize(org,o->fend);
 
              // but now, arg value is copied to a new register/addr, which MAY be used.....
              #ifdef XDBGX
@@ -8840,7 +9375,7 @@ void ldx(SBK *s, INST *c)
          if (org->popped)
               // reg flagged as popped so make [wop] an arg - would expect this to be indirect or indexed
            {
-            nrg = add_rgstat(o->addr, o->rfend, c->opr[1].addr);          //org->ofst);     //s->substart);
+            nrg = add_rgstat(o->addr, o->fend, c->opr[1].addr);          //org->ofst);     //s->substart);
             if (nrg)
              {
               nrg->arg = 1;
@@ -8866,13 +9401,42 @@ void orx(SBK *s, INST *c)
 
   calc_mult_ops(s,c);
 
-  if (c->opcix < 32)    c->opr[2].val |=  c->opr[1].val;   // std or
-  else  c->opr[2].val ^=  c->opr[1].val;                   // xor
+  if (c->opcix < 32)    c->opr[3].val |=  c->opr[1].val;   // std or
+  else  c->opr[3].val ^=  c->opr[1].val;                   // xor
 
-  if (s->emulating)
+   if (!s->proctype) return;
+//CHECK if mem-expand set with only one bank indicates something screwy
+//if rbase sig found, then can try to find bank 1
+
+ //  orb   Ra,10            MEM_Expand = 1;
+
+if (c->opr[3].addr == 0xa && c->opr[1].val & 0x10)
+ {        //Mem_expand bit set
+    if (numbanks == 0)
+    {
+          #ifdef XDBGX
+        DBGPRT(1,"%x MEM_EXPAND SET BUT SINGLE BANK !!!!", s->curaddr);
+        #endif
+        wnprt(1,"##        MEM_EXPAND SET BUT SINGLE BANK !!!!");
+
+ find_data_bank();
+        // find bank by rbase data..........
+
+    }
+ }
+
+
+
+
+
+
+
+
+
+  if (s->proctype == 4)
      {
       pset_psw(c, 0, 0xa);      // clear bits V,C
-      set_psw(c, c->opr[2].val, c->opr[2].wfend, 0x30);     // N and Z
+      set_psw(c, c->opr[3].val, c->opr[3].fend, 0x30);     // N and Z
      }
  }
 
@@ -8881,10 +9445,10 @@ void add(SBK *s, INST *c)
       // 2 or 3 op
    calc_mult_ops(s,c);
 
-   c->opr[c->numops].val =  c->opr[2].val + c->opr[1].val;
+   c->opr[3].val =  c->opr[2].val + c->opr[1].val;
 
-   if (s->emulating)
-   set_psw(c, c->opr[c->numops].val, c->opr[c->numops].wfend, 0x3e);
+   if (s->proctype == 4)
+   set_psw(c, c->opr[3].val, c->opr[3].fend, 0x3e);
  }
 
 
@@ -8892,9 +9456,9 @@ void andx(SBK *s, INST *c)
  {
        // 2 or 3 op
   calc_mult_ops(s,c);
-  c->opr[c->numops].val =  c->opr[2].val & c->opr[1].val;
+  c->opr[3].val =  c->opr[2].val & c->opr[1].val;
 
- if (s->emulating)  pset_psw(c, 0, 0xa);
+ if (s->proctype == 4)  pset_psw(c, 0, 0xa);
  // set_psw(2, 0x30);
 
  }
@@ -8904,12 +9468,12 @@ void sub(SBK *s, INST *c)
  {      // 2 or 3 op
     calc_mult_ops(s,c);
 
-    c->opr[c->numops].val =  c->opr[2].val - c->opr[1].val;
+    c->opr[3].val =  c->opr[2].val - c->opr[1].val;
 
  // sub is a BORROW not a carry
-    if (s->emulating)
+    if (s->proctype == 4)
       {
-       set_psw(c, c->opr[c->numops].val, c->opr[c->numops].wfend, 0x3e);
+       set_psw(c, c->opr[3].val, c->opr[3].fend, 0x3e);
        c->psw ^= 2;       // complement of carry
       }
  }
@@ -8922,10 +9486,10 @@ void cmp(SBK *s, INST *c)
 
   calc_mult_ops(s,c);
 
-  if (s->emulating)
+  if (s->proctype == 4)
     {
      c->opr[0].val =  c->opr[2].val - c->opr[1].val;
-     set_psw(c, c->opr[0].val, c->opr[1].rfend,0x3e);
+     set_psw(c, c->opr[0].val, c->opr[1].fend,0x3e);
      c->psw ^= 2;       // complement of carry
     }
  }
@@ -8933,7 +9497,7 @@ void cmp(SBK *s, INST *c)
 void mlx(SBK *s, INST *c)
  {     //psw not clear - assume no changes; 2 or 3 op
     calc_mult_ops(s,c);
-    c->opr[c->numops].val =  c->opr[2].val * c->opr[1].val;  // 2 and 3 ops
+    c->opr[3].val =  c->opr[2].val * c->opr[1].val;  // 2 and 3 ops
  // PSW ???
 
  }
@@ -8943,26 +9507,26 @@ void dvx(SBK *s, INST *c)
    // quotient to low addr, and remainder to high addr
    // always 2 op ??
     long x;
-    int ix;
+    OPS *o;
 
     calc_mult_ops(s,c);
 
-    ix = c->numops;
+    o = c->opr + 3;
 
-    x = c->opr[ix].val;  // keep original
-    if (c->opr[1].val != 0) c->opr[ix].val /= c->opr[1].val;    // if 2 ops (wop = 2)
+    x = o->val;  // keep original
+    if (c->opr[1].val != 0) o->val /= c->opr[1].val;    // if 2 ops (wop = 2)
 
-    x -= (x * c->opr[ix].val);             // calc remainder
+    x -= (x * o->val);             // calc remainder
 
-    if (c->opr[ix].rfend > 7)              // long/word
+    if (o->fend > 7)              // long/word
         {
-         c->opr[ix].val  &= 0xffff;
-         c->opr[ix].val  |= (x << 16);       // remainder
+         o->val  &= 0xffff;
+         o->val  |= (x << 16);       // remainder
         }
     else
        {          // word/byte
-         c->opr[ix].val  &= 0xff;
-         c->opr[ix].val  |= (x << 8);       // remainder
+         o->val  &= 0xff;
+         o->val  |= (x << 8);       // remainder
         }
 
 // PSW ??
@@ -8971,16 +9535,21 @@ void dvx(SBK *s, INST *c)
 
 void calc_shift_ops(SBK *s, INST *c)
 {
-    short b;
-     b = g_byte(s->nextaddr+1);             // first data byte after (true) opcode
+    //all shifts are 2 op
+    uint b;
+    c->opcsub = 0;                          // not multimode
+    b = g_byte(s->nextaddr+1);             // first data byte after (true) opcode
   //   set_opdata(s->nextaddr+1,7);
      op_calc (b, 1,c);                      // 5 lowest bits only from firstb, from hbook
 
      if (b < 16) op_imd(c);                 // convert op 1 to absolute (= immediate) shift value
      op_calc (g_byte(s->nextaddr+2),2,c);
+     op_calc (g_byte(s->nextaddr+2),3,c);    //and calc destination
+
  //    set_opdata(s->nextaddr+2,7);
      s->nextaddr += c->numops + 1;
     }
+
 
 void shl(SBK *s, INST *c)
  {
@@ -8993,16 +9562,18 @@ void shl(SBK *s, INST *c)
   long mask, v;
 
   calc_shift_ops(s,c);
-  v = c->opr[2].val;
+
+     if (!s->proctype) return;
+  v = c->opr[3].val;
   v <<= c->opr[1].val;  // as a 64 long, for DW shifts
 
-  if (s->emulating)
+  if (s->proctype == 4)
     {
-     set_psw(c, v, c->opr[2].wfend,0x30);               // Z and N
-     mask =  get_sizemask(c->opr[1].rfend) + 1;         // get to 'size + 1' bit (= last shifted)
+     set_psw(c, v, c->opr[3].fend,0x30);               // Z and N
+     mask =  get_sizemask(c->opr[1].fend) + 1;         // get to 'size + 1' bit (= last shifted)
      if (v & mask) c->psw |= 2;  else c->psw &= 0x3d;   // set or clear carry flag
     }
-  c->opr[2].val =  v;
+  c->opr[3].val =  v;
  }
 
 void shr(SBK *s, INST *c)
@@ -9016,10 +9587,10 @@ void shr(SBK *s, INST *c)
 
   calc_shift_ops(s,c);
 
-
+   if (!s->proctype) return;
  // c->psw &= 0x3b;         // clear sticky first
 
-  c->opr[2].val >>=  c->opr[1].val;    // always 2
+  c->opr[3].val >>=  c->opr[1].val;    // always 2
 
 // if (!s->scanning) return;
   // and need to sort out carry and sticky here....
@@ -9029,12 +9600,12 @@ void inc(SBK *s, INST *c)
  {
    do_dflt_ops(s,c);
    // ALWAYS 1 (only autoinc is one or two)
-   c->opr[1].val++;
+   c->opr[3].val++;
 
-   if (s->scanning) add_dtk(s,c);
-   if (s->emulating)
+   if (s->proctype == 1) add_dtk(s,c);
+   if (s->proctype == 4)
      {
-      set_psw(c, c->opr[1].val, c->opr[1].rfend, 0x3e);
+      set_psw(c, c->opr[3].val, c->opr[3].fend, 0x3e);
      }
 
  }
@@ -9043,11 +9614,10 @@ void dec(SBK *s, INST *c)
  {
     do_dflt_ops(s,c);
    // ignore for scans
-      c->opr[1].val--;
-    if (s->emulating)
+      c->opr[3].val--;
+    if (s->proctype == 4)
      {
-
-      set_psw(c, c->opr[1].val, c->opr[1].rfend, 0x3e);
+      set_psw(c, c->opr[3].val, c->opr[3].fend, 0x3e);
      }
  }
 
@@ -9055,22 +9625,20 @@ void dec(SBK *s, INST *c)
 int calc_jump_ops(SBK *s, int jofs, INST *c)
 {
     // s->nextaddr must correctly point to next opcode.
-    // returns jump address
+    // returns jump OFFSET
 
      OPS *o;
 
      c->opcsub = 0;                           //no multimode
-     jofs += s->nextaddr;                     // offset as calc'ed from NEXT opcode
-     jofs = nobank(jofs);                     // pcj allow for wrap in 16 bits
-
      o = c->opr+1;                            // set up opr[1] as a jump (=address)
      o->adr = 1;
      o->rgf = 0;
      o->rbs = 0;
-     o->addr = codebank(jofs, c);             // add CODE bank for jumps
-     if (val_rom_addr(o->addr)) o->val = g_val(o->addr,0, 15);     // get value of jump address for display ??
-     else o->val = 0;
-     jofs = c->opr[1].addr;                   // now is full address with bank
+     o->fend = 0xf;                           // for symbol and size
+     o->val = jofs;
+     o->addr = jofs + s->nextaddr;
+     o->addr = codebank(o->addr, c);             // add CODE bank for jumps
+
      return jofs;
   }
 
@@ -9084,13 +9652,13 @@ void cjm(SBK *s, INST *c)
 
   // set_opdata(s->nextaddr-1,7);
 
-   if (s->scanning)
+   if (s->proctype == 1)
     {
     do_sjsubr(s, c, J_COND);
     return;
     }
 
-if (s->emulating) {
+if (s->proctype == 4 ) {
 
 // do actual jump if emulating
 switch (c->opcix)
@@ -9189,7 +9757,7 @@ void bjm(SBK *s, INST *c)
  //   set_opdata(xofst+1,7);
     calc_jump_ops(s, g_val(xofst+2,0,39),c);   // jump destination, signed byte
  //   set_opdata(xofst+2,39);
-    if (s->scanning)
+    if (s->proctype == 1)
       {
        do_sjsubr(s, c, J_COND);
        return ;
@@ -9197,7 +9765,7 @@ void bjm(SBK *s, INST *c)
 
   //  0 is LS bit .... jnb is 70, jb 71
 
-if (s->emulating)
+if (s->proctype == 4)
     {
 
     if (check_backw(c->opr[1].addr, s, J_STAT)) return;
@@ -9224,13 +9792,13 @@ void sjm(SBK *s, INST *c)
 
     calc_jump_ops(s, jofs,c);
 
-    if (s->scanning)
+    if (s->proctype == 1)
       {
        do_sjsubr(s, c, J_STAT);
        return;
       }
 
-if (s->emulating)
+if (s->proctype == 4)
     {
      if (check_backw(c->opr[1].addr, s, J_STAT)) return;
      s->nextaddr = c->opr[1].addr;      // go direct in emu mode
@@ -9247,13 +9815,13 @@ void ljm(SBK *s, INST *c)
    jofs = g_val(s->nextaddr-2,0,47);        //signed word
    calc_jump_ops(s, jofs,c);
  //  set_opdata(s->nextaddr-2,47);
-   if (s->scanning)
+   if (s->proctype == 1)
      {
        do_sjsubr(s, c, J_STAT);
        return;
      }
 
-if (s->emulating)
+if (s->proctype == 4)
     {
  if (check_backw(c->opr[1].addr, s, J_STAT)) return;
     s->nextaddr = c->opr[1].addr;      // go direct in emu mode
@@ -9265,6 +9833,7 @@ if (s->emulating)
 void cll(SBK *s, INST *c)
  {     // long call
     SBK *n;
+
     s->nextaddr += 3;
     calc_jump_ops(s,g_val(s->nextaddr-2,0,47),c);         //signed word
  //   set_opdata(s->nextaddr-2,47);
@@ -9279,7 +9848,7 @@ void cll(SBK *s, INST *c)
     }
 */
 
-    if (s->scanning)
+    if (s->proctype == 1)
       {
    #ifdef XDBGX
     if (anlpass < ANLPRT) DBGPRT(1,"call %x from %x", c->opr[1].addr, s->curaddr);
@@ -9288,7 +9857,7 @@ void cll(SBK *s, INST *c)
        return;
       }
 
-if (s->emulating)
+if (s->proctype == 4)
     {
        SUB *sub;
        sub = get_subr(c->opr[1].addr);
@@ -9336,7 +9905,7 @@ void scl(SBK *s, INST *c)
     }
 */
 
-   if (s->scanning)
+   if (s->proctype == 1)
      {
 
    #ifdef XDBGX
@@ -9347,7 +9916,7 @@ void scl(SBK *s, INST *c)
       return;
      }
 
- if (s->emulating)
+ if (s->proctype == 4)
     {
        SUB *sub;
        sub = get_subr(c->opr[1].addr);
@@ -9385,7 +9954,7 @@ void ret(SBK *s, INST *c)
    calc_jump_ops(s, -1,c);      // do as loopstop jump
 
 
-   if (s->scanning)
+   if (s->proctype == 1)
     {
  //    #ifdef XDBGX
  //      if (chrgst.num > 0) DBGPRT(1,"Clear rgstats");
@@ -9398,15 +9967,19 @@ void ret(SBK *s, INST *c)
     }
 
    if (anlpass < ANLPRT) {
-    if (s->emulating)
+    if (s->proctype == 4)
     {
      fakepop(s);                     // check & drop the stack call
     }
 
    #ifdef XDBGX
+   if (s->proctype)           // scanning || s->emulating)
+   {
      DBGPRT(0,"%x RET", s->curaddr);
-     if (s->emulating) DBGPRT(0," E");
+     if (s->proctype == 4) DBGPRT(0," E");
      DBGPRT(2,0);
+
+   }
    #endif
 
 
@@ -9423,27 +9996,29 @@ void djm(SBK *s, INST *c)
  { // djnz
    int xofst;
 
-
    xofst = s->nextaddr;
    s->nextaddr += 3;
-   op_calc (g_byte(xofst+1), 2,c);              // do register
+   op_calc (g_byte(xofst+1), 2,c);              // for first operand print
+   op_calc (g_byte(xofst+1), 3,c);              // for calcs as [3] = write
+
  //  set_opdata(xofst+1,7);
    calc_jump_ops(s,g_val(xofst+2,0,39),c);      //signed byte
  //  set_opdata(xofst+2,39);
-   if (s->scanning)
+
+   if (s->proctype == 1)
      {
       do_sjsubr(s, c, J_COND);
       return ;
      }
 
-   if (s->emulating)
+   if (s->proctype == 4)
      {
 
        RST *r;
        OPS *o;
-       o = c->opr+2;
-       c->opr[2].val--;
-       if (c->opr[2].val > 0) s->nextaddr = c->opr[1].addr;
+       o = c->opr+3;
+       o->val--;
+       if (o->val > 0) s->nextaddr = c->opr[1].addr;
        else
         {
          r = get_rgstat(o->addr);
@@ -9463,13 +10038,14 @@ void skj(SBK *s, INST *c)
 
     calc_jump_ops(s,1,c);
 
-    if (s->scanning)
+    if (s->proctype == 1)
       {
-       do_sjsubr(s, c, J_COND);
+       do_sjsubr(s, c, J_STAT);
+       // if valid opcode then can add a scan here ....??
        return;
       }
 
-  if (s->emulating)
+  if (s->proctype == 4)
    {
       s->nextaddr++;      // skip next byte
    }
@@ -9483,6 +10059,8 @@ void php(SBK *s, INST *c)
      // push flags (i.e. psw)
 
    s->nextaddr++;
+
+    if (!s->proctype) return;
    s->php = 1;
 
      if (numbanks)
@@ -9501,11 +10079,15 @@ void ppp(SBK *s, INST *c)
      // pop flags (i.e. psw)
      // ignore in scan
 
+   FSTK *x;
+
    s->nextaddr++;
+
+   if (!s->proctype) return;
+
    s->php = 0;
 
-   FSTK *x;
-   if (s->emulating)
+   if (s->proctype == 4)         //emulating)
       {
         x = emulstack;       //else  x = fstack;
 
@@ -9523,8 +10105,15 @@ void nrm(SBK *s, INST *c)
  {
       do_dflt_ops(s,c);
 
-      // from Ford hbook shift left double until b31 = 1
+//copy 3,1         to get 1 into 3
+// 3 shifted up
+// 2 is no of shifts
+
+
+
+      // from Ford hbook shift left double until b31 = 1   (op 1)
       // and result size is double too....as it's shifted...
+      //no of shifts go into [2] which is byte
 
       // TO DO
  }
@@ -9577,17 +10166,20 @@ void bka(SBK *s, INST *c)
    //   According to Ford book, this only sets PSW, so could be cancelled by a POPP
    //   or PUSHP/POPP save/restore,  so may need a PREV_BANK
 
-   bk = c->opcix - 107;                   // new RAM bank
-   basepars.rambnk = bk * 0x100;                 // establish new offset
-
-   op_imd(c);                                    // mark operand 1 as immediate
-   c->opr[1].val = bk;
-   c->opr[1].rfend = 7;                           // byte sized;
-   c->numops = 1;                                // fake a single byte [imd] op
    s->nextaddr++;
 
+
+   bk = c->opcix - 107;                          // new RAM bank
+   op_imd(c);                                    // mark operand 1 as immediate
+   c->opr[1].val = bk;
+   c->opr[1].fend = 7;                           // byte sized;
+   c->numops = 1;                                // fake a single byte [imd] op
+
+   if (!s->proctype) return;
+   basepars.rambnk = bk * 0x100;
+
    #ifdef XDBGX
-   if (s->scanning) DBGPRT(1,"New Rambank = %x at %x", bk, s->curaddr);
+    DBGPRT(1,"New Rambank = %x at %x", bk, s->curaddr);
    #endif
  }
 
@@ -9619,7 +10211,7 @@ void do_code (SBK *s, INST *c)
     return;
    }
 
-    if (s->curaddr > maxpcadd(s->start) || s->curaddr < minadd(s->start))
+    if (s->curaddr > maxadd(s->start) || s->curaddr < minadd(s->start))
     {
       #ifdef XDBGX
       if (anlpass)  DBGPRT(1,"Scan > Illegal address %x from blk %x, STOP", s->curaddr, s->start);
@@ -9641,6 +10233,16 @@ void do_code (SBK *s, INST *c)
     }
 
   xofst = s->curaddr;                             // don't modify curaddr, use temp instead
+
+
+//if (xofst == 0x9372e)
+//{
+ //   DBGPRT(0,0);
+
+//}
+
+
+
 
 //----------------------------
 
@@ -9666,22 +10268,26 @@ void do_code (SBK *s, INST *c)
         tbk++;
 
         #ifdef XDBGX
-        if (anlpass && anlpass < ANLPRT && !bkmap[tbk].bok)
+        if (s->proctype && !bkmap[tbk].bok)
                     DBGPRT(1,"ROMBNK - Invalid bank %d (%x)", tbk, c->ofst);
         #endif
         c->bank = tbk;                               // set bank for this opcode
-        x = g_byte(xofst);                           // get true opcode
+        x = g_byte(xofst);                           // get opcode, may still be sign...
         indx = opcind[x];
        }
      }
 
   if (indx == 111)
-     {                                  // this is the SIGN prefix, find alternate opcode
+     {                                  // this is the SIGN prefix (0xfe), find alternate opcode
       xofst++;
       x = g_byte(xofst);
       indx = opcind[x];                 // get opcode
       opl = opctbl + indx;
-      if (opl->sign)  indx += 1;        // get prefix opcode index instead
+      if (opl->sign)
+        {
+           indx += 1;                   // get prefix opcode index instead
+           c->feflg = 1;
+        }
       else indx = 0;                    // or prefix not valid
      }
 
@@ -9697,7 +10303,7 @@ void do_code (SBK *s, INST *c)
 
  //------------
 
-  if (indx == 80 && s->scanning)
+  if (s->proctype && indx == 76)         //scanning)
    {         // skip
      // if opcode = skip, check that next opcode is only a single byte (i.e. no operands)
      // otherwise skip MUST be an invalid opcode. Others make no sense also (index >= 106 , ret, skip, etc)
@@ -9711,59 +10317,54 @@ void do_code (SBK *s, INST *c)
 
     n = opctbl + ix;
 
-    if (ix >= 106 || ix == 80 || n->sigix == 20 || n->nops)
+    if (ix >= 106 || ix == 76 || n->sigix == 20 || n->nops)
      {
       #ifdef XDBGX
-          if (anlpass) DBGPRT(0,"[Skip] + %s !INV!", n->name);
+          if (anlpass) DBGPRT(0,"!INV! [Skip] + %s", n->name);
        #endif
       indx = 0;
      }
    }
 
   if (!indx)
-     {
+  {
        s->inv = 1;
-       s->nextaddr = xofst + 2;      //to get nextaddr right for end_scan
+       s->nextaddr = xofst + 2;      // to get nextaddr right for end_scan
+
+   if (s->proctype)               //not if signature checking or printing
+     {
        #ifdef XDBGX
           if (anlpass) DBGPRT(1,"Invalid opcode (%x) at %x [%d]", x, s->curaddr, anlpass);
        #endif
-
-       if (s->scanning) end_scan (s);
-       else  if (anlpass) wnprt(1,"Invalid opcode at %x [%d]", s->curaddr, anlpass); // report only once
-
-       return;
      }
+
+    if (anlpass >= ANLPRT ) wnprt(1,"Invalid opcode at %x [%d]", s->curaddr, anlpass); // report only once
+
+   return;
+  }
 
 //------------
 
   c->opcsub = x & 3;                               // this is valid only for multimode opcodes
+  c->opcode = x;
   c->opcix = indx;                                 // opcode index
   c->sigix = opl->sigix;                           // sig index
   c->ofst  = s->curaddr;                           // original start of opcode
 
-  set_opstart(s->curaddr);                         // code start flag
+  if (s->proctype == 1) add_opc(s->curaddr);          // opcode addr only if scanning
 
-  // These next items can be changed by opcodes, this is default setup
+  // NB. These next items are changed by opcodes, this is default setup
 
   c->numops = opl->nops;
   c->psw   = psw;                                 // carry over psw from last instance
   o = c->opr;                                     // shortcut to operands (4 off)
-  c->wop = opl->wop;                              // write destination index (or zero)
-  o[opl->wop].wfend = opl->wfend;                 // set write size (or zero)
-  o[1].rfend = opl->rfend1;                       // operands - read size
-  o[2].rfend = opl->rfend2;
-  o[3].rfend = opl->rfend3;
+
+  o[1].fend = opl->fend1;                         // operands - preset size
+  o[2].fend = opl->fend2;
+  o[3].fend = opl->fend3;
   o[1].rgf  = 1;                                  // set register ops by default
   o[2].rgf  = 1;
   o[3].rgf  = 1;
-
-
-//if (s->curaddr == 0x9342a)
-//if (s->curaddr == 0x9224e)
-//{
-//DBGPRT(1,0);
-//}
-
 
   s->nextaddr = xofst;                      // address of actual opcode - for eml call
 
@@ -9782,18 +10383,18 @@ void do_code (SBK *s, INST *c)
 
 uint pp_code (uint ofst, LBK *k)
 {
-  int i, cnt, inx, ainx, eqp, jf;
+  int i, cnt,  ainx, jf;
 
   const char  *tx ;
   const OPC* opl;
   INST *c;
  // JMP *j;
 
-//if (ofst == 0x9250f)
-//{                         //xdt2
-//DBGPRT(0,0);
-//}
 
+//if (ofst == 0x17bb1)
+//{                         //RZAS
+ //DBGPRT(0,0);
+//}
 
 
   memset(&prtscan,0, sizeof(SBK));     // clear it first
@@ -9815,6 +10416,8 @@ uint pp_code (uint ofst, LBK *k)
   // This is neatest way to show addresses correctly in printout
   // internally, keep 'ofst' at original address, but update curaddr for printout.
 
+
+
   if (c->bank)
     {
      pp_hdr (ofst, "rombk", 2);
@@ -9822,12 +10425,13 @@ uint pp_code (uint ofst, LBK *k)
      prtscan.curaddr +=2;
     }
 
-  inx = c->opcix;
-  ainx = inx;                        // safety
-  opl = opctbl + inx;
+ // inx = c->opcix;
+  ainx = c->opcix;                        // safety
+  opl = opctbl + ainx;
 
   cnt = prtscan.nextaddr - prtscan.curaddr;
   pp_hdr (prtscan.curaddr, opl->name, cnt);
+
 
   i = c->numops;
   while (i)
@@ -9842,9 +10446,9 @@ uint pp_code (uint ofst, LBK *k)
   *********************************************/
 
 
-//if (ofst == 0x92ba9)
-//{                         //xdt2
-//DBGPRT(1,0);
+//if (ofst == 0x920d8)
+//{
+//DBGPRT(0,0);
 //}
 
 
@@ -9857,7 +10461,7 @@ uint pp_code (uint ofst, LBK *k)
    //     pstr("|%d ", indent);         // experiment, for lining up and new brackets
 
         tx = opl->sce;                 // source code, before any mods
-        eqp = 1;                       // equals not printed yet
+   //     eqp = 1;                       // equals not printed yet
 
         // any mods to source code go here
 
@@ -9869,9 +10473,9 @@ uint pp_code (uint ofst, LBK *k)
 
         if ((jf & 1) && *tx)
          {                             // invert jump logic for source printout
-           if (inx > 53 && inx < 72)   // all conditional jumps (except djnz)
+           if (c->opcix > 53 && c->opcix < 72)   // all conditional jumps (except djnz)
            {
-             ainx = inx ^ 1;           // get alternate opcode index if jump found.
+             ainx = c->opcix ^ 1;           // get alternate opcode index if jump found.
              tx = opctbl[ainx].sce;    // and source code
 //indent++;
            }
@@ -9892,7 +10496,7 @@ uint pp_code (uint ofst, LBK *k)
            case 0x12:
            case 0x13:
 
-             p_opsc (c, *tx, eqp);
+             p_opsc (c, *tx);           //, eqp);
              break;
 
            case 4:
@@ -9903,7 +10507,7 @@ uint pp_code (uint ofst, LBK *k)
            case 5:
              // subr call, may have answer attached.
              pp_answer(c);
-             p_opsc (c, 1, eqp);
+             p_opsc (c, 1);
              prtscan.nextaddr += pp_subargs(c,prtscan.nextaddr);
              break;
 
@@ -9940,10 +10544,16 @@ uint pp_code (uint ofst, LBK *k)
                 break;
               default:
                 pstr (0,"goto ");
-                p_opsc (c,1,0);
+                p_opsc (c,1);
                 pchar (';');
+
+             if (c->opcix == 76)  pstr(1,0);        //skip fakes a newline
                 break;
              }
+
+
+
+
 
 /*if (j && j->retn)
     {
@@ -9959,23 +10569,27 @@ uint pp_code (uint ofst, LBK *k)
 
              break;
 
-           case 11:
-             p_indl();             // 0xb  print new line with indent (DJNZ etc)
+           case 11:          // divide, 2 line special
+               do_divprt(c,&tx);
              break;
 
-           case '=' :
-             eqp = 0;                 // equals printed, read syms after this
-              // fall through
-           default:
+
+           case '\n':
+             p_indl();             // (0xa) print new line with indent (DJNZ, NORM etc)
+             break;
+
+             default:
              pchar(*tx);
           }         // end switch tx
+
+          if (!tx) break;
           tx++;
         }           // end while tx
       }             // end if opl->sce
    }                // end if PSSRC
   else
      {      // subr arguments without source code option - must still print and skip operands
-      if (!PSSRC && (inx == 73 || inx == 74 || inx == 82 || inx == 83))          // CALL opcodes
+      if (!PSSRC && c->sigix == 17)    // (opcinx == 73 || inx == 74 || inx == 78 || inx == 79))          // CALL opcodes
          {
            prtscan.nextaddr += pp_subargs(c,prtscan.nextaddr);
          }
@@ -10024,9 +10638,10 @@ uint pp_code (uint ofst, LBK *k)
 
  if (prtscan.nextaddr <= k->end)
   {
-   if (inx > 75 && inx < 80) pp_comment(prtscan.nextaddr,1);   // Rets
-   if (inx == 75 || inx == 81)  pp_comment(prtscan.nextaddr,1); //jumps
+   if (c->opcix > 79 &&  c->opcix < 84) pp_comment(prtscan.nextaddr,1);    // Rets
+   if (c->opcix == 75 || c->opcix == 77)  pp_comment(prtscan.nextaddr,1); // jumps
   }
+
  return prtscan.nextaddr;
 }
 
@@ -10085,24 +10700,38 @@ uint fix_input_addr_bank(CPS *c, int ix)
      // answers 0 is OK
      // 1 is invalid bank
 
-   int rlen;
+   uint rlen, bk, addr;
 
-   rlen = c->pf[ix] & HXRL;     //read length
+   rlen = c->pf[ix] & HXRL;     // read length
+   bk = g_bank  (c->p[ix]);       // 0 - 15 in 0xf0000
+   addr = nobank(c->p[ix]);     // address part
 
-   if (c->p[ix] <= max_reg()) return 0;        //register
-
-//   if (rlen < 4) return 0;        //ok, register.  WRONG!! original was max reg
+   if (addr <= max_reg())
+     {
+       if (bk) return 1;       // registers don't ever have a bank
+       return 0;               // register valid
+     }
 
    if (!numbanks)
      {
-       if (rlen > 4) return 1;    // no bank allowed
-      c->p[ix] = nobank(c->p[ix]) | basepars.datbnk;                  //single bank
+       if (rlen > 4 && bk != 0x80000 ) return 1;      // only bank 8 allowed
+       bk = basepars.datbnk;                          // single bank force 8 (9)
      }
    else
      {          // multibank
-       if (rlen < 5) return 1;    // must have bank
-       c->p[ix] +=  0x10000;
+       if (bk & 0x60000) return 1;       // invalid bank
+
+       if (rlen < 5)
+         {
+          if (addr > 0x1fff) return 1;    // 0x2000 on MUST have a bank.
+          bk = 0x20000;                   // set bank 1
+         }
+       else
+         {
+          bk += 0x10000;                   // add one to valid bank
+         }
      }
+   c->p[ix] = addr | bk;
    return 0;
  }
 
@@ -10111,7 +10740,11 @@ uint fix_input_addr_bank(CPS *c, int ix)
 
 uint validate_input_addr(CPS *c, int ix, uint type)
 {
-  // force single bank addrs to bank 9,  uint x;
+  // force single bank addrs to bank 9.
+
+  // 0 none, 1 start address, 2 end address (same bank) 3 register,
+ // 4 start address (no ROM valid) 5 end address (no ROM valid)
+  // 6 range start 7 range end (can cross banks)
 
   switch(type)
 
@@ -10119,7 +10752,7 @@ uint validate_input_addr(CPS *c, int ix, uint type)
     default:           //do nothing
       break;
 
-      case 2:       // end address
+      case 2:       // end address within valid ROM
 
          if (ix)
           {
@@ -10127,8 +10760,9 @@ uint validate_input_addr(CPS *c, int ix, uint type)
            if (!c->p[ix]) c->p[ix] = c->p[ix-1];
            else
             {
-             if (c->p[ix] <= 0xffff) c->p[ix] |= g_bank(c->p[ix-1]);      // add start bank
-             if (fix_input_addr_bank(c, ix))    return do_error(c,1, "Invalid bank");;
+             if ((c->pf[ix] & HXRL) < 5) c->p[ix] |= g_bank(c->p[ix-1]);
+             else if (fix_input_addr_bank(c, ix))    return do_error(c,1, "Invalid bank");;
+
              if (!val_rom_addr(c->p[ix]))       return do_error(c,1,"Invalid address");
             }
          // extra end validation against start
@@ -10140,7 +10774,7 @@ uint validate_input_addr(CPS *c, int ix, uint type)
           }
        // else fall through as a type 1
 
-      case 1:       // start address
+      case 1:       // start address within valid ROM
 
          if (numbanks < 0)              return do_error(c,1, "No banks defined");    //but what if bank command ???
          if (fix_input_addr_bank(c,ix)) return do_error(c,1, "Invalid bank");
@@ -10155,7 +10789,7 @@ uint validate_input_addr(CPS *c, int ix, uint type)
         if (c->p[ix] > (int) max_reg())       return do_error(c,1, "Invalid Register ");
         break;
 
-     case 5:       // full range end address (without val_rom)
+     case 5:       // end address (0-0xffff) without val_rom
 
          if (ix)
           {
@@ -10163,9 +10797,8 @@ uint validate_input_addr(CPS *c, int ix, uint type)
            if (!c->p[ix]) c->p[ix] = c->p[ix-1];
            else
             {
-             if (c->p[ix] <= 0xffff) c->p[ix] |= g_bank(c->p[ix-1]);      // add start bank
-             if (fix_input_addr_bank(c, ix))    return do_error(c,1, "Invalid bank");;
-      //       if (!val_rom_addr(c->p[ix]))       return do_error(c,1,"Invalid address");
+             if ((c->pf[ix] & HXRL) < 5) c->p[ix] |= g_bank(c->p[ix-1]);
+             else if (fix_input_addr_bank(c, ix))    return do_error(c,1, "Invalid bank");;
             }
          // extra end validation against start
 
@@ -10176,12 +10809,33 @@ uint validate_input_addr(CPS *c, int ix, uint type)
           }
        // else fall through as a type 4
 
-      case 4:       // full range start address
+
+   case 7:       // full range end address across banks
+
+         if (ix)
+          {
+
+           if (!c->p[ix]) c->p[ix] = c->p[ix-1];
+           else
+            {
+             if ((c->pf[ix] & HXRL) < 5) c->p[ix] |= g_bank(c->p[ix-1]);
+             else if (fix_input_addr_bank(c, ix))    return do_error(c,1, "Invalid bank");;
+            }
+
+           if (c->p[ix] < c->p[ix-1])           return do_error(c,1, "End is less than Start");
+
+           break;
+          }
+       // else fall through as a type 6
+
+      case 4:       // start address (0-0xffff) without val_rom
+      case 6:       // full range start address (same as 4)
 
          if (numbanks < 0)              return do_error(c,1, "No banks defined");    //but what if bank command ???
          if (fix_input_addr_bank(c,ix)) return do_error(c,1, "Invalid bank");
-  //       if (!val_rom_addr(c->p[ix]))   return do_error(c,1, "Invalid address");
          break;
+
+
 
   }
 return 0;
@@ -10212,7 +10866,7 @@ uint set_rbas (CPS *c)
 
  if (chbase.lasterr) return do_ch_error(c, &chbase);
 
- x->cmd = 1;              // by command
+ x->usrcmd = 1;              // by command
  return 0;
 }
 
@@ -10255,7 +10909,7 @@ return 0;
 
 
 
-
+/*
 
 void set_data_vect(LBK *blk)
 {
@@ -10289,24 +10943,31 @@ void set_data_vect(LBK *blk)
   }
 }
 
+
+
 void add_ans(uint start, ADT *ca)
 {  //special adt copy for subr answers
- ADT *a;
+ SPF *f;
 
 // insert ino answer chain
-  a = add_adt(&chans, start, 1);        // add new one
-  *a = *ca;
-  a->fkey = set_adt_fkey(start,1);
+  f = add_spf(start);        // add new one
+
+  f->spf = 1;             // answer
+  f->addrreg = c->ansreg;
+
+ // *a = *ca;
+ // a->fkey = set_adt_fkey(start,1);
 
     #ifdef XDBGX
     DBGPRT(0,"      with answer params");
-    prt_adt(&chans, start, 0, DBGPRT);
+ //   prt_adt(&chans, start, 0, DBGPRT);
     DBGPRT(1,0);
   #endif
 
 }
 
-void cpy_adt(CPS *c, uint start)                 //, int start)
+
+void cpy_adt(CPS *c, uint start)
 {
  // move adt blocks from cmd to new LBK
  // NB. create NEW ones as fid will be in worng place otherwise in adt chain
@@ -10323,11 +10984,11 @@ void cpy_adt(CPS *c, uint start)                 //, int start)
   while ((a = get_next_adnl(&chadcm,a)))
     {
  //     if (a->seq > c->seq) break; don't need it, chain cleared each command
-      if (a->ans)
-       {
-        add_ans(start,a);        // add answer (in different chain)
-       }
-      else
+    //  if (a->ans)
+   //    {
+   //     add_ans(start,a);        // add answer (in different chain)
+   //    }
+    //  else
 
       if (a->cnt)
        {          // use cnt as null checker
@@ -10347,8 +11008,57 @@ void cpy_adt(CPS *c, uint start)                 //, int start)
     DBGPRT(1,0);
   #endif
 
-}
+} */
 
+void cpy_adt(CPS *c, void *newfid)
+{
+ // copy adt blocks from cmd chain to std chain with new fid
+
+  ADT *a;
+  uint fix, ix;
+
+  fix = 0;
+
+  if (c->fcom == C_ARGS)  fix = 1;
+  if (c->fcom == C_SUBR)  fix = 1;
+  if (c->fcom == C_TABLE) fix = 2;
+  if (c->fcom == C_FUNC)  fix = 2;
+
+
+//fid for a itself doesn't change - conneted stuff OK
+
+   a = get_adt(&cmnd,0);    // get first block (dummy fid)
+
+  if (a)
+    {
+     ix = chadnl.lastix;         //get_lastix(&chadnl);         // save index of block
+     a->fid = newfid;
+     chupdate(&chadnl,ix);             // rechain after new FK
+    }
+
+
+  // set pfw zero for args and subr
+  // set print radix to decimal for tab and func
+
+  if (!fix) return;
+
+  while ((a = get_adt(newfid,0)))
+    {
+      if (a->cnt)
+       {          // use cnt as null checker
+        if (fix == 1) a->pfw = 0;    // clear all pfw
+        if (fix == 2 && a->prdx == 0) a->prdx = 2;  //a->dptype == 0) a->dptype = DP_DEC;  //set decimal if not set
+       }
+      newfid = a;
+    }
+
+     #ifdef XDBGX
+    DBGPRT(0,"      with addnl params");
+    prt_adt(newfid, 0, DBGPRT);
+    DBGPRT(1,0);
+  #endif
+
+}
 
 
 // amend this for everything - change end if relevant
@@ -10357,16 +11067,13 @@ void cpy_adt(CPS *c, uint start)                 //, int start)
 
 int chk_csize(CPS *c)
  {
-  int bsize, tsize, row, bytes;
+  int bsize, adtsize, row, bytes;
   DIRS *d;
 
  // if (!c->fcom) return 0;       // not for fill cmd
 
   d = dirs + c->fcom;
  // check addnl levels allowed
-
-//  row = d->maxadt;      //max levels
-//  bytes = d->minadt -1;      // min levels
 
   if (!d->maxadt && c->seq)
     {     //no extra allowed
@@ -10384,33 +11091,32 @@ int chk_csize(CPS *c)
         c->seq = d->maxadt;
      }
 
-
 // check extra levels and sizes
 
   bsize = c->p[1] - c->p[0]+1-c->term;    // byte size of cmd entry in total
 
-  if (d->defsze)  tsize = d->defsze; else tsize = c->tsize;
+  if (d->defsze)  adtsize = d->defsze; else adtsize = c->adtsize;
 
-  if (!tsize)
+  if (!adtsize)
     {
       do_error(c,1, "Row size is ZERO !!");
-      tsize = 1;
+      adtsize = 1;
      }
 
-   if (tsize > bsize)
+   if (adtsize > bsize)
      {
       if (c->p[0] == c->p[1] || d->defsze)
         {  // if end = start, or preset sizes, allow change
-         c->p[1] = c->p[0] + tsize-1;
-         bsize = tsize;
+         c->p[1] = c->p[0] + adtsize-1;
+         bsize = adtsize;
          do_error(c,2, "End address set to ");
          paddr(c->p[1],0,wnprt);
         }
          else  return do_error(c,1, "End address too low for start+data definition");
      }
 
-   row = bsize/tsize;                  // number of whole rows
-   bytes = row * tsize;                // number of bytes for whole rows
+   row = bsize/adtsize;                  // number of whole rows
+   bytes = row * adtsize;                // number of bytes for whole rows
 
    if (bytes != bsize)
      {
@@ -10441,15 +11147,15 @@ uint set_func (CPS *c)
 
   // size row vs. start>end check first
 
-  a = get_adnl(&chadcm, 0, 1);
+  a = get_adt(c,0);
 
   if (c->seq < 2)
     {   // add another level if only one specified
-     b = add_adt(&chadcm, 0, 256);
+     b = append_adt(a,0);                    //&chadcm, 0, 256);
      *b = *a;               // copy all data
-     b->fkey = 2;           // but reset seq
-     c->seq = 2;            // levels = 1;         // up levels
-     c->tsize = totsize(&chadcm, 0);
+     b->fid = a;           // but reset seq
+  //   c->seq = 2;            // levels = 1;         // up levels
+     c->adtsize = totsize(c);
     }
 
   // c->tsize must be correct first
@@ -10471,12 +11177,13 @@ uint set_func (CPS *c)
      else  do_error(c,0,"First value (%x) indicates wrong sign specified", val);
     }
 
-  blk = add_cmd (c->p[0], c->p[1], c->fcom|C_CMD,0);  // start,end, cmd. by cmd
+  blk = add_cmd (c->p[0], c->p[1], c->fcom|C_USR,0);  // start,end, cmd. by cmd
   if (chcmd.lasterr) return  do_ch_error(c, &chcmd);
 
-  cpy_adt(c,blk->start);
-  blk->size = totsize(&chadnl, blk->start);
-
+  cpy_adt(c,vconv(blk->start));
+  blk->size = totsize(vconv(blk->start));
+  blk->usrcmd =1;
+//  if (blk->size) blk->adt = 1;
   return 0;
 }
 
@@ -10489,12 +11196,14 @@ uint set_tab (CPS *c)
   // size row vs. start>end check first
   if (chk_csize(c)) return 1;
 
-  blk = add_cmd (c->p[0], c->p[1], c->fcom|C_CMD,0);  // start,end, cmd. by cmd
+  blk = add_cmd (c->p[0], c->p[1], c->fcom|C_USR,0);  // start,end, cmd. by cmd
   if (chcmd.lasterr) return do_ch_error(c,&chcmd);
 
 
-  cpy_adt(c,blk->start);
-  blk->size = totsize(&chadnl,blk->start);
+  cpy_adt(c,vconv(blk->start));
+  blk->size = totsize(vconv(blk->start));
+  blk->usrcmd =1;
+ // if (blk->size) blk->adt = 1;
 
  if (c->argl) blk->argl = 1;     // default is argl OFF
  return 0;
@@ -10506,20 +11215,27 @@ uint set_stct (CPS *c)
    // structures
 
   LBK *blk;
+  uint cmd;
 
   // size row vs. start>end check first
   if (chk_csize(c)) return 1;
 
-  blk = add_cmd (c->p[0], c->p[1], c->fcom|C_CMD,0);  // start,end, cmd. by cmd
+  cmd = c->fcom|C_USR;
+  if (c->adtsize) cmd |= C_NOMERGE;
+//can't merge if c->adtsize...
+
+  blk = add_cmd (c->p[0], c->p[1], cmd,0);  // start,end, cmd. by cmd
   if (chcmd.lasterr) return do_ch_error(c,&chcmd);      //do_error(c,2,0);
 
-  cpy_adt(c,blk->start);
-  blk->size = totsize(&chadnl,blk->start);
+  cpy_adt(c,vconv(blk->start));
+  blk->size = totsize(vconv(blk->start));
+  blk->usrcmd =1;
+ // if (blk->size) blk->adt = 1;
 
   blk->term = c->term;                    // terminating byte flag (struct only)
   if (c->argl) blk->argl = 1;             // default is arg layout
 
-  set_data_vect(blk);   // for Refs out in structs
+ // set_data_vect(blk);   // for Refs out in structs
   return 0;
 }
 
@@ -10534,10 +11250,17 @@ uint set_data (CPS *c)
 
   LBK *blk;
   ADT *a;
+  uint cmd;
 
   if (chk_csize(c)) return 1;
 
-  blk = add_cmd (c->p[0], c->p[1], c->fcom|C_CMD,0);  // start,end, cmd. by cmd
+
+  cmd = c->fcom|C_USR;
+  if (c->adtsize) cmd |= C_NOMERGE;
+
+//  can't merge if c->adtsize...cant add size until blk made....
+
+  blk = add_cmd (c->p[0], c->p[1], cmd,0);  // start,end, cmd. by cmd
   if (chcmd.lasterr) return do_ch_error(c,&chcmd);
 
   //for text and fill, this can return blk = ZERO
@@ -10550,56 +11273,62 @@ uint set_data (CPS *c)
 
   //if (a && a->bsize < c->fcom)  a->bsize = c->fcom;
 
-  cpy_adt(c,blk->start);
-  blk->size = totsize(&chadnl,blk->start);
-
+  cpy_adt(c,vconv(blk->start));
+  blk->size = totsize(vconv(blk->start));
+  blk->usrcmd =1;
+ // if (blk->size) blk->adt = 1;
   return 0;
 }
 
 
 uint set_sym (CPS *c)
 {
-  int fstart,fend,write;    //,i, flags
-  ADT *a;
+  int fstart,fend;
+  ADT *a;        //, *b;
   SYM  *s;
 
 // flagsword.
 // allow/inhibit if immediate...
 
+//if (c->debug)
+//{
+ //   DBGPRT(0,0);
 
-  write = 0;           // read or write
- // flags = 0;           // flags word
-  fstart = 32;
-  fend = 31;
+//}
 
-  if (c->npars < 3)
+  //check command levels    c->seq
+  if (c->seq > 1) return do_error(c,0,"Only one data level allowed");
+
+   if (c->npars < 3)
    {
     c->p[1] = 0;         // default address range to ALL (zeroes) otherwise done by cmd
     c->p[2] = 0xfffff;   // max possible address
    }
 
-// only one adt level allowed
 
-// for (i = 0; i <= c->levels; i++)
- //  {
-    a = get_adnl(&chadcm, 0, 1);     //cmdadnl + i;           //->adnl;
-    if (a)
+    a = get_adt(c,0);              //nl(&chadcm, 0, 1);
+    if (a)    // size specified
      {
-      if (a->fend == 15)  write = 1;      // write 'W'
-
-      if (a->enc == 7 && a->fstart < 31)
-        {        // bit marker 'B'
-         fstart = a->fstart;
-         fend   = a->data & 0x1f;
-        }
+      fstart = a->fstart;
+      fend   = a->fend;
+     }
+    else
+     {
+       fstart = 0;
+       fend   = 7;
      }
 
-  s = add_sym(c->symname, write|C_CMD, c->p[0], fstart, fend, c->p[1], c->p[2]);
+if (c->write)  fend |= 0x40;      // set write
+if (!c->bits)  fend |= 0x80;       // set C_NBT for nobits
 
-  if (chsym.lasterr && chsym.lasterr != E_DUPL)   return do_ch_error(c,&chsym);
 
-  if (c->flags) s->flags = 1;          // with flags (not for bits...)
-  if (c->names) s->names = 1;          // with flags (not for bits...)
+
+  s = add_sym(c->symname, c->p[0], fstart, fend|C_USR, c->p[1], c->p[2]);
+
+  if (chsym.lasterr )   return do_ch_error(c,&chsym);
+
+ // if (c->flags) s->flags = 1;          // with flags (not for bits...)
+ // if (c->names) s->names = 1;          // with flags (not for bits...)
   if (c->imm)   s->immok = 1;
   return 0;
 }
@@ -10632,12 +11361,12 @@ uint set_subr (CPS *c)
   if (c->spf)
      {            // special func is marked
 
-      f = add_spf(xsub->start);
-      f->spf = c->spf;   // start of funcs
+      f = append_spf(vconv(xsub->start), c->spf > 12  ? 5 : 4, 0);
+
       f->fendin  = anames[f->spf].fendin;
       f->fendout = anames[f->spf].fendout;
       f->addrreg = c->adreg;          // register
-      f->sizereg = c->szreg;             // cols
+      f->sizereg = c->szreg;          // cols
 
       #ifdef XDBGX
         DBGPRT(0, "  with spf = %x ", f->spf);
@@ -10646,10 +11375,26 @@ uint set_subr (CPS *c)
 
   add_scan (c->p[0], J_SUB,0);
 
-  cpy_adt(c, xsub->start);
-
-  xsub->size = totsize(&chadnl,xsub->start);
+  cpy_adt(c, vconv(xsub->start));
+  xsub->size = totsize(vconv(xsub->start));
+//  xsub->user = 1;
   if (c->cptl) xsub->cptl = 1;     // default is argl ON
+
+
+  if (c->ansreg)
+   {
+       f = append_spf(vconv(xsub->start), 1, 0);
+       f->addrreg = c->ansreg;                 //pars[0].reg = c->ansreg;
+        #ifdef XDBGX
+        DBGPRT(0, "  with ans = %x ", f->addrreg);     //pars[0].reg);
+      #endif
+   }
+
+
+
+
+
+
  return 0;
  }
 
@@ -10663,9 +11408,9 @@ uint set_time(CPS *c)
  // SYM *s;
  // char *z;
 
-  blk = add_cmd (c->p[0],c->p[1],c->fcom|C_CMD,0);
+  blk = add_cmd (c->p[0],c->p[1],c->fcom|C_USR,0);
   if (chcmd.lasterr) return do_ch_error(c,&chcmd);
-  cpy_adt(c,blk->start);
+  cpy_adt(c,vconv(blk->start));
   //s =
  // add_sym(C_CMD,c->symname,c->p[0],-1, 0,0);  // safe for null name
  // if (s) s->cmd = 1;
@@ -10742,14 +11487,14 @@ int find_text(BANK *b)
 
   // BUT 0FAB has NO COPYRIGHT STRING !!!
 
-  int ans, val, start, ofst, bk, cnt;
+  uint ans, val, start, ofst, bk, cnt;
 
-  if (nobank(b->maxbk) < 0xdfff)  return 0;          // not full bank
+  if (nobank(b->maxromadd) < 0xdfff)  return 0;          // not full bank
 
   if (strncmp("Copyright", (char *) b->fbuf + 0xff63, 9)) return 0;  // not found
 
   // matched Copyright string
-  bk = g_bank(b->minpc);
+  bk = g_bank(b->minromadd);
 
   start = (0xff63 | bk);
   ofst = start;
@@ -10762,8 +11507,9 @@ int find_text(BANK *b)
       ofst++;
       val = g_byte(ofst);
    }
+ // b->maxromadd = start-1;
   add_cmd (start,ofst, C_TEXT |C_SYS,0);
-  add_cmd (ofst+1,b->maxbk, C_DFLT|C_SYS,0);    // treat as cmd (cannot override)
+  add_cmd (ofst+1,b->maxromadd, C_DFLT|C_SYS,0);    // treat as cmd (cannot override)
 
   ans = start - 1;
 
@@ -10775,7 +11521,9 @@ int find_text(BANK *b)
    {     // allow a few non printers...6 ?
      if (val < 0x20 || val > 0x7f)
       {
-        if (cnt > 5) add_cmd (ofst-cnt,ofst-1, C_TEXT |C_SYS,0);
+        if (cnt > 5){ add_cmd (ofst-cnt,ofst-1, C_TEXT |C_SYS,0);
+    //     if ((ofst-cnt) < b->maxrpc) b->maxpc = ofst-cnt;
+        }
         cnt = 0;
       }
      else
@@ -10811,15 +11559,15 @@ void find_fill_txt(BANK *b)
    uint ofst, last;
    int cnt, val;
 
-   last = b->maxbk;
-   b->maxpc = b->maxbk;             // default and safety
+   last = b->maxromadd;
+ //  b->maxpc = b->maxbk;             // default and safety
 
    ofst = find_text(b);             // any text found ?
 
-   if (!ofst) ofst = b->maxbk; else last = ofst;
+   if (!ofst) ofst = b->maxromadd; else last = ofst;
 
    cnt = 0;
-   for (; ofst > b->minpc; ofst--)
+   for (; ofst > b->minromadd; ofst--)
      {
       val = g_byte(ofst);
 
@@ -10833,12 +11581,12 @@ void find_fill_txt(BANK *b)
 
    ofst += 4;                     // 2 count plus one - may need more for a terminator byte ?
 
-   if (ofst < b->maxbk)
+   if (ofst < b->maxromadd)
       {
         // fill at end
        add_cmd (ofst,last, C_DFLT|C_SYS,0);
-       add_aux_cmd (ofst,b->maxpc,C_XCODE|C_SYS,0);       // and xcode to match
-       b->maxpc = ofst;
+       add_aux_cmd (ofst,b->maxromadd,C_XCODE|C_SYS,0);       // and xcode to match
+  //     if (ofst < b->maxpc) b->maxpc = ofst;           //no, allows writes.
       }
   }
 
@@ -10900,7 +11648,7 @@ uint set_bnk (CPS *c)
 
    if ((bk & 6) || bk > 15) return do_error(c,1, "Invalid Bank Number");
 
-   if (bkmap[bk].cmd)   return do_error(c,1, "Bank already defined");
+   if (bkmap[bk].usrcmd)   return do_error(c,1, "Bank already defined");
 
    bk++;
    bank = bk << 16;          // bank in correct form
@@ -10942,7 +11690,7 @@ uint set_bnk (CPS *c)
 
 // clear valid map entries
 
-   if (!bkmap[3].cmd)
+   if (!bkmap[3].usrcmd)
       {    //first use of 'bank' command - clear whole map.
   #ifdef XDBGX
      DBGPRT(1,"Banks CLEARED ***************");
@@ -10956,39 +11704,39 @@ uint set_bnk (CPS *c)
            b->bkmask = 0;
           }
        numbanks = -1;                // no banks
-       bkmap[3].cmd = 1;
+       bkmap[3].usrcmd = 1;
       }
 
    b = bkmap+bk;
-   b->cmd = 1;
+   b->usrcmd = 1;
    b->bok = 1;
    b->bprt = 1;    // print in msg file
    b->filstrt = c->p[1];
 
-   if (c->npars > 2) b->minpc = nobank(c->p[2]) | bank;
-   else  b->minpc = PCORG | bank;
+   if (c->npars > 2) b->minromadd = nobank(c->p[2]) | bank;
+   else  b->minromadd = PCORG | bank;
 
-   if (c->npars > 3) b->maxbk = nobank(c->p[3]) | bank;
-   else  b->maxbk = 0xffff;
+   if (c->npars > 3) b->maxromadd = nobank(c->p[3]) | bank;
+   else  b->maxromadd = 0xffff | bank;
 
-   b->filend =  b->filstrt + (b->maxbk - b->minpc);
+   b->filend =  b->filstrt + (b->maxromadd - b->minromadd);
 
    // fldata is still valid...
    if (b->filend > fldata.fillen)
       {
        b->filend = fldata.fillen-1;
-       b->maxbk = (b->filend-b->filstrt) + b->minpc;
+       b->maxromadd = (b->filend-b->filstrt) + b->minromadd;
       }
 
-    b->maxpc = b->maxbk;
+ //   b->maxpc = b->maxbk;
 
 // file read ???     anything ??
 
-  b->fbuf = (uchar*) mem(0,0, 0x10000);          // big enough for file TOO BIG
+//  fbinbuf = (uchar*) mem(0,0, 0x10000);          // too big
 
-  fseek (fldata.fl[0], b->filstrt,SEEK_SET);        // set file start - CHECK ERROR
+//  fseek (fldata.fl[0], b->filstrt,SEEK_SET);        // set file start - CHECK ERROR
 
-  fread (b->fbuf + 0x2000, 1, b->filend-b->filstrt+1, fldata.fl[0]);
+//  fread (fbinbuf + 0x2000, 1, b->filend-b->filstrt+1, fldata.fl[0]);
 
 /*  #ifdef XDBGX
    DBGPRT(1,"Read input file (0x%x bytes)", fldata.fillen);
@@ -11034,7 +11782,10 @@ uint set_bnk (CPS *c)
 */
    numbanks++;
 
-b->opcbt = opcbit + (0x800*numbanks);
+/// b->opcbt = opcbit + (0x800*numbanks);          //NO !!!!
+
+
+
 //b->opdbt = opdbit + (0x800*numbanks);
 
   basepars.codbnk = 0x90000;                         // code start always bank 8
@@ -11044,8 +11795,8 @@ b->opcbt = opcbit + (0x800*numbanks);
 
 
    #ifdef XDBGX
-     DBGPRT(0,"Bank Set %d %x %x ",bk, b->minpc,b->maxbk);
-     DBGPRT(1," #(%x - %x  fill %x)",b->filstrt, b->filend, b->maxpc);
+     DBGPRT(0,"Bank Set %d %x %x ",bk, b->minromadd,b->maxromadd);
+     DBGPRT(1," #(%x - %x  fill %x)",b->filstrt, b->filend, b->maxromadd);
    #endif
    return 0;
  }
@@ -11060,17 +11811,18 @@ uint set_vect (CPS *c)
 
   if (chk_csize(c))   return 1;
 
-  blk = add_cmd (c->p[0],c->p[1], C_VECT|C_CMD,0);   // by cmd
+  blk = add_cmd (c->p[0],c->p[1], C_VECT|C_USR,0);   // by cmd
 
   if (PMANL) return 0;
   if (chcmd.lasterr)  return do_ch_error(c,&chcmd);
 
   if (c->seq)                 //levels == 0)
    {
-     a = get_adnl(&chadcm,0, 1);             // check addn entry
+     a = get_adt(c,0);              //nl(&chadcm,0, 1);             // check addn entry
      bank = a->bank << 16;
      if (!bkmap[a->bank].bok) return do_error(c,1, "Bank invalid");
-     cpy_adt(c,blk->start);
+     cpy_adt(c,vconv(blk->start));
+
    }
   else bank = g_bank(c->p[0]);
 
@@ -11087,14 +11839,14 @@ uint set_vect (CPS *c)
 uint set_code (CPS *c)
 {
 
-  add_cmd (c->p[0], c->p[1], c->fcom|C_CMD,0);   // by cmd
+  add_cmd (c->p[0], c->p[1], c->fcom|C_USR,0);   // by cmd
   if (chcmd.lasterr) do_ch_error(c,&chcmd);
   return 0;
 }
 
 uint set_scan (CPS *c)
 {
-  add_scan (c->p[0], J_STAT|C_CMD,0);
+  add_scan (c->p[0], J_STAT|C_USR,0);
   if (chscan.lasterr) do_ch_error(c,&chscan);
  return 0;
 }
@@ -11106,18 +11858,22 @@ uint set_args(CPS *c)
 
  if (chk_csize(c)) return 1;
 
-  blk = add_aux_cmd (c->p[0], c->p[1], c->fcom|C_CMD,0);  // by cmd
+  blk = add_aux_cmd (c->p[0], c->p[1], c->fcom|C_USR,0);  // by cmd
 
   if (chaux.lasterr)  return  do_ch_error(c,&chaux);
 
   // must clear all fieldwidths for args command
 
-  cpy_adt(c,blk->start);
-  set_data_vect(blk);
+  cpy_adt(c,vconv(blk->start));
+ // set_data_vect(blk);
 
-  blk->size = totsize(&chadnl,blk->start);
+  blk->size = totsize(vconv(blk->start));
 
   #ifdef XDBGX
+
+  if (!blk->size)
+      DBGPRT(1,"ZZ SIZE IS ZERO %x", blk->start);
+
   DBGPRT(1,0);
   #endif
 return 0;
@@ -11126,7 +11882,7 @@ return 0;
 uint set_cdih (CPS *c)
 {
     // xcode commands
-  add_aux_cmd(c->p[0],c->p[1],c->fcom|C_CMD,0);
+  add_aux_cmd(c->p[0],c->p[1],c->fcom|C_USR,0);
   if (chaux.lasterr) do_ch_error(c,&chaux);
   return 0;
 }
@@ -11150,33 +11906,37 @@ uint set_psw (CPS *c)
 
  void do_listing (void)
 {
-  uint ofst;
+  uint ofst, xofst;
   int i, lastcom;
   LBK *x;
   BANK *b;
   anlpass = ANLPRT;                   // safety
 
   pstr(1,0);            //newline
-  pstr(1,"####################################################################################################");
-  pstr(0,"#\n# Disassembly listing of binary '%s'  ",fldata.bare);
+  p_run(1, '#', 80);
+  pstr(1,"   SAD Version %s (%s)", SADVERSION, SADDATE);
+  p_run(1, '#', 80);
+  pstr(1,"#\n# Disassembly listing of file '%s'  ",fldata.bare);
 
-  //pstr(0,"  806%d%c %d bank%c ", P8065 ? 5 : 1, PSTPD ? 'D' : ' ',  numbanks+1, numbanks ? 's' : ' ');
-  pstr(0,"  806%d  %d bank%c ", P8065 ? 5 : 1, numbanks+1, numbanks ? 's' : ' ');
+  pstr(2,"Appears to be 806%d  %d bank%c ", P8065 ? 5 : 1, numbanks+1, numbanks ? 's' : ' ');
 
-  pstr(0,"   SAD Version %s (%s)", SADVERSION, SADDATE);
-  pstr(0,"\n# See '%s%s' for warnings, results and other information", fldata.bare, fd[2].suffix);
+
+  pstr(1,"# See '%s%s' for warnings, results and other information", fldata.bare, fd[2].suffix);
+
   pstr(0,"\n\n# Explanation of extra flags and formats - ");
   pstr(0,"\n#   R general register. Extra prefix letters shown for mixed size opcodes (e.g DIVW)");
   pstr(0,"\n#   l=long (4 bytes), w=word (2 bytes), y=byte, s=signed. Unsigned is default.");
   pstr(0,"\n#   [ ]=use value as an address   (addresses are always word) ");
-  pstr(0,"\n#   @=value is an address (to symbol),  '++' increment register after operation." );
+  pstr(0,"\n#   '++' increment register after operation." );
   pstr(0,"\n# Processor status flags (for conditional jumps)" );
   pstr(1,"\n#   CY=carry, STC=sticky, OVF=overflow, OVT=overflow trap");
 #ifdef  XDBGX
-pstr(0,"\n# - - - -  DEBUG  - - - - - ");
+pstr(1,"\n# - - - -  DEBUG  - - - - - ");
 #endif
-  pstr(1,"#\n####################################################################################################");
+   p_run(1, '#', 80);
 
+
+ memset(&cmnd, 0, sizeof(CPS));          // clear entire struct, used for comments
 
  for (i = 0; i < BMAX; i++)
     {
@@ -11189,7 +11949,7 @@ pstr(0,"\n# - - - -  DEBUG  - - - - - ");
        pstr (2,0);
        pstr (1,"###########################################################################");
        pstr (0,"# Bank %d  file offset %x-%x, ", i-1, b->filstrt, b->filend);
-       paddr(b->minpc,0,pstr);  pstr(0," - "); paddr(b->maxbk,0,pstr);
+       paddr(b->minromadd,0,pstr);  pstr(0," - "); paddr(b->maxromadd,0,pstr);
        if (i == 9) pstr(0, "  CODE/BOOT starts HERE");
        pstr(1,0);
        pstr (2,"###########################################################################");
@@ -11198,7 +11958,7 @@ pstr(0,"\n# - - - -  DEBUG  - - - - - ");
   //   indent = 0;
      lastcom = 0;
 
-     for (ofst = b->minpc; ofst < b->maxbk; )
+     for (ofst = b->minromadd; ofst < b->maxromadd; )
       {
          // first, find command for this offset
 
@@ -11212,13 +11972,16 @@ pstr(0,"\n# - - - -  DEBUG  - - - - - ");
          {
           show_prog (anlpass);
           pp_comment(ofst,0);
+          xofst = ofst;
           ofst = dirs[x->fcom].prtcmd (ofst, x);
+          if (ofst == xofst) ofst++;                     //stop infinite loop, safety check
          }
        }      // ofst loop
 
-     pp_comment(b->maxbk,0);     //+1,0);             // any trailing comments at bank or listing end
+     pp_comment(g_bank(b->maxromadd) + 0x10000,0);    // next bank+0 - need this for any trailing comments (NOT  g_bank(ofst)+ 0x10000,0);
     }        // bank
-}
+
+  }
 
 
 
@@ -11296,10 +12059,14 @@ void add_iname(int from, int ofst)
  else
     z += sprintf(nm, "I_");         // no bank number
 
- if (match_sig(&intign, ofst,0))       // this is 'ignore int' signature
+// if (match_sig(&intign, ofst))       // this is 'ignore int' signature
+
+  i = g_byte(ofst);
+
+  if ( i == 0xf0 || i == 0xf1)       // this is 'ignore int'
     {
       sprintf(z,"Ignore");
-      add_sym(nm, C_SYS, ofst,32,32, 0,0xfffff);
+      add_sym(nm, ofst,0,7 |C_WHL | C_SYS, 0,0xfffff);
 
       return;
     }
@@ -11310,7 +12077,7 @@ void add_iname(int from, int ofst)
        {
        z += sprintf(z,"%s",inames[i].name);                      // number flag set
        if (inames[i].num) z+=sprintf(z, "%u", from-inames[i].start);
-       add_sym(nm, C_SYS, ofst,32,32,0,0xfffff);
+       add_sym(nm, ofst,0,7|C_WHL|C_SYS,0,0xfffff);
        break;    // stop loop once found for single calls
        }
     }
@@ -11345,15 +12112,11 @@ int readpunc(CPS *c)
   return 1;
  }
 
-int chkpnc(char *x)    //CPS *c, int l)
+int chkpnc(char *x)
  {
   // check end letter of numbers to make sure this isn't
   // a string which happens to begin a-f
 
- // char *x;
-
- // x = c->cmpos+l;
- // if (*x == 0  ) return 0; // ; c->posn+l >= c->maxlen)  return 0;            // hit end of line
   if (*x == ' ') return 0;
   if (*x == ',') return 0;
   if (*x == ':') return 0;
@@ -11378,12 +12141,6 @@ int chkpunc(CPS *c, int rl)
 
   return chkpnc(x);
 
-//  if (*x == ' ') return 0;
-//  if (*x == ',') return 0;
-//  if (*x == ':') return 0;
-//  if (*x == '|') return 0;
-
-//  return 1;
  }
 
 
@@ -11481,6 +12238,7 @@ int getpd(CPS *c, int ix, int limit)
        {
     //    if (chkpunc(c, rlen)) break;
         c->cmpos += rlen;
+        c->pf[ix] = rlen;
         ans++;
         }
      else break;
@@ -11493,26 +12251,33 @@ int getpd(CPS *c, int ix, int limit)
 
 
 
-int getstr(CPS *c, const char **s, uint size)
+int getstr(CPS *c, CSTR *s)            //const char **s, uint size)
  {
      // get string max of 63 chars and compare to string array 's'
   int ans, rlen;
   uint j;
+  CSTR *x;
 
   ans = sscanf (c->cmpos, "%64s%n", nm, &rlen);    // n is no of chars read, to %n
-  if (ans >= 0) c->cmpos += rlen;
-
+  if (ans > 0) c->cmpos += rlen;
   if (ans <= 0) return ans;          // nothing to read
 
   ans = -2;         // string not found.
+  j = 0;
 
-  for (j = 0; j < size; j++)
+  while (1)
+
+  // for (j = 0; j < size; j++)
    {
-    if (!strncasecmp (*(s+j), nm, 3) )      // 3 chars min match
+     x = s+j;
+     if (!x->minsize) break;
+
+    if (!strncasecmp (x->str,nm, x->minsize) )      // 3 chars min match
       {
        ans = j;                 // found
        break;
       }
+      j++;
    }
 
    return ans;
@@ -11709,9 +12474,9 @@ int do_adnl_letter (CPS* c)
   //       c->levels++;
     //     if (c->levels > 31) return do_error(c,1, "Error - Too Many data items");
          if (c->seq > 32) return do_error(c,1, "Too Many data items");
-         a = add_adt(&chadcm,0, 256);                   // add new adt
+         a = append_adt(c,0);                          // add new adt
          c->adnl = a;                                        // and remember it
-         c->seq = a->fkey & 0xff;
+         c->seq++;
          break;
 
        case '=' :       // an ANSWER definition.
@@ -11719,24 +12484,36 @@ int do_adnl_letter (CPS* c)
          ans = getpx(c,4,1);
          if (!ans) return do_error(c,1, "Register Address required ");
 
-         a->ans = 1;
-          //   check........ MUST BE VALID REGISTER !!
-         if (!a->cnt)   a->cnt = 1;
-         a->data  = c->p[4];    // item + fixed address offset (funcs) -  bank?
+     //    a->ans = 1;
+          //   check........ MUST BE VALID REGISTER ??  could be RAM address...nobank < 2000 ?
+      //   if (!a->cnt)   a->cnt = 1;
+         c->ansreg = c->p[4];       //a->data  = c->p[4];    // item + fixed address offset (funcs) -  bank?
          break;
 
-       case 'B' :                 // Bit
-         // read one decimal val  b only allowed in sym and timer commands
-         ans = getpd(c, 4, 2);
-         if (!ans) return do_error(c,1, "Bit Number required ");
-         if (c->p[4] < 0 || c->p[4] > 31) return do_error(c,1, "Bit Number invalid");
+
+// case 'A' :  /absolute, for SFR's ??
+
+ case 'B' :                 // Bit for subfields and syms.
+         ans = getpd(c,4,2);
+         if (!ans) return do_error(c, 1, "Bit Number Required");
+         if (c->p[4] < 0 || c->p[4] > 31) return do_error(c, 1, "Invalid Start Bit");
+         if (c->p[5] < 0 || c->p[5] > 31) return do_error(c, 1, "Invalid End Bit");
+
+         a->fend &= 0x60;         // keep sign and write, kill others
          a->fstart = c->p[4];
-          // can't use a->fend , which is for SIZE (=W)
-         if (ans > 1) a->data = c->p[5];         // TEMP !!
-         else a->data = a->fstart;               // single bit
-         a->enc = 7;           // temp marker for  bitno
+         a->fend   = c->p[5];
+
+         if (ans < 2)
+            {
+              if (a->fend & 0x20) return do_error(c, 1, "Single bit cannot be signed");
+              a->fend |= a->fstart;  // single bit
+            }
+         c->bits = 1;             //need to know !!
+
+         //difference between a default 0-7 or 0-15 and a user specified one ??
          break;
 
+// C
        case 'D' :
 
          // 1 hex value (address offset with bank) WHAT ABOUT NEGATIVES !!
@@ -11786,7 +12563,7 @@ int do_adnl_letter (CPS* c)
 
 
 
-  // G H J
+  // G H J K
 
        case 'I' :               // immediate fixup for syms
 
@@ -11813,14 +12590,19 @@ int do_adnl_letter (CPS* c)
          if (!a->pfw) a->pfw = get_pfwdef(a);
          break;
 
- // case 'M':                // mask pair ?, use esize to decide word or byte
- //    cadd->mask = 1;
- //    break;
+      case '*':                // make a multiplier !! or even a '*'
+         // read one FLOAT val
+         ans = sscanf(c->cmpos, "%f%n ", &fx, &rlen);       // FLOAT
+         if (ans <=0) return do_error(c,1, "Divsior value required ");
+         c->cmpos += rlen;
+         a->mult = 1;                                 // mark float variable
+         a->fldat = fx;                              // Full FLOAT variable
+         break;
 
        case 'N' :
 
          a->fnam = 1;       // Name lookup
-          if (c->fcom == C_SYM) c->names = 1;
+         if (c->fcom == C_SYM) c->names = 1;
          break;
 
        case 'O' :                // Cols or count - 1 decimal value
@@ -11848,13 +12630,12 @@ int do_adnl_letter (CPS* c)
 
          a->pfw = c->p[4];
          break;
-
+// Q
        case 'R' :               // indirect pointer to subroutine (= vect)
 
          a->fend = 15;         // safety, lock to WORD
-       //  a->bsize = 2;
          a->vaddr = 1;
-     //    a->name  = 1;          // with name by default  NOT DEFAULT
+     //    a->name  = 1;          // add sym name lookup by default ?
          if (!a->cnt) a->cnt   = 1;
 
          if (!a->pfw) a->pfw = get_pfwdef(a);
@@ -11865,7 +12646,7 @@ int do_adnl_letter (CPS* c)
           a->fend |= 32;
           break;
 
-       case 'T':                 // biT ->Triple
+       case 'T':                 // biT -> Triple
          a->fend &= 32;           // keep sign
          a->fend |= 23;
          if (!a->cnt) a->cnt   = 1;
@@ -11879,23 +12660,40 @@ int do_adnl_letter (CPS* c)
          a->fend &= 31;         // clear sign
          break;
 
-       case 'V':                  // diVisor
+       case 'V':                  // diVisor (or VV or something ??
+       case '/' :
+
+       // case '^':           value/x  instead of x/value
 
          // read one FLOAT val
          ans = sscanf(c->cmpos, "%f%n ", &fx, &rlen);       // FLOAT
          if (ans <=0) return do_error(c,1, "Divsior value required ");
          c->cmpos += rlen;
-         a->flt = 1;                            //mark float variable
+         a->div = 1;                                 // mark float variable
          a->fldat = fx;                              // Full FLOAT variable
          break;
 
-       case 'W':                  // Word   - or write for syms
+     //  case 'W':                  // Word   - or write for syms
 
-         a->fend &= 32;           // keep sign
+  case 'W':                  // Word   - or write for syms
+            if (c->fcom == C_SYM)
+            {
+               c->write = 1;
+            }
+            else
+            {
+               a->fend &= 0x60;           // keep sign
+               a->fend |= 15;
+               if (!a->cnt) a->cnt   = 1;
+      //       set_pfwdef(a);
+            }
+     /*    a->fend &= 32;           // keep sign
          a->fend |= 15;
+         if (c->fcom == C_SYM)  a->fend imm = 1;
+
 
          if (!a->cnt) a->cnt   = 1;
-         if (!a->pfw) a->pfw = get_pfwdef(a);
+         if (!a->pfw) a->pfw = get_pfwdef(a);  */
          break;
 
        case 'X':                  // Print radix  ( Hex default)
@@ -11924,7 +12722,10 @@ int do_adnl_letter (CPS* c)
          if (!a->pfw) a->pfw = get_pfwdef(a);
          break;
 
-         // Z
+       case 'Z':
+         c->debug = 1;
+         break;
+
 
        default:
            return do_error(c,1, "Invalid Option");
@@ -11987,7 +12788,7 @@ int do_global_opts(CPS *c)
        case  'F' :
         // f <str> <reg1> <reg2>    func add/ tab add, cols
 
-         ans = getstr(c,spfstrs, NC(spfstrs));  // zero is a dummy
+         ans = getstr(c,spfstrs);           //, NC(spfstrs));  // zero is a dummy
          if (ans <= 0)  return do_error(c,1, "Subroutine type reqd");
          c->spf = ans + 4;
          ans = getpx(c,5,2);
@@ -12038,7 +12839,7 @@ int do_opt_str (CPS* c)
       t = c->cmpos;
       if (*t == ':') c->cmpos++;
 
-      ans = getstr(c,optstrs, NC(optstrs));            // zero is valid answer (default)
+      ans = getstr(c,optstrs);             //, NC(optstrs));            // zero is valid answer (default)
       if (ans < 0) do_error(c,1, "Invalid Option");       // not found
       c->p[0] |= mopts[ans];
     }
@@ -12054,10 +12855,22 @@ int parse_cmd(CPS *c, char *flbuf)
   int rlen, ans;
   char *t;                        // where we are up to
   DIRS* d;
+  ADT *a;
+ void *fid;
 
   memset(c, 0, sizeof(CPS));          // clear entire struct
-  clearchain(&chadcm);                // clear command adt chain
-//  c->fid = (void *) 0x100;            // dummy fid for adt command chain
+
+  //first clear any residual additional data.
+
+  fid = c;
+  while ((a = get_adt(fid,0)))        // get first block (dummy fid)
+  {
+     fid = a;                         // next.....
+     ans = chadnl.lastix;             // get_lastix(&chadnl);         // save index of block
+     chdelete(&chadnl, ans, 1);         // and delete it
+   }
+
+
 
   if (!fgets (flbuf, 255, fldata.fl[3])) return 0;
 
@@ -12088,7 +12901,9 @@ int parse_cmd(CPS *c, char *flbuf)
   t = c->cmpos;
   if (*t == '#')  return 1;           // # comment at front
 
-  ans = getstr(c,cmds, NC(cmds));     // string match against cmds array - zero is valid
+
+
+  ans = getstr(c,cmds);      //, NC(cmds));     // string match against cmds array - zero is valid
   if (ans < 0)  return do_error(c,1, "Invalid Command");             // cmd not found
 
   d = dirs+ans;
@@ -12096,6 +12911,13 @@ int parse_cmd(CPS *c, char *flbuf)
 
   if (PARGC)   c->cptl = 1;     // set compact argument layout default
   if (PSTCA)   c->argl = 1;     // set data struct argument layout default
+
+//from here, can make param get into called subr..............
+
+
+
+
+
 
   readpunc(c);
 
@@ -12191,8 +13013,13 @@ int parse_cmd(CPS *c, char *flbuf)
        {
         if (!readpunc(c)) break;                    // safety check
 
-        if (d->stropt) ans = do_opt_str(c);        // option strings
+        if (d->stropt == 1) ans = do_opt_str(c);        // option strings
+        //if (d->stropt == 2) read_calcs(c);
+
+
         if (d->opts)   ans = do_adnl_letter (c);   // adnl letters style
+
+
         if (c->error) return 1;
        }      //  end get more options (= colon levels)
 
@@ -12206,9 +13033,9 @@ int parse_cmd(CPS *c, char *flbuf)
 
  // any further error reporting is responsibility of each handler command
 
- c->tsize = totsize(&chadcm, 0);          //safety.
+ c->adtsize = totsize(c);          //safety.
 
-  d->setcmd (c);                  // do setup procedure
+ d->setcmd (c);                  // do setup procedure
 
  if (d->namex && c->fcom != C_SYM && *c->symname)
  {  // default add sym name for cmds other than SYM
@@ -12216,7 +13043,7 @@ int parse_cmd(CPS *c, char *flbuf)
  //  uint add;
  //  add = nobank(c->p[0]);
  //  add = fix_sbk_addr(add);      // force bank 9 if single bank
-   s = add_sym(c->symname,C_CMD,c->p[0],32,32, 0,0xfffff);
+   s = add_sym(c->symname,c->p[0],0, 7|C_WHL|C_USR, 0,0xfffff);
 
 // may need error for bank
 
@@ -12228,8 +13055,8 @@ int parse_cmd(CPS *c, char *flbuf)
          chsym.lasterr = 0;
          if (!s->sys) do_error(c,2, "New Symname replaces \"%s\"", nm);
          s->sys = 0;
-         s->cmd = 1;        //clear system, set user cmd
-         s->xnum = 0;      // and clear any autonum
+         s->usrcmd = 1;        //clear system, set user cmd
+    //     s->xnum = 0;      // and clear any autonum
          if (chsym.lasterr)   return do_ch_error(c,&chsym);
        }
  }
@@ -12242,6 +13069,39 @@ int parse_cmd(CPS *c, char *flbuf)
 }
 
 
+
+
+void do_preset_syms(void)
+ {
+   uint i;
+   DFSYM *z;
+
+   if ((P8065))
+    {
+     for (i = 0; i < NC(d65syms); i++)
+     {
+       z = d65syms+i;
+       add_sym(z->symname,z->addr,z->fstart,(z->fend | C_SYS),0,0xfffff);
+
+     //  if (s) s->olap = z->olap;
+       //z->olap
+       //s->olap
+     }
+    }
+   else
+    {
+     for (i = 0; i < NC(d61syms); i++)
+     {
+       z = d61syms+i;
+       add_sym(z->symname,z->addr,z->fstart,(z->fend | C_SYS),0,0xfffff);
+
+       //z->olap     //not on 8061 ??
+       //s->olap
+     }
+    }
+
+  }
+/*
 void do_preset_syms(void)
  {
    uint i;
@@ -12252,11 +13112,11 @@ void do_preset_syms(void)
       z = defsyms+i;
       if (((P8065) && z->p85) || (!(P8065) && z->p81))
          {
-          add_sym(z->symname,z->wrt|C_SYS,z->addr,z->fstart,z->fend,0,0xfffff);
+          add_sym(z->symname,z->addr,z->fstart,z->fend|C_SYS,0,0xfffff);
          }
       }
   }
-
+*/
 
 
 /***************************************************************
@@ -12303,7 +13163,7 @@ int getudir (int ans)
      #endif
 
      bank = i << 16;
-     addr = b->minpc;
+     addr = b->minromadd;
      addr |= bank;
 
      add_scan (addr,J_INIT,0);                  // inital scan at PCORG (cmd)
@@ -12352,18 +13212,21 @@ void prt_subs (uint (*prt) (uint,const char *, ...))
            {
             go = 0;
             if (s->cmd)  go = 1;
-            if (!go && get_spf(s->start)) go = 1;
-            if (!go && get_adnl(&chadnl,s->start,1)) go = 1;
-            if (!go && get_adnl(&chans,s->start,1))  go = 1;
+            if (!go && get_spf(vconv(s->start))) go = 1;
+            if (!go && get_adt(vconv(s->start),0)) go = 1;
+       //     if (!go && get_adnl(&chans,s->start,1))  go = 1;
            }
         else go = 1;
 
         if (go)
           {
-           if (prt == wnprt) {prt(0,"sub  ");  paddr(s->start,2,prt);}
+           if (prt == wnprt) {prt(0,"sub  ");
+              { paddr(s->start,0,prt);}
+             prt(0,"  ");
+           }
            else prt(0,"sub  %x %x  ", s->start, s->end);
 
-           x = get_sym(0, s->start,32,0);
+           x = get_sym(s->start,0,C_WHL|7,0);
            if (x)
              {
               prt(0,"%c%s%c  ", '\"', x->name, '\"');
@@ -12371,8 +13234,8 @@ void prt_subs (uint (*prt) (uint,const char *, ...))
              }
 
            prt_glo(s, prt);
-           prt_adt(&chadnl,s->start,0,prt);
-           prt_adt(&chans ,s->start,0,prt);             // answer
+           prt_adt(vconv(s->start),0,prt);
+     //      prt_adt(&chans ,s->start,0,prt);             // answer// spf
            if (s->cmd)  prt(0," #cmd");
            prt(1,0);
           }
@@ -12401,35 +13264,45 @@ void prt_syms (uint (*prt) (uint,const char *, ...))       //void)
       if (prt == wnprt)
          {
           prt(0,"sym ");
-          paddr(t->addb >> 5,1,prt);
+          paddr(t->addr,0,prt);
+            prt(0,"  ");
           if (t->rstart)
            {
-            paddr(t->rstart,1,prt);
+            paddr(t->rstart,0,prt);
+              prt(0,"  ");
             paddr(t->rend,0,prt);
            }
          }
       else
         {         // debug
-         prt(0,"[%x] sym %x ", t->addb, t->addb >> 5);
-         prt (0," %5x %5x ", t->rstart, t->rend);
+         prt(0,"sym %4x ", t->addr);
+         prt(0," %5x %5x ", t->rstart, t->rend);
+         prt(0,"  B %2x %3x" , t->fstart, t->fend);
+         if (t->pbkt)  prt(0," bkt"); else prt(0,"    ");
+         if (t->fend & 0x80)  prt(0," whl"); else prt(0,"    ");
+     //    if (t->olap)  prt(0," OLP"); else prt(0,"    ");
+         prt(0," fm %x", t->fmask);
+
         }
 
      prt(0," \"%s\"",t->name);
 
-     b = t->addb & 0x8;
-     if (!b || t->flags || !(t->addb & 0x10) || t->immok) prt(0," :");
+     if (t->pbkt ) prt(0," :");    //|| t->pbits
 
-     if (!(t->addb & 0x8))
+     if (!(t->fend & C_WHL))
        {
-        prt(0,"B %d" , t->addb & 7);
-        if (t->fend != (t->addb & 7)) prt(0, " +%d", t->fend);
+         b = t->fend & 0x1f;
+        prt(0,"  B %d" , t->fstart );
+        if (b != t->fstart || prt != wnprt) prt(0, " %d", b);
        }
+  //   else
 
-     if (!(t->addb & 0x10))  prt(0," W");
-     if (t->flags) prt(0," F");
-     if (t->names) prt(0," N");
+     if ((t->fend & 0x40))  prt(0," W");
+ //    if (t->pbkt)  prt(0," bkt"); else prt(0,"    ");
+ //  if (t->flags) prt(0," F");
+   //  if (t->names) prt(0," N");
      if (t->immok) prt(0," I");
-     if (t->sys) prt(0,"                  # auto");
+     if (t->usrcmd) prt(0,"                  # user cmd");
 
      prt(1,0);
      }
@@ -12458,26 +13331,26 @@ short init_structs(void)
  {
 
   // 4 banks of 16k as bit flags
-  opcbit = (uint *) mem(0,0, 0x8000);       // opcode start bit flags (bytes)
+//  opcbit = (uint *) mem(0,0, 0x8000);       // opcode start bit flags (bytes)
  // opdbit = (uint *) mem(0,0, 0x8000);       // 8*0x8000 = 0x40000
 
   memset(bkmap,0,sizeof(bkmap));
-  bkmap[3].opcbt = opcbit;                   // bit flag array start (uints)
-  bkmap[4].opcbt = opcbit + 0x800;           // = 800*20 = 10000 (32 bit uints)
-  bkmap[5].opcbt = opcbit + 0x1000;
-  bkmap[6].opcbt = opcbit + 0x1800;
+ // bkmap[3].opcbt = opcbit;                   // bit flag array start (uints)
+ // bkmap[4].opcbt = opcbit + 0x800;           // = 800*20 = 10000 (32 bit uints)
+ // bkmap[5].opcbt = opcbit + 0x1000;
+//  bkmap[6].opcbt = opcbit + 0x1800;
 
 //  bkmap[3].opdbt = opdbit;                   // bit flag array start
 //  bkmap[4].opdbt = opdbit + 0x800;           // = 800*20 = 10000 (32 bit uints)
  // bkmap[5].opdbt = opdbit + 0x1000;
 //  bkmap[6].opdbt = opdbit + 0x1800;
 
-  memset(opcbit, 0, 0x8000);                 // clear all opcode flags
+ // memset(opcbit, 0, 0x8000);                 // clear all opcode flags
 //  memset(opdbit, 0, 0x8000);                 // clear all opdata flags
 
   anlpass  = 0;                              // current pass number
   gcol     = 0;
-  lastpad  = 0;
+  glastpad  = 0;
   cmdopts  = 0;
 
   #ifdef XDBGX
@@ -12577,32 +13450,32 @@ void check_ihandler(SIG *s, uint taddr, uint ix)
 
 } */
 
-void check_ihandler(SIG *s, uint taddr, uint ix)
+
+uint check_ihandler(uint taddr)
  {
    // check pointer values (int handler) for valid jump, return etc
-   // ix = 7 for 8065, 5 for 8061
+   // return 1 for valid 0 otherwise
   int val;
   uint jp, cx;
 
+// allow taddr == d000 to d010 as a special ??? different count ??
 
-// allow taddr == d004 as a special ???
+  if (!val_rom_addr(taddr)) return 0;
 
   val = g_byte(taddr);
 
   // allow up to 7 nops
+
   jp = taddr+7;
   while (taddr < jp)
     {
      if (val == 0xff) val = g_byte(++taddr); else break;
     }
 
-  if (val >= 0xf0 && val <= 0xf2)
-    {  // ret, retei or pushp
-     s->v[ix]++;
-     return;
-    }
+// ret, retei or pushp
+  if (val >= 0xf0 && val <= 0xf2) return 1;
 
-  do_one_opcode(taddr);
+  do_one_opcode(taddr, &tmpscan, &sinst);
 
   if (sinst.sigix == 16 || sinst.sigix == 23)
     {    // jump, jnb
@@ -12613,7 +13486,80 @@ void check_ihandler(SIG *s, uint taddr, uint ix)
           cx-= 0x10000;
           if (!(cx & 0xf6))
            {
-            s->v[ix]++;   // bank OK  (0,1,8,9)
+             return 1;       // can't go any further at this point, may be need unverified count ??
+           }
+        }
+
+     taddr = jp;             //jump destination
+     if (val_rom_addr(taddr))
+       {
+        val = g_byte(taddr);  //not bank swop, get value
+        if (val >= 0xf0 && val <= 0xf2) return 1;    // ret, retei or pushp
+       }
+
+    }
+
+  taddr = tmpscan.nextaddr;        //try after one unmatched opcode
+  //check valid address ?
+  val = g_byte(taddr);             // get value
+  if (val >= 0xf0 && val <= 0xf2) return 1;    // ret, retei or pushp
+
+return 0;
+ }
+
+
+
+
+
+
+
+
+
+
+void check_ihandler(SIG *s, uint taddr, uint ix)
+ {
+   // check pointer values (int handler) for valid jump, return etc
+   // ix = 7 for 8065, 5 for 8061
+  int val;
+  uint bank;
+  uint jp, cx;
+
+bank = g_bank(taddr);
+// allow taddr == d004 as a special ???
+
+  val = g_byte(taddr);
+
+  // allow up to 7 nops, check for bank overflow
+  jp = taddr+7;
+
+  while (taddr < jp)
+    {
+     if (val == 0xff) val = g_byte(++taddr); else break;
+      if (g_bank(taddr) != bank) break;
+
+
+    }
+
+  if (g_bank(taddr) != bank) return;
+
+  if (val >= 0xf0 && val <= 0xf2)
+    {  // ret, retei or pushp
+     s->vx[ix]++;
+     return;
+    }
+
+  do_one_opcode(taddr, &tmpscan, &sinst);
+
+  if (sinst.sigix == 16 || sinst.sigix == 23)
+    {    // jump, jnb
+     jp = sinst.opr[1].addr;
+     cx = g_bank(jp);
+     if (cx != g_bank(taddr))
+        {    // bank swop
+          cx-= 0x10000;
+          if (!(cx & 0xf6))
+           {
+            s->vx[ix]++;   // bank OK  (0,1,8,9)
             return;       // can't go any further
            }
         }
@@ -12622,86 +13568,94 @@ void check_ihandler(SIG *s, uint taddr, uint ix)
      if (val_rom_addr(taddr))
        {
         val = g_byte(taddr);  //not bank swop, get value
-        if (val >= 0xf0 && val <= 0xf2) {s->v[ix]++; return;}    // ret, retei or pushp
+        if (val >= 0xf0 && val <= 0xf2) {s->vx[ix]++; return;}    // ret, retei or pushp
        }
 
     }
 
   taddr = tmpscan.nextaddr;        //try after one unmatchd opcode
   val = g_byte(taddr);             // get value
-  if (val >= 0xf0 && val <= 0xf2) {s->v[ix]++; return;}    // ret, retei or pushp
+  if (val >= 0xf0 && val <= 0xf2) {s->vx[ix]++; return;}    // ret, retei or pushp
 
  }
 
 
 
-void check_bank_intv (SIG *s, uint *mx)
+void check_bank_intvects (BNKF *b)
  {
-    uint bank, taddr, x;
-    if (!s)  return;                     // safety, no jump
+    uint bank, x, taddr;
+
+    if (!b) return;
     taddr = 0;
-    bank = g_bank(s->start);               // FAKE bank from sig
+    if (!val_rom_addr(b->jdest)) return;
+
+    bank = g_bank(b->pcstart);               // FAKE bank from sig
 
     // sig below int vects and a valid jump
-    if (nobank(s->end) >= 0x2010 || s->v[1] < (0x2000|bank))  return;
+    taddr = nobank(b->jdest);
 
-    // check interrupt vects 8065
-    // counts valid adrress into [6]
-    // and valid contents into [7]
+    if (taddr >= 0x2010 && taddr < 0x2020) return; // invalid always.
 
-    cmdopts |= 8;            //set 8065 for bank swops
+    // check interrupt vects and handlers 8065
+
+    cmdopts |= 8;          //set_cmdopt(OPT8065);                       // set 8065 to allow bank swops
 
     for (x = (bank|0x2010);  x < (bank|0x205f);  x+=2)
       {
-       taddr = g_word(x);             //pointer
-       //if (taddr <= 0xffff  && taddr >= 0x2060)  s->v[6]++;         // 8065 count (valid address)
-       if (taddr > 0x205f)  s->v[6]++;         // 8065 count (valid address)
-       else break;
-       check_ihandler(s, taddr|bank, 7);
+       taddr = g_word(x);             // vect pointer
+       if (taddr < 0x2060) break;     // not valid
+
+       b->vc65++;                    // 8065 count (valid address)
+       b->ih65 += check_ihandler(taddr|bank);
       }
 
-  if (s->v[6] > *mx) *mx = s->v[6];                    //  keep highest match in outer loop
+    cmdopts = 0;            //set_cmdopt(0);                                     // clear 8065
 
-  cmdopts = 0;                      //clear 8065
 
-  if (*mx <= 11)
-   {
-    // check interrupt vects 8061 if max 8065 count below 10
-    // counts valid adrress into [4]
-    // and  valid contents into [5]
+if (b->ih65 < 10)
+{     // check interrupt vects 8061
+    b->vc65 = 0;
+    b->ih65 = 0; //clear 8065 counts
+
 
     for (x = (bank|0x2010);  x < (bank|0x201f);  x+=2)
       {
        taddr = g_word(x);             //pointer
-     //  if (taddr <= 0xffff && taddr >= 0x2020) s->v[4]++;         // valid adress
-       if (taddr > 0x201f) s->v[4]++;         // valid adress
-       else break;
-       check_ihandler(s, taddr|bank, 5);
 
+       if (taddr < 0x2020) break;
+       b->vc61++;         // valid adress
+       b->ih61 += check_ihandler(taddr|bank);           //s, taddr|bank, 5);
       }
-   }
+}
 
-  taddr = chsig.num * 0x100;
-  s->start += taddr;                   // fiddle to stop dupls & overlaps
-  s->end += taddr;
+  if (b->jdest <= b->pcstart+b->skip) b->lpstp = 1;                    // loopstop jump (not code start)
 
-  // check for code bank, bank 8
-  // sig can't overlap interrupt vects (2010) and must have a jump
-
-  if (s->v[1] <= s->start+s->skp)  s->v[3] = 2;                      // loopstop = Data bank
-
-  if (s->v[6] > 39 && nobank(s->v[1]) > 0x205f)   s->v[3] = 1;       // jump over intr regs - 8065.
+  if (b->vc65 > 30 && nobank(b->jdest) > 0x205f) b->cbnk = 1;       // valid jump over int vects - 8065.
   else
-  if (s->v[4] > 7  && nobank(s->v[1]) > 0x201f)   s->v[3] = 1;       // jump over intr regs - 8061.
+  if (b->vc61 > 7  && nobank(b->jdest) > 0x201f) b->cbnk = 1;       // valid jump over int vects - 80611.
 
- if (s->v[3])
-   {   //sig must have a matched jump
-    if (s->v[4] > 7 || s->v[6] > 35)  inssig(s);                     // matched enough, so keep it for now
-   }
- if (s->v[6] > *mx) *mx = s->v[6];             // keep highest score
+
 }
 
 
+
+uint skip_ff(uint addr)
+{  //skip leading oxff or oxfa for finding bank
+    int c, v;
+    c = 0;
+
+
+//need more than just ff and fa ??? f8 (jsa)
+
+    while (c < 16)
+      {
+       v = g_byte(addr);
+       if (v != 0xff && v != 0xfa) break;
+       c++;
+       addr++;
+      }
+return c;
+}
 
 
 void find_banks (uchar *fb)
@@ -12711,29 +13665,32 @@ void find_banks (uchar *fb)
     // for missing or extra bytes
 
     BANK *b, *l;
-    SIG *s, *t, *x;
-    uint addr, bank, tix, mx;
-    int ofs;
+    uint addr, bank, ix, skp;
+    CHAIN *ch;
+    BNKF  blk, *z, *x1, *x5;
+    int fofs;              //file offset
 
-    // temp bank setup so accesses work
+    // temp bank setups so accesses work
 
     bank = 0x30000;      //bank 3, temp
     b = bkmap+3;
-    b->maxbk = (bank | 0xffff);
-    b->maxpc = b->maxbk;
-    b->minpc = (bank | PCORG);
+    b->maxromadd = (bank | 0xffff);
+    b->minromadd = (bank | PCORG);
     b->bok = 1;                               // temp mark as OK
-    b->cmd = 0;
+    b->usrcmd = 0;
     b->cbnk = 0;
 
     #ifdef XDBGX
-       DBGPRT(1,"scan for all banks");
+       DBGPRT(1,"scan file for banks");
     #endif
 
     // check full file in loop for ALL banks
 
-    mx = 0;                //move this inside loop ???
+  //  mx1 = 0;
+ //   mx5 = 0;
     numbanks = -1;
+
+//is every 1k often enough ???
 
     for (addr = 0; addr < fldata.fillen;  addr += 0x1000)
       {
@@ -12743,117 +13700,164 @@ void find_banks (uchar *fb)
        // for extra bytes   - mapaddr changes +0 to +3, PC set at 0x2000
 
        b->filstrt = addr;                       // move file offset
-       b->filend  = addr + 0xe000-1;            // max possible end point
+       b->filend  = addr + 0xe000-1;            // max possible end point (64k - 2k)
 
        if (b->filend >= fldata.fillen)
-         {        // make range safe for file end, adjust downwards
+         {        // make range safe for file end (adjust end downwards)
           b->filend = fldata.fillen-1;                         // end of file (no bank)
-          b->maxbk = b->filend - b->filstrt + (PCORG | bank);
-          b->maxpc = b->maxbk;
+          b->maxromadd = b->filend - b->filstrt + (PCORG | bank);
          }
 
-       b->fbuf = fb + addr - 0x2002;     // start addr maps to 0x1ffe, then 1fff
+       //allow for missing and extra bytes....
+       // if bytes are missing, cannot just map backwards, must adjust start address,
+       //but if extra bytes, can move buffer up and start at 2000
 
-       for (ofs = 0; ofs < 2; ofs++)
+       for (fofs = -2; fofs < 3; fofs++)   // 2 bytes each way around 'address'
          {
-          s = match_sig(&hdr,((0x2002-ofs)|bank),0);
-          if (s)
-            {
-             s->v[15] = addr;                 // file start addr
-             s->v[10] = 0x2002-ofs;           // code start addr
-             check_bank_intv (s,&mx);
-            }
-          b->fbuf++;
+           b->fbuf = fb + addr + fofs - 0x2000;     // overlay buff onto addresses  (minus 0x2000 offset)
+
+        //     if (fofs < 0) b->fbuf = fb + addr - 0x2002;
+      //     else   b->fbuf = fb + addr - 0x2000;     // start addr fixed 0x2000, file start moves
+
+           ix = 0x2000|bank;
+
+           if (fofs < 0)
+             {
+              ix -= fofs;                  // move pcstart up to match so still starts at file offset zero
+             }
+
+          skp = skip_ff(ix);        // skips would only be FF and FA, others make NO SENSE max of 15
+
+          ix += skp;
+          do_one_opcode(ix, &tmpscan, &sinst);
+
+          if (sinst.sigix == 16 && sinst.opcode)
+           {  // jump, long or short, but not skip
+
+           //put in local first to keep candidates low
+             memset(&blk,0,sizeof(BNKF));
+
+          // don't allow first file address to be negative
+
+             if (addr < 16 && fofs < 0) blk.filestart = 0;
+             else           blk.filestart = addr+fofs;
+
+             blk.pcstart   = ix-skp;
+             blk.jdest     = sinst.opr[1].addr;
+             blk.skip      = skp;
+             check_bank_intvects (&blk);
+
+             if (blk.ih61 || blk.ih65)
+             {
+              z = add_bnkf(addr+fofs,ix-skp);
+              if (z)
+               {
+                 *z = blk;       //     copy counts etc.
+               }
+             }
+           }
+
+           /* else      //no, need sparate subr ??
+           {
+              check_rbase(ix)....
+             // check for data bank, via rbase links (e.g FM20M06)
+             uint val1,val2;
+             ix -= skp;            //put ix back to start
+             val1 = g_word(ix);
+             if (val1 =
+              *
+            *
+           }
+            */
+
          }
+    }                //may move this........... ???
 
-       b->fbuf = fb + addr - 0x2000;     // start addr fixed 0x2000, file start moves
+  // look for highest valid counts in address groups
 
-       for (ofs = 0; ofs < 3; ofs++)
-        {
-         s = match_sig(&hdr,(0x2000|bank),0);
-         if (s)
-          {
-             s->v[15] = addr+ofs;        // file start addr
-             s->v[10] = 0x2000;          // code start addr
-             check_bank_intv (s, &mx);
-          }
-         b->fbuf++;
-        }
-    }
+  ch = &chbkf;           //get_chain(CHBNK);
 
-  // look for highest valid intr count. [4] & 5 for 8061, 6 & 7 8065
-  // addresses (in s->v[15]) will be grouped. v[2] is bank (and highest)
+if (!ch->num)
+{
+   #ifdef XDBGX
+        DBGPRT(1,"NO banks found !!");
+        #endif
+return;
+}
+  z = (BNKF*) ch->ptrs[0];
+  x1 = z;                         // 8061 highest count
+  x5 = z;                         // 8065 highest match
 
-  t = (SIG*) chsig.ptrs[0];             // to be 8061 highest match
-  x = t;                                // to be 8065 highest match
   bank = 3;                             // (fake) start bank
-  if (t->v[5] > 5)  t->v[2] = bank;     // start as match if qualifies
-  if (x->v[7] > 30) x->v[2] = bank;
 
-  for (tix = 1; tix < chsig.num; tix++)
+// NB. add one to max count and break, to get assign for last bank.
+
+  for (ix = 1; ix < ch->num+1; ix++)
     {
-      s = (SIG*) chsig.ptrs[tix];
+      z = (BNKF*) ch->ptrs[ix];
+      if (x1->ih61 > 6)  x1->tbnk = bank;     // current group match (if qualifies)
+      if (x5->ih65 > 30) x5->tbnk = bank;
+
+      if (ix > ch->num) break;                //with above +1, so that last bank gets allocated
 
       // interrupt vect cnt MUST be all OK otherwise not correct binary
       // check address ranges in s[15] so no interbank overlaps
 
-      if ((s->v[15] - x->v[15]) < 0x800)
+      if ((z->filestart - x5->filestart) < 10 ) // same file address batch
        {
-         if (s->v[6] == 40) // 8065
-           {
-             if (s->v[7] > x->v[7])
-               {
-                if (s->v[7] > 30) s->v[2] = bank;           // new match
-                x->v[2] = 0;                                // kill old match
-                x = s;
-               }
+         if (z->ih65 == 40 && z->ih65 > x5->ih65)
+           {           // better 8065 count
+             z->tbnk  = bank;           // new match
+             x5->tbnk = 0;             // kill old match
+             x5 = z;                   // keep new 'max'
+
            }
 
-         if (s->v[4] == 8 && s->v[6] < 10)     // 8061
+         if (z->ih61 == 8 && z->ih65 < 10)     // 8061
            {
-              if (s->v[5] > t->v[5])
+              if (z->ih61 > x1->ih61)
                 {
-                 if (s->v[5] > 6) s->v[2] = bank;           // new match
-                 t->v[2] = 0;                               // kill old match
-                 t = s;
+                 z->tbnk = bank;              // new match
+                 x1->tbnk = 0;                // kill old match
+                 x1 = z;
                 }
            }
        }
       else
-       {
-         if (x->v[2] || t->v[2]) bank++;
-         t = (SIG*) chsig.ptrs[tix];            // to be 8061 highest match
-         x = t;
-         if (t->v[5] > 6)  t->v[2] = bank;      // add bank if qualifies
-         if (x->v[7] > 30) x->v[2] = bank;
-       }
+       {      //new batch of addresses
+         if (x1->tbnk || x5->tbnk) bank++;     // next bank
+         x1 = (BNKF*) ch->ptrs[ix];            // next batch
+         x5 = x1;
+        }
      }
 
 // done, now sort out temp banks.
 // clear all bank OK markers
 
- for (tix = 3; tix < 7;  tix++)
+ for (ix = 3; ix < 7;  ix++)
     {
-     b = bkmap+tix;
+     b = bkmap+ix;
      b->bok = 0;
     }
 
-  for (tix = 0; tix < chsig.num; tix++)
+// run up bank find list and assign banks...
+
+  for (ix = 0; ix < ch->num; ix++)
     {
-     s = (SIG*) chsig.ptrs[tix];
-     if (s->v[2])
+     z = (BNKF*) ch->ptrs[ix];
+     if (z->tbnk)
        {        //bank set (temp)
-        bank = s->v[2];               //reset bank.............
+        bank = z->tbnk;               //reset bank.............
         b = bkmap+bank;
 
-        if (s->v[6] == 40) b->P65 = 1; else  b->P65 = 0;   // mark bank as 8065
-        b->bok = 1;                                  // bank is valid start
+        if (z->ih65 == 40) b->P65 = 1; else  b->P65 = 0;     // mark bank as 8065
+        b->bok = 1;                                          // bank is valid
         numbanks++;
-        if (s->v[3] < 2) b->cbnk = 1;                // code bank (8)
-        b->filstrt = s->v[15];                       // actual bank start as buffer offset for 0x2000
-        b->filend = b->filstrt + 0xe000-1;           // default (max) end
+        if (z->cbnk) b->cbnk = 1;                            // code bank (8)
+        b->filstrt = z->filestart;                           // actual bank start as buffer offset for 0x2000
+        b->filend = b->filstrt + 0xe000-1;                   // default (max) end
 
-        // beyond end of file ???
+        // check beyond end of file
         if (b->filend >= fldata.fillen) b->filend = fldata.fillen-1;
 
        // short bank check .............
@@ -12862,36 +13866,73 @@ void find_banks (uchar *fb)
          {   // shorten previous bank if it overlaps start.
 
           l->filend = b->filstrt-1;
-          l->maxbk = l->filend - l->filstrt + l->minpc;
-          l->maxbk |= g_bank(l->minpc);
-          l->maxpc = l->maxbk;
-           #ifdef XDBGX
-           DBGPRT(1,"** Short bank %d, %x-%x", bank-1, l->filstrt, l->filend);
-           #endif
+          l->maxromadd = l->filend - l->filstrt + l->minromadd;
+          l->maxromadd |= g_bank(l->minromadd);
+
+          #ifdef XDBGX
+            DBGPRT(1,"** Short bank %d, %x-%x", bank-1, l->filstrt, l->filend);
+          #endif
          }
 
+
         b->fbuf = fb + b->filstrt-0x2000;            // set correct fbuf
-        b->minpc = s->v[10] | (bank << 16);                  // 2000, 2001 or 2002
-        b->maxbk = b->filend - b->filstrt + b->minpc;
+        b->minromadd = z->pcstart | (bank << 16);                  // 2000, 2001 or 2002
+        b->maxromadd = b->filend - b->filstrt + b->minromadd;
 
         #ifdef XDBGX
-        DBGPRT(1,"bank found at %5x, PC %x", b->filstrt, s->v[10]);
-        if (b->filstrt & 3)           DBGPRT(1," WARNING - file/bank appears to have %s byte(s) at front", "extra");
-        if (nobank(b->minpc) > PCORG) DBGPRT(1," WARNING - file/bank appears to have %s byte(s) at front", "missing");
+        DBGPRT(1,"bank found at %5x, PC %x", b->filstrt, z->pcstart);
         #endif
 
-        if (b->filstrt & 3)           wnprt(1," WARNING - file/bank appears to have %s byte(s) at front", "extra");
-        if (nobank(b->minpc) > PCORG) wnprt(1," WARNING - file/bank appears to have %s byte(s) at front", "missing");
+        //print warning if not on a 000 boundary
+        fofs = (b->filstrt & 3);
+
+        if (fofs)
+           {
+              #ifdef XDBGX
+              DBGPRT(1," WARNING - file has extra %d byte(s) at front of bank ", fofs);
+              #endif
+               wnprt(2," WARNING - file has extra %d byte(s) at front of bank",  fofs);
+           }
+
+        fofs = nobank(b->minromadd) - PCORG;
+
+        if (fofs)
+           {
+              #ifdef XDBGX
+              DBGPRT(1," WARNING - file has %d byte(s) missing at front of bank", fofs);
+              #endif
+               wnprt(2," WARNING - file has %d byte(s) missing at front of bank", fofs);
+           }
 
       }
     }
 
    #ifdef XDBGX
-   DBG_sigs(&chsig);
-   #endif
-   clearchain(&chsig);                    // clear out all sigs
 
+   DBGPRT(2,"- - - - - bank finds - - - - -");
+
+   ch = &chbkf;               //   get_chain(CHBNK);
+   for (ix = 0; ix < ch->num; ix++)
+   {
+     BNKF *c;         // only for debug
+
+  c = (BNKF*) ch->ptrs[ix];
+
+  if (c->filestart < 0)DBGPRT(0,"   -%x", -c->filestart); else DBGPRT(0,"%5x", c->filestart);
+  DBGPRT(0," %5x  %5x", c->pcstart, c->jdest);
+  DBGPRT(0," %2d (61 %2d %2d), (65 %2d %2d)", c->skip, c->vc61, c->ih61, c->vc65, c->ih65);
+  DBGPRT(0," lp %2d, cd %2d tb %2d", c->lpstp, c->cbnk, c->tbnk);
+  DBGPRT(1,0);
+
+
+     // ch->chprt(ch, 1, ix, DBGPRT);
+   }
+   DBGPRT(2,0);
+
+#endif
 }
+
+
 
 
 
@@ -12961,34 +14002,37 @@ void copy_banks(uchar * fbuf)
        bk =  from->dbank << 16;
 
        *to = *from;             // lazy, may change this
-       size = to->filend-to->filstrt+1;
+       size = to->filend - to->filstrt+1;                          // what if minus filstart ????
 
-       to->fbuf = (uchar*) mem(0,0, 0x10000);   //malloc a full bank.
+       to->fbuf = (uchar*) mem(0,0, 0x10000);                      // malloc a full bank 0-0xffff.
 
-       memcpy(to->fbuf+nobank(from->minpc), from->fbuf+0x2000, size);
-       to->minpc &= 0xffff;
-       to->minpc |= bk;    // substitute bank no
+       memset(to->fbuf, 0, 0x2000);           //clear first 0x2000 ??  may be good idea...
 
-       to->maxbk &= 0xffff;
-       to->maxbk |= bk;
+       memcpy(to->fbuf+nobank(from->minromadd), from->fbuf+0x2000, size);
+       to->minromadd &= 0xffff;
+       to->minromadd |= bk;    // substitute bank no
+
+       to->maxromadd &= 0xffff;
+       to->maxromadd |= bk;
        to->bok = 1;
-       to->bprt = 1;         // print his bank
-       to->maxpc = 0;       // do the fill check
+       to->bprt = 1;         // print this bank
        find_fill_txt(to);
        from->bok = 0;        // clear old bank
-       from->bprt = 0;       // and print
+       from->bprt = 0;       // don't print
       }
 
    }
-
 
   basepars.codbnk = 0x90000;                         // code start always bank 8
   basepars.rambnk = 0;                               // start at zero for RAM locations
   if (numbanks) basepars.datbnk = 0x20000;           // data bank default to 1 for multibanks
   else   basepars.datbnk = 0x90000;                  // databank 8 for single
 
-}
 
+
+
+
+ }
 
 void drop_banks_via_ints (int bk)
  {
@@ -13024,14 +14068,14 @@ void drop_banks_via_ints (int bk)
           taddr++;
           val = g_byte(taddr);             // get opcode after bank prefix
 
-          if (val == 0xe7 || ( val >=0x20 && val <= 0x27))
+  /*        if (val == 0xe7 || ( val >=0x20 && val <= 0x27))
            {
             // a jump - calc destination
-            taddr = do_jumpsig (opcind[val], taddr,0x100000);
+           taddr = do_jumpsig (opcind[val], taddr,0x100000);
            // now try to find a valid opcode in one of the other banks.
            // have a guessed order at this point
 
-          /* for (i = 2; i < 6; i++)
+          / for (i = 2; i < 6; i++)
              {
                taddr = nobank(taddr);
                taddr |= (i << 16);
@@ -13054,8 +14098,8 @@ void drop_banks_via_ints (int bk)
                 #endif
 
                }
-             } */
-           }
+             }
+           } */
          }    // end bank check 8065 loop
       }
 
@@ -13227,7 +14271,7 @@ int do_banks(uchar *fbuf)
 
 
    #ifdef XDBGX
-   DBGPRT(1,"%d Banks, start in %d", numbanks+1, bank+3);
+   DBGPRT(1,"%d Banks, (temp start in 3)", numbanks+1 );
    #endif
 
   switch (numbanks)
@@ -13306,7 +14350,7 @@ int readbin(void)
 
   int x;
 
-  uchar *fbuf;            //file goes in here first.
+
 
   fldata.fillen = fseek (fldata.fl[0], 0, SEEK_END);
   fldata.fillen = ftell (fldata.fl[0]);
@@ -13325,8 +14369,8 @@ int readbin(void)
 
   wnprt(1,0);
 
-  fbuf = (uchar*) mem(0,0, fldata.fillen);          // big enough for file
-  fread (fbuf, 1, fldata.fillen, fldata.fl[0]);
+  fbinbuf = (uchar*) mem(0,0, fldata.fillen);
+  fread (fbinbuf, 1, fldata.fillen, fldata.fl[0]);       // read in the file
 
   #ifdef XDBGX
    DBGPRT(1,"Read input file (0x%x bytes)", fldata.fillen);
@@ -13337,246 +14381,11 @@ int readbin(void)
 // check for file error ?
 //  end = fldata.fillen;
 
-  find_banks(fbuf);
-  x = do_banks(fbuf);               // auto, may be modded later by command
-  mfree(fbuf, fldata.fillen);
+  find_banks(fbinbuf);
+  x = do_banks(fbinbuf);               // auto, may be modded later by command
+
   return x;
 }
-
-
-void rbasp(SIG *sx, SBK *b)
-{
-
-  //add rbase entries from signature match
-
-  uint add, add2, reg, i, cnt;   //,xcnt,rcnt;
-//  RBT *r;
-  uint  pc;
-
-  if (b) return;                  // no processing if subr set
-
- // rcnt = chbase.num;              // may have rbases already. start at 'NEW' point
-  reg = (sx->v[1] & max_reg());
-  add = sx->v[3];
-  cnt = g_byte(add);              // no of entries in list
-
-  #ifdef XDBGX
-  DBGPRT(1,"In rbasp - begin reg %x at %x, cnt %d", reg, add, cnt);
-  #endif
-
-  add_cmd(add, add+1, C_BYTE|C_SYS,0);
-  add_cmd(add+2, add+(cnt*2)+1, C_WORD|C_SYS, 0);
-
-  if (chcmd.lasterr)
-   {
-     #ifdef XDBGX
-      DBGPRT(1,"Rbase Already Processed");
-     #endif
-    return ;
-   }
-
-  pc= add+2;
-
- //  check bank is correct ?
-    add = g_word(pc);                       // register pointer
-    add |= basepars.datbnk;                 // + default data bank
-    add2 = g_word(add);                     // check pointer is consistent with next entry
-    i = g_word(pc+2);                       // next in list
-
-  #ifdef XDBGX
-  if (i != add2)
-    {
-     // rbases point to different bank
-     DBGPRT(1,"RBASEDBNK");
-    }
-  #endif
-
-  for (i = 0; i < cnt; i++)
-   {
-    add = g_word(pc);                       // register pointer
-    add |= basepars.datbnk;               // add + default data bank
-
-   if (nobank(add) < 0x2020) break;
-   add_cmd(add, add+1, C_WORD|C_SYS,0);
-   add2 = g_word(add);                     // check pointer is consistent with next entry
-    // also valid for last pointer for xcode
-
-//   r =
-add_rbase(reg,add,0,0xfffff);                     // dbg message in here....
- //  if (r) r->cmd = 1;
-   upd_ram(reg,add,15);
-   add_aux_cmd(add,add2-1, C_XCODE|C_SYS,0);          // and add an XCODE as this is data
-
-    reg+=2;
-    pc+=2;
-   }
-
- /* now check pointers for XCODE directives for newly added entries
-
- if (rcnt == chbase.num)  return ;     // nothing added
-
- for (i = rcnt; i < rcnt+cnt; i++)
-   {
-     if (i >= chbase.num)  break;
-    r = (RBT*) chbase.ptrs[i];
-    n = (RBT*) chbase.ptrs[i+1];
-    pc = n->rval & 0xffff;
-
-    xcnt =0;
-
-    if (i >= rcnt+cnt-1)
-     {
-      n = (RBT*) chbase.ptrs[i-1];                  // get bank of last pointer
-      r->rval = (r->rval & 0xffff) | (n->rval & 0xf0000);
-      pc = g_word(r->rval);
-     }
-    else
-     {
-       while (pc != g_word(r->rval) && xcnt < BMAX && i < rcnt+cnt-1)
-       {
-        xcnt++;             // try to find matching bank...
-        if (bkmap[xcnt].bok)  r->rval = (r->rval & 0xffff) | (xcnt << 16);
-       }
-     }
-
-    if (xcnt >= BMAX)
-    {
-		#ifdef XDBGX
-        DBGPRT(1,"Matching rbase addr not found !");
-		#endif
-    }
-    else
-      {
-   //     if (xcnt) DBGPRTN("Rbase %x = %x",r->radd, r->rval);
-      //  set_cmd(r->rval, r->rval+1, C_WORD);
-     //   set_auxcmd(r->rval,pc-1, C_XCODE);          // and add an XCODE as this is data
-        add_data_cmd(val, val+1, C_WORD|C_CMD,0);
-        add_code_cmd(val,val2-1, C_XCODE);          // and add an XCODE as this is data
-      }
-   }
-   sx->done = 1;
-   #ifdef XDBGX
-   DBGPRT(1,"end rbasp");
-   #endif
-   return ;*/
-}
-
-
-/*
-void check_rbase(void)       //SIG *sx, SBK *dummy)
-{
-
-// rewrite to ditch the sig scan
-// CAN'T DO THIS - 0FAB does not use f0 as start point !!!
- // must go back to signature !!
-
-  //check if rbase caclcon pointer entries are present
-  // 2020 num of levels (always 8)
-  // 2021 no of calibrations (1)
-  // 2022-20A1 cal pointers = 7f 0r 64 pointers
-  // presume 2060 for 8065.
-
-  int i, cnt,bank, bf;
-  RBT *r;
-  uint  pc, addr, val, val2;
-
- #ifdef XDBGX
-  DBGPRT(1,"In chk_rbasp");
-  #endif
-
-// do NOT use numbanks, as CAN have single bank 8065 !!
-  if (P8065) addr = 0x82060; else addr = 0x82020;
-
-  cnt = g_byte(addr);                     // no of entries
-  bf = 0;
-  pc = addr+2;
-  val2 = g_word(pc);
-
-  if (cnt != 8)
-   {             // may be a bigger number somewhere....
-    #ifdef XDBGX
-     DBGPRT(1,"Not Found");
-    #endif
-   return;
-   }
-
-  bank = 8;
-
-  for (i = 1; i < cnt; i++)
-   {
-    addr = val2 | (bank << 16);
-    if (!val_data_addr(addr)) break;  // cancel all
-
-    val = g_word(addr);                    // value at pointed to
-    pc += 2;                               // still in bank 8
-    val2 = g_word(pc);                     // get next match (was addr)
-
-    if (val != val2)
-     {
-      if (!numbanks)  break;
-      // check if rbase points to another bank (typically b1)
-      if (!bf)
-        {
-         // not checked yet
-          for (bank = 0; bank < BMAX; bank++)
-              {
-                if (bkmap[bank].bok)
-                 {          // bank is OK
-                   addr = nobank(addr) | (bank << 16);
-                   val = g_word(addr);                    // value at pointed to
-                  if (val == val2) {bf = 1; break;}                      // bank found
-                 }
-              }
-        }
-     }
-   }
-
-  if (i < cnt)
-   {
-    #ifdef XDBGX
-    DBGPRT(1,"Not Found");
-    #endif
-    return;
-   }
-
-
-  #ifdef XDBGX
-    DBGPRT(1,"FOUND RBASE, points to bank %d", bank);
-  #endif
-
-  // OK, matched list and bank................
-
-  if (P8065) addr = 0x82062; else addr = 0x82022;
-
-  add_data_cmd(addr-2, addr-1, C_BYTE|C_CMD, 0);
-  add_data_cmd(addr, addr+(cnt*2)-1, C_WORD|C_CMD, 0);
-
-  pc = 0xf0;                                // always 0xf0 ?? NO !!!!
-  for (i = 0; i < cnt; i++)
-   {
-    val   = g_word(addr);                    // value at pointed to
-    val  |= (bank << 16);
-    val2  = g_word(val);
-    val2 |= (bank << 16);
-
-    r = add_rbase(pc,val,0,0);             // message in here....
-    if (r)
-      {
-       r->cmd = 1;
-       upd_ram(pc,val,2);                           // and set register
-       add_data_cmd(val, val+1, C_WORD|C_CMD,0);
-       add_code_cmd(val,val2-1, C_XCODE);          // and add an XCODE as this is data
-      }
-
-    pc+=2;
-    addr+=2;
-   }
-
-   #ifdef XDBGX
-   DBGPRT(1,"end rbasp");
-   #endif
-   return ;
-}*/
 
 
 // do branch has a FULL copy of SFIND to ensure that parallel branches have their own
@@ -13607,10 +14416,10 @@ void set_struct(SFIND *f)
 
 
    // function
-   if (f->spf > 4 && f->spf < 13) set_xfunc(f);
+   if (f->spf->spf == 4) set_xfunc(f);
    // table
 
-    if (f->spf > 12 && f->spf < 15) set_xtab(f);
+    if (f->spf->spf == 5) set_xtab(f);
 }
 
 void do_list_struct(SFIND *f)
@@ -13638,6 +14447,7 @@ void do_list_struct(SFIND *f)
 
   m = start;
 
+
   if (!f->rg[1])
     {  // func, check first byte is valid.
 
@@ -13651,7 +14461,7 @@ void do_list_struct(SFIND *f)
 
        if (!val_rom_addr(addr)) break;
        i = g_byte(addr);
-       if ( i != 0x7f && i != 0xff) break;
+       if ( i != 0x7f && i != 0xff) break;     //check func start
        f->ans[0] = addr;        //set func address
        set_struct(f);
        m += 2;
@@ -13685,17 +14495,18 @@ void do_list_struct(SFIND *f)
        }
     }
 
-   if (m >= start+2) {  k = add_cmd (start,  m-1, C_WORD, 0);
+   if (m >= start+2) {
+  k = add_cmd (start,  m-1, C_WORD|C_NOMERGE, 0);
 
    if (k)
     {
-      a = add_adt(&chadnl,k->start,0);    // only one
+      a = append_adt(vconv(k->start),0);    // only one
    if (a)
      {
       a->fend = 15;         //word
   //    a->bsize = 1;
       a->foff = 1;
-      a->data = f->lst[1];
+      a->data = f->lst[1] & 0xffff;
       a->fnam = 1;
       a->cnt = 1;
      }
@@ -13722,6 +14533,7 @@ void do_branch(uint addr, int cnt, SFIND f)
    while (xcnt)
      {
        // find_opcode just goes down/up list, no checks (pn_opcodes does check).
+       //probably need to limit how far back thsi goes.........
        xofst = find_opcode(0, xofst, &opl);
        if (!xofst) break;
        xcnt --;
@@ -13774,9 +14586,12 @@ void do_branch(uint addr, int cnt, SFIND f)
            DBGPRT(1,"JMP %x<-%x %d", j->toaddr, j->fromaddr, cnt);
           #endif
 
+
+//what if a CALL ????
+
          //j->from-j->cmpcnt to skip the cmp
 // copy f for each new branch ??
-         do_branch(j->fromaddr,xcnt,f);
+         do_branch(j->fromaddr,xcnt,f);        //why xcnt ??
          ix++;
         }  // end jump loop
 
@@ -13802,7 +14617,7 @@ void do_calls(SUB * sub, SFIND f)
  uint jx, ix, ofst;
       #ifdef XDBGX
         DBGPRT(1,0);
-        DBGPRT(0,"Base calls for sub %x", sub->start);
+        DBGPRT(0,"Base calls for sub %x ss %x", sub->start, f.spf->fendout );
       #endif
 
  ix = get_tjmp_ix(sub->start);     // start point
@@ -13826,7 +14641,7 @@ void do_calls(SUB * sub, SFIND f)
 
         ofst = j->fromaddr + j->size;
 
-        a = get_adnl(&chadnl,sub->start,1);
+        a = get_adt(vconv(sub->start),0);
         if (a)
           {    // same as data command, but user specified
             f.ans[0] = decode_addr(a, ofst);
@@ -13841,7 +14656,7 @@ void do_calls(SUB * sub, SFIND f)
           g = get_aux_cmd(ofst, C_ARGS);
           if (g)
            {         // assume first parameter ???
-            a = get_adnl(&chadnl,g->start,1);
+            a = get_adt(vconv(g->start),0);
             f.ans[0] = decode_addr(a, ofst);
 
             #ifdef XDBGX
@@ -13855,6 +14670,7 @@ void do_calls(SUB * sub, SFIND f)
 
           // do_branch scans back from j->from FIRST before checking for jumps,
           // so add an extra check and loop for jumps to j->from
+         // 20 instructions ?
 
           jx = get_tjmp_ix(j->fromaddr);     // start point
           while(jx < chjpt.num)
@@ -13892,7 +14708,7 @@ LBK* del_olaps(uint addr, uint ix)
  while (n && n->start < addr)
      {
       // n MUST be wrong - delete it. keep if higher or cmd
-      if (n->cmd) break;
+      if (n->usrcmd) break;
       if (n->fcom < C_TEXT) chdelete(&chcmd,ix,1); else break;
       if (ix < chcmd.num) n = (LBK *) chcmd.ptrs[ix]; else n = 0;
      }
@@ -13915,31 +14731,18 @@ void extend_func(uint ix)
 
   k = (LBK *) chcmd.ptrs[ix];
 
-//if (k->start == 0x22336)
-//{
-//DBGPRT(1,0);
-//}
-
-
-
-
-
-
-
-
   ix++;
   if (ix < chcmd.num) n =  (LBK *) chcmd.ptrs[ix]; else n = 0;
       // check end of func
 
-  eadr = maxpcadd(k->end);                 // safety
-  a = get_adnl(&chadnl,k->start,1);        // entry 1
+  eadr = maxadd(k->end);                 // safety
+  a = get_adt(vconv(k->start),0);        // entry 1
   if (!a) return;
-  b = get_next_adnl(&chadnl,a);            // entry 2
+  b = get_adt(a,0);            // entry 2
   if (!b) return;
 
  // extend func to zero or max negative here
 
- // size = bytes(a->fend);
   rsize = bytes(a->fend) + bytes(b->fend);    // whole row size in BYTES
   eval  = get_signmask(a->fend);              // end value
   adr   = k->start;
@@ -13952,23 +14755,23 @@ void extend_func(uint ix)
      val = g_val(adr,0, (a->fend & 31));      // next input value as UNSIGNED
      if (val == eval)
         {
-         eadr = adr + rsize-1;            // hit end input value, set end
+         eadr = adr + rsize-1;            // hit end input value, break
          break;
         }
     }
 
-  k->end = eadr;                        // stage 1 of extend
+  k->end = eadr;                        // stage 1 of extend (to end value
 
   //check here if any command occurs inside the function and delete them
   n = del_olaps(eadr, ix);
 
   //adr is now at first zero row, and val is last value
 
-  eadr = maxpcadd(k->end);           // reset end
+  eadr = maxadd(k->end);           // reset end (why??)
 
   if (n)
     {
-      if (n->cmd) eadr = n->start;  // can't go past a user command.
+      if (n->usrcmd) eadr = n->start;  // can't go past a user command.
       if (n->fcom > C_TEXT) eadr = n->start;  // or past funcs or tabs (etc)
     }
   // set row size for whole row for extend check.
@@ -13998,7 +14801,7 @@ void extend_func(uint ix)
 
  if (n && adr > n->start)
     {
-      if (n->cmd) adr = n->start;  // can't go past a user command.
+      if (n->usrcmd) adr = n->start;  // can't go past a user command.
       if (n->fcom > C_TEXT) adr = n->start;  // or past funcs or tabs (etc)
     }
 
@@ -14029,7 +14832,7 @@ void extend_func(uint ix)
   rsize = bytes(a->fend) + bytes(b->fend);    // whole row size in BYTES
 
 if (rsize == 4)
-  {          //word table - check for table dim style (top byte only)
+  {          //word funce - check for table dim style (top byte only)
    uint lval, chg;
 // prob need more rules (like eval should always be <= lval...but val must change also
 // and end up at zero ??)
@@ -14062,7 +14865,7 @@ if (rsize == 4)
 
 if (eval && chg)
  {       //passes test as dimension func for table
-   b->flt = 1;
+   b->div = 1;
    b->fldat = 256.0;           //set divisor at 256
 //change name ??
  }
@@ -14075,81 +14878,136 @@ if (eval && chg)
  }
 
 
-/* experimentals
+// experimentals
 
-uint test_func(uint start, uint ssize)
+
+int endval (uint fend)
 {
-uint addr, end, rsz;
-int val,lval;
-if (start == 0x827b4)
+  switch (fend)
+  {
+      default:
+        return 0;
+      case 0x27:
+        return 0x80;
+      case 0x2f:
+        return 0x8000;
+  }
+
+}
+
+int startval (uint fend)
 {
-DBGPRT(1,0);
+  switch (fend)
+  {
+      default:
+        return 0;
+      case 0x7:
+        return 0xff;
+      case 0x27:
+        return 0x7f;
+      case 0xf:
+        return 0x8000;
+      case 0x2f:
+        return 0x7fff;
+  }
+
 }
 
 
 
-rsz = casz[ssize] * 2;          // one row
-
-addr = start;
-end = start + 128;      // safety
-
-lval = g_val(addr, ssize);   //start value
 
 
-val = (~casg[ssize]) & camk[ssize];     // start value
 
-if (lval != val) return start;
 
+void test_func(uint start, uint fend)
+{
+    // fend & 0x20 for sign...
+    // 7 27, f 2f
+
+uint addr, end, rsize;
+int val,lval, cnt;
+
+//if (start == 0x827b4)
+//{
+//DBGPRT(1,0);
+//}
+
+rsize = bytes(fend);          // size in bytes
+
+lval = g_val(start, 0, fend);   // start value as unsigned
+
+if (lval != startval(fend)) return ;
+
+val = lval;
 
 // need row extender in here for some short tables
 
-addr += rsz;
+rsize *= 2;      // whole row size, input values only.
+addr = start + rsize;
+end  = start + 128;      // safety
 
+cnt = 1;
 while (addr < end)
-{
-val = g_val(addr, ssize);
-if (val >= lval) break;
-lval = val;
-addr += rsz;
+  {
+    val = g_val(addr, 0, fend);
+    if (val >= lval) break;
+    lval = val;
+    if (lval == endval(fend)) break;
+    addr += rsize;
+    cnt++;
 }
 
 // 3 rows = 6 * size
-if ( (addr - start) >= (rsz * 3) && (lval & camk[ssize]) == casg[ssize] )
+if (cnt > 3)
 {
-DBGPRT (1,"possible func at %x-%x (%d)", start, addr, ssize);
+      #ifdef XDBGX
+DBGPRT (1,"possible func at %x-%x (%d)", start, addr, fend);
+#endif
 }
 
-return start;
+
 }
 
 
 
 
-void find_func(uint start, uint end)
+uint scan_func(LBK *s, LBK *n)       //uint start, uint end)
 {
-uint addr;
-int val;
 
-addr = start;
+   uint addr, start, end, val;  //, cnt;
+
+   start = s->end+1;
+   end  = n->start-1;
+
+   if (g_bank(start) != basepars.datbnk) return 0;
+
+   #ifdef XDBGX
+      DBGPRT(1,"func scan %x-%x", start, end);
+   #endif
+
+   addr = start;
+
+  //   uint bytes(uint fend)
 
 while (addr < end)
   {
    val = g_byte(addr);
    if (val == 0xff || val == 0x7f)
     {
-     test_func(addr,1);
-     test_func(addr,5);      // byte
+     test_func(addr,0x7);       // uns byte
+     test_func(addr,0x27);      // sign byte
      if (!(addr &1))
       {
-       test_func(addr,2);
-       test_func(addr,6);  // word
+       test_func(addr,0xf);
+       test_func(addr,0x2f);  // word
       }
      }
     addr++;
 
  }
+ return 0;
 }
-*/
+
 
 
 
@@ -14162,22 +15020,24 @@ void extend_table(uint ix)
 
   k = (LBK *) chcmd.ptrs[ix];
 
-
+  // DBGPRT(1,"extend table for %x", k->start);
  // attempt to extend by data,use external proc
  // to do best match by data for row and col sizes
 
   if (ix >= chcmd.num)
    {
-     apeadr = maxpcadd(k->end)+1;
+     apeadr = maxadd(k->end)+1;
      maxadr = apeadr;
    }
   else
    {
     jx = ix+1;
     n = (LBK *) chcmd.ptrs[jx];
+
+  //  DBGPRT(1,"next cmd is %x-%x", n->start, n->end);
     apeadr = n->start;             // apparent end from next cmd
 
-    while ( n->fcom < C_TEXT && !n->cmd)
+    while ( n->fcom < C_TEXT && !n->usrcmd)
      {  // struct of user command
        jx++;
        if (jx >= chcmd.num) break;
@@ -14187,7 +15047,7 @@ void extend_table(uint ix)
     maxadr = n->start;            // max end. not skippable
    }
 
-  a = get_adnl(&chadnl,k->start,1);          //k->adnl;                 // cols in a->cnt
+  a = get_adt(vconv(k->start),0);
 
   if (!a) return;
   size = apeadr - k->start;    // size in bytes to apparent end
@@ -14247,24 +15107,25 @@ void do_structs()
    LBK *k;
    SFIND f;
    SPF *x;
-   // go down tab and func subroutines and find params (structs)
+   // go down tab and func subroutines call trees  and find params (structs)
 
    // func subroutines
 
    for (i = 0; i < chsubr.num; i++)
    {
     sub =  (SUB *) chsubr.ptrs[i];
-    x = get_spf(sub->start);
+    x = get_spf(vconv(sub->start));
 
     if (x)
      {
       // common to both
       f.lst[0] = 0;
-      f.spf    = x->spf;
+      f.spf    = x;
       f.rg[0]  = x->addrreg;        // address
       f.ans[0] = 0;
 
-      if (x->spf > 4 && x->spf < 13)
+      //functions
+      if (x->spf == 4)
        {
         f.rg[1]  = 0;              // no size reg
         f.ans[1] = 1;              // mark as found
@@ -14272,7 +15133,7 @@ void do_structs()
 
       // table subroutines
 
-      if (x->spf > 12 && x->spf < 15)
+      if (x->spf == 5)
        {
         f.rg[1]  = x->sizereg;        // cols
         f.ans[1] = 0;
@@ -14288,7 +15149,7 @@ void do_structs()
    for (i = 0; i < chcmd.num; i++)
    {
      k = (LBK *) chcmd.ptrs[i];
-     if (!k->cmd)
+     if (!k->usrcmd)
        {
         if (k->fcom == C_FUNC)  extend_func(i);
         if (k->fcom == C_TABLE) extend_table(i);
@@ -14343,6 +15204,7 @@ char *calcfiles(char *fname)
 short disassemble (char *fstr)
 {
   int ans;
+  BANK *b;
 
   init_structs();
   calcfiles(fstr);
@@ -14381,6 +15243,14 @@ void main()
   wnprt(1,"# ----------------------------");
   wnprt(1,"# SAD Version %s (%s)", SADVERSION, SADDATE);
   wnprt(2,"# ----------------------------");
+
+  #ifdef XDBGX
+    DBGPRT(1,0);
+    DBGPRT(1,"# ----------------------------");
+    DBGPRT(1,"   SAD Version %s (%s)", SADVERSION, SADDATE);
+    DBGPRT(2,"# ----------------------------");
+  #endif
+
 
   ans = readbin();
 
@@ -14440,19 +15310,26 @@ void main()
 
   turn_scans_into_code();      // turn all valid scans into code
 
-//  scan_code_gaps();           // scan for code gaps  TEMP !!!
+  do_structs();                 // recursive loop down call branches tablu and funclu
 
-  do_structs();                // then structs
+ // scan_cmd_gaps(scan_func);        not yet!!          //find funcs and tables here ??  after code before data ?.
 
-//  turn_dtk_into_data();        // add data found fom dtk
+
 
  check_dtk_links();
 
- //scan_gaps();                 // BEFORE data, so only code, tabs,vects,funcs
+ turn_dtk_into_data();              // add data found fom dtk
 
- turn_dtk_into_data();        // add data found fom dtk
+ scan_cmd_gaps(scan_cgap);                // code scans
+
+ scan_cmd_gaps(scan_fillgap);             // fill data
 
 
+//after data processed, clear dtk+dtd and check over ???
+
+
+
+// and now look for other functions and tabs ?? discover_struct() :
 
   // ----------------------------------------------------------------------
 
@@ -14464,6 +15341,7 @@ void main()
    show_prog (++anlpass);                 //anlpass = 5 = ANLPRT
 
   #ifdef XDBGX
+    DBGPRT(1,"#\n####################################################################################################");
     DBG_data();
   #endif
 
@@ -14487,8 +15365,20 @@ void main()
   wnprt(3,"# ---------------------------------------------------------------------------------------------");
 
   prt_dirs();
+
+ // mfree(opcbit, 0x8000);
+  mfree(fbinbuf,fldata.fillen);         //and file buffer
+
+
+ for (ans = 0; ans < BMAX; ans++)
+  {
+   b = bkmap + ans;
+
+   if (b->bok)  mfree(b->fbuf, 0x10000);             //temp
+
+  }
+
   free_structs();
-  mfree(opcbit, 0x2000);
   wnprt(2,0);
   wnprt(2, "# ----- END of disassembly run -----");
   printf ("\n END of run\n");

@@ -36,7 +36,7 @@ const char *passd [] = {"Checking Binary ", "Process Commands", "Analyse Bin [1]
 
 
 
-char prg[] = { '|', '/', '-', '\\' };       //  for rotating symbol display 
+char prg[] = { '|', '/', '-', '\\' };       //  for rotating symbol display
 
 void show_prog (int s)
 {
@@ -63,7 +63,7 @@ if (isatty(STDOUT_FILENO))
       printf ("  %c\r", prg[lastsym]);
       fflush (stdout);
       lastsym++;
-    }  
+    }
 }
 }
 
@@ -100,7 +100,7 @@ void segfault(int signal, siginfo_t *si, void *arg)
 
 
 
- #ifdef XDBGX   
+ #ifdef XDBGX
     if (signal == SIGINT) DBG_data();            // this seems to work, even if not technically safe...
  #endif
 
@@ -119,6 +119,7 @@ int main (int argc, const char **argv)
   char *x, *fn;
   char* pth[3];
 
+/*
 #ifdef __linux__
   // set up signal catcher for disasters
 
@@ -130,7 +131,7 @@ int main (int argc, const char **argv)
     sigaction(SIGSEGV, &sa, NULL);
     sigaction(SIGINT, &sa, NULL);
 #endif
-
+*/
 
 
 
@@ -138,12 +139,12 @@ int main (int argc, const char **argv)
   printf ("EEC-IV disassembler Version %s (%s)", SADVERSION, SADDATE);
   printf ("\nAbsolutely no warranty or liability");
   prt_stars();
- 
+
   fn = 0;
 
   pth[0] = (char *) argv[0];
   pth[1] = 0;
-  pth[2] = 0; 
+  pth[2] = 0;
   for (go = 1; go < argc; go++)
     {
      if (*argv[go] == '-')
@@ -161,7 +162,7 @@ int main (int argc, const char **argv)
           pth[1] = (char *) argv[go+1];              // path of config file
           go++;
           break;
-          
+
          case 'h':
          case 'H':
            printf ("\nsad -h   this help info");
@@ -189,7 +190,7 @@ int main (int argc, const char **argv)
        {
         printf ("\nFor binary file '%s'\n", fn);
         go = disassemble(fn);
-        
+
         return go;
        }
 

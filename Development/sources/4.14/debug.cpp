@@ -8,27 +8,17 @@
 #include  "core.h"
 #include  "sign.h"
 
+
+
 #ifdef XDBGX
 
-extern int anlpass;
-extern HDATA fldata;        
+extern uint anlpass;
+extern HDATA fldata;
 
-extern const char *cmds[]; 
-extern CHAIN chrgst;
-extern CHAIN chscan;
-extern CHAIN chsubr;
-extern CHAIN chsym;
-extern CHAIN chsig;
-extern CHAIN chcmd;
-extern CHAIN chaux;
-extern CHAIN chjpf;
-extern CHAIN chjpt;
+extern CHAIN chopcd;
 extern CHAIN chadnl;
-extern CHAIN chans;
-extern CHAIN chdtk;
-//extern CHAIN chdtko;
-//extern CHAIN chdtkr;
-extern CHAIN chdtkd;
+
+extern CSTR cmds[];
 
 extern int tscans;
 extern int xscans;
@@ -39,6 +29,7 @@ extern BANK bkmap[];
 extern OPC opctbl[];
 
 
+CHAIN *get_chain(uint chn);
 
 void prt_glo(SUB *, uint (*) (uint,const char *, ...));
 void prt_adt(CHAIN *, void *, int , uint (*) (uint,const char *, ...));
@@ -71,22 +62,24 @@ DTD *get_next_dtkd(DTD *);
 
 // how to have an array of subroutine pointers.....this works.
 
-// typedef void DBGPB(CHAIN *, int, void*, const char *fmt);  
+// typedef void DBGPB(CHAIN *, int, void*, const char *fmt);
 // DBGPB *chdbgpt [4];
- 
+
 
 uint DBGPRT (uint nl, const char *fmt, ...)
 {  // debug file prt with newlines
   va_list args;
+  uint chars;
 
+  chars = 0;
   if (fmt)
     {
      va_start (args, fmt);
-     vfprintf (fldata.fl[5], fmt, args);
+     chars = vfprintf (fldata.fl[5], fmt, args);
      va_end (args);
     }
   while (nl--) fprintf(fldata.fl[5], "\n");
-  return 1;             // useful for if statements
+  return chars;             // useful for if statements
 }
 
 
@@ -103,17 +96,19 @@ void DBGPBK(int nl, LBK *b, const char *fmt, ...)
      va_end (args);
     }
 
-  DBGPRT(0," %05x %05x %s ", b->start, b->end, cmds[b->fcom]);
+  DBGPRT(0," %05x %05x %s ", b->start, b->end, cmds[b->fcom].str);
   va_end (args);
   while (nl--) fprintf(fldata.fl[5], "\n");
 }
 
 
 
-void DBG_stack (FSTK *t)
+void DBG_stack (SBK *s, FSTK *t)
  {
-   int i;
+  int i;
 
+  if (s && s->proctype)                         //ng || s->emulating))
+   {
   if (anlpass >= ANLPRT) return;
 
   DBGPRT(0,"STK ");
@@ -125,6 +120,7 @@ void DBG_stack (FSTK *t)
     t++;
    }
   DBGPRT(1,0);
+   }
  }
 
 
@@ -148,12 +144,15 @@ void DBG_rgchain(void)
 
   uint ix;
   RST *r;
+  CHAIN *x;
 
-   DBGPRT(1,"# chrgst num = %d", chrgst.num);
+  x = get_chain(CHRGST);
 
-   for (ix = 0; ix < chrgst.num; ix++)
+   DBGPRT(1,"# chrgst num = %d", x->num);
+
+   for (ix = 0; ix < x->num; ix++)
     {
-     r = (RST*) chrgst.ptrs[ix];
+     r = (RST*) x->ptrs[ix];
      DBG_rgstat(r);
     }
  DBGPRT(1,0);
@@ -211,7 +210,7 @@ void DBG_sbk(const char *t, SBK *s)
  if (!s->logdata)  DBGPRT(0," NDAT");
  if (s->inv)       DBGPRT(0," INV");
  //if (!s->stop)     DBGPRT(0," NOT Scanned");
-   if (!s->stop)     DBGPRT(0," Scanned"); 
+   if (!s->stop)     DBGPRT(0," Scanned");
 // if (s->gapchk)    DBGPRT(0," GAP");
 
  DBGPRT(1,0);
@@ -220,39 +219,78 @@ void DBG_sbk(const char *t, SBK *s)
 
 void DBG_scans(void)
 {
-
   uint ix;
+  CHAIN *x;
 
-   DBGPRT(1,"# dbg scans chnum = %d blk scans = %d chain scans %d", chscan.num, tscans, xscans);
+  x = get_chain(CHSCAN);
 
-   for (ix = 0; ix < chscan.num; ix++)
+   DBGPRT(1,"# dbg scans chnum = %d blk scans = %d chain scans %d", x->num, tscans, xscans);
+
+   for (ix = 0; ix < x->num; ix++)
     {
-    DBG_sbk("Scan",(SBK*) chscan.ptrs[ix]);
+    DBG_sbk("Scan",(SBK*) x->ptrs[ix]);
 
     }
  DBGPRT(1,0);
 }
 
 
+void DBG_opc(void)
+{
+  uint ix, i;
+  CHAIN *x;
+  TOPC *c;
+
+  x = &chopcd;
+
+   DBGPRT(1,"# opcodes num = %d", x->num);
+
+   i = 0;
+   for (ix = 0; ix < x->num; ix++)
+    {
+      c = (TOPC*) x->ptrs[ix];
+      DBGPRT(0,"%x ",c->ofst);
+      i++;
+      if (i >=20)
+      {
+          DBGPRT(1,0);
+          i = 0;
+      }
+
+
+    }
+ DBGPRT(3,0);
+}
+
+
+
+
+
+
+
+//change to per operand
+
+
 void DBG_dtkx (TRK *k)
 {
  // uint start;  //,fend;
   DTD *d;
-  uint wop, i;
+  uint i;
 
-  wop = opctbl[k->opcix].wop;
+  DBGPRT(0,"%5x, (%5x), %5s ", k->ofst, k->ofst+k->ocnt, opctbl[k->opcix].name);
 
-  DBGPRT(0,"%5x, %5x, %5s ", k->ofst, k->ofst+k->ocnt, opctbl[k->opcix].name); 
-
-  for (i = 0; i <= 4; i++)
+  DBGPRT(0,"%-4x ", k->rgvl[0]);
+  for (i = 1; i <= 3; i++)
     {
-     if (i && wop == i) DBGPRT(0,"*"); else DBGPRT(0," ");
-     DBGPRT(0,"R%4x ", k->rgvl[i]);
-    }
 
- // if (k->numops > 0) {if (wop == 1) DBGPRT(0,"*"); else DBGPRT(0," "); DBGPRT(0,"R%3x ", k->reg1); } else DBGPRT(0,"    ");
- // if (k->numops > 1) {if (wop == 2) DBGPRT(0,"*"); else DBGPRT(0," "); DBGPRT(0,"R%3x ", k->reg2); } else DBGPRT(0,"    ");
- // if (k->numops > 2) {if (wop == 3) DBGPRT(0,"*"); else DBGPRT(0," "); DBGPRT(0,"R%3x ", k->reg3); } else DBGPRT(0,"    ");
+
+
+
+
+        if (i == 3) DBGPRT(0,"w"); else DBGPRT(0," ");
+     DBGPRT(0,"R%-3x ", k->rgvl[i]);
+    }
+   DBGPRT(0,"S%-3x ", k->rgvl[4]);
 
 
   switch(k->opcsub)
@@ -278,26 +316,18 @@ void DBG_dtkx (TRK *k)
     if (k->ainc) DBGPRT(0, " +%x", k->ainc);
 
 
-//if (k->ofst == 0x92233)
-//{
-//DBGPRT(1,0);
-//}
-
-
-
-
-
-    d = start_dtdk_loop(k->ofst);
+    d = (DTD*) chmem(&chdtko);
+    if (d) d->ofst = k->ofst;
 
     while ((d = get_next_dtkd(d)))
       {
         DBGPRT(0," %5x", d->stdat);
     //    if (d->olp) DBGPRT(0,"O");
         if (d->psh) DBGPRT(0," P");
-        if (d->gap) DBGPRT(0," G%d",d->gap); 
+        if (d->gap) DBGPRT(0," G%d",d->gap);
         if (d->olp) DBGPRT(0," O");
         DBGPRT(0,",");
-      } 
+      }
     DBGPRT(1,0);
   }
 
@@ -314,18 +344,21 @@ void DBG_dtk (void)
 
   TRK *k;
   DTD *d;
-  uint ix;         //, f, i;
+  uint ix;
+  CHAIN *x;
+
+  x = get_chain(CHDTK);
 
   DBGPRT(1,0);
   DBGPRT(1,"# ------------ data tracking list");
-  DBGPRT(1,"# num items = %d", chdtk.num);
+  DBGPRT(1,"# num items = %d", x->num);
 
-  DBGPRT(1,"from, next, addr, size"); 
+  DBGPRT(1,"from, next, addr, size");
   DBGPRT(1,"# by ofst");
 
-  for (ix = 0; ix < chdtk.num; ix++)
+  for (ix = 0; ix < x->num; ix++)
       {
-        k = (TRK*) chdtk.ptrs[ix];
+        k = (TRK*) x->ptrs[ix];
         DBG_dtkx (k);
     }
 
@@ -343,10 +376,11 @@ void DBG_dtk (void)
 
   DBGPRT(1,"# by data");
 
-  for (ix = 0; ix < chdtkd.num; ix++)
+  x = get_chain(CHDTKD);
+  for (ix = 0; ix < x->num; ix++)
       {
-        d = (DTD*) chdtkd.ptrs[ix];
-        DBGPRT(0,"%5x, %5x, ", d->fk, d->stdat); 
+        d = (DTD*) x->ptrs[ix];
+        DBGPRT(0,"%5x, %5x, ", d->ofst, d->stdat);
 
  /*       f = d->modes;
         i = 0;
@@ -390,24 +424,77 @@ DBGPRT(1,0);
   }
 
 
-/*
-void DBG_syms (void)
+
+void DBG_adt (void)
 {
  CHAIN *x;
- SYM *t;
- uint ix, b;
+ ADT *a;
+ uint ix;
 
- DBGPRT(1,"# ---------Symbols num = %d", chsym.num);
+ DBGPRT(1,"# ---------Additional num = %d", chadnl.num);
 
- x = &chsym;
+ x = &chadnl;
 
  for (ix = 0; ix < x->num; ix++)
    {
-   t = (SYM*) x->ptrs[ix];
+   a = (ADT*) x->ptrs[ix];
 
-   if (!t->noprt)     // not printed as subr or struct
-     {
-     DBGPRT(0,"sym %x ", t->addb >> 4);
+   DBGPRT(0,"fid %lx (%lx) ", a->fid, a);
+
+   DBGPRT(0,"O %d ", a->cnt);
+   DBGPRT(0,"D %x ", a->data);
+   DBGPRT(0,"E %d ", a->enc);
+
+   /*    else
+       if (a->vaddr)
+        {
+         prt(0,"R ");
+        }
+       else
+       if (a->bank) prt(0,"K %x ", a->bank-1);
+       else prt_cellsize(a,prt);
+
+       prt_pfw(a,prt);                         // print fieldwidth if not default
+       prt_radix(a,drdx,prt);                  // print radix if not default
+
+       if (a->div) flprt("/ ", a->fldat, prt);
+       if (a->fnam) prt(0,"N ");
+
+       #ifdef XDBGX
+         if (prt == DBGPRT) prt (0,"[R%x, csz %d] ", a->dreg, cellsize(a));
+       #endif
+       fid = a;
+
+   DBGPRT(0," S%x E%x ", t->rstart, t->rend);
+   //31
+uint dreg    : 10 ;    // data destination register for data - for arg processing (0-0x3ff)
+uint fstart  : 5 ;     // 0-31 start of sub field (bit number).
+uint fend    : 7 ;     // 0-31 end   of sub field (bit number), sign 0x20, write 0x40
+uint cnt     : 5 ;     // (O) repeat count, 31 max
+uint pfw     : 5 ;     // (P) print min fieldwidth (0-31)
+
+//19
+uint bank    : 4 ;     // (K) holds a bank override, zero if none
+uint places  : 4 ;     // 0-15 print decimal places (is 7 enough ?) [forces radix 10]
+uint enc     : 3 ;     // (E) encoded data type (E) 1-7 (addr & 0xff)
+uint prdx    : 2 ;     // (X) print radix 0 = not set, 1 = hex, 2 = dec, 3 bin
+uint fnam    : 1 ;     // (N) look for symbol name
+uint newl    : 1 ;     // (|) break printout with newline (at start of this level)
+uint vaddr   : 1 ;     // (R) value is an addr/pointer to symbol (R) (full address)
+uint foff    : 1 ;     // (D) data is an offset address
+// uint ans     : 1 ;     // (=) this is ANSWER definition (separate item, for verification) move t spf
+uint div     : 1 ;     // (V or /) data is FLOAT, use fldat (union with data)
+uint mult    : 1 ;     // (*) data is FLOAT, use fldat (union with data)
+uint sbix : 1;         //subchain
+
+// uint write  : 1 ??
+} ADT;
+
+
+
+
+
+
      DBGPRT(0," S%x E%x ", t->rstart, t->rend);
 
      if (t->cmd) DBGPRT(0," CMD");
@@ -421,19 +508,22 @@ void DBG_syms (void)
      DBGPRT(0," size %d", t->tsize);
      DBGPRT(0," \"%s\"",t->name);
 
-     DBGPRT(0," ab [%x]", t->addb);
+     DBGPRT(0," ab [%x]", t->addb);     */
      DBGPRT(1,0) ;
      }
-   }
+
   DBGPRT(1,0);
 
  }
-*/
 
-void DBG_jumps (CHAIN *x, const char *z)
+
+void DBG_jumps (uint ch, const char *z)
 {
  JMP *j;
  uint ix;
+ CHAIN *x;
+
+ x = get_chain(ch);
 
   DBGPRT(1,"------------ Jump list %s", z);
   DBGPRT(1,"num jumps = %d", x->num);
@@ -466,27 +556,34 @@ void DBG_jumps (CHAIN *x, const char *z)
 
 void DBG_jumps ()
 {
-DBG_jumps (&chjpf,"Forwards");
-DBG_jumps (&chjpt,"To ");
+DBG_jumps (CHJPF,"Forwards");
+DBG_jumps (CHJPT,"To ");
 }
 
-void DBG_sigs(CHAIN *x)
+void DBG_sigs(uint ch)
 {
  uint i, ix;
  SIG *y;
+ CHAIN *x;
 
- DBGPRT(1,0);
+ x = get_chain(ch);
+
+DBGPRT(1,0);
  DBGPRT(1,"-----------Signatures---------[%d]--", x->num);
- DBGPRT(1,"d ofst  end    k    name      pars" );
+ DBGPRT(1,"d ofst  end   HN P1 name         pars" );
 
  for (ix = 0; ix < x->num; ix++)
    {
      y = (SIG*) x->ptrs[ix];
-     DBGPRT(0,"%d %5x %5x %2d %7s  ", y->done, y->start, y->end, y->skp, y->ptn->name);
-     for (i = 0; i < NSGV; i++) DBGPRT(0,"%5x," , y->v[i]);
-     DBGPRT(1,0);
-    }
+     DBGPRT(0,"%5x %5x %2d %2d %-10s  ", y->start, y->end, y->hix, y->par1, y->name);
 
+     for (i = 0; i < NSGV; i++)
+     {
+        if (i == 16)  DBGPRT(0,"\n                              ");
+        DBGPRT(0,"%5x," , y->vx[i]);
+     }
+     DBGPRT(2,0);
+    }
  DBGPRT(1,0);
 }
 
@@ -514,7 +611,7 @@ void DBG_banks(void)
          DBGPRT(0,"%2d, %5x %5x %5x", ix, b->filstrt, b->filend, b->maxpc);
          DBGPRT(0," ## %5x %5x", b->minpc, b->maxbk);
          DBGPRT(0,"  %x %x %x %x  %5x", b->bok, b->cmd,b->bkmask, b->cbnk, b->fbuf);
-         DBGPRT(0," %5x", b->opbt-opbit ); 
+         DBGPRT(0," %5x", b->opbt-opbit );
          DBGPRT(1,0);}
        }
   DBGPRT(1,0);
@@ -543,7 +640,7 @@ void DBG_banks(void)
 
 void DBG_data()
  {
-  
+
    DBGPRT(1,"max alloc = %d (%dK)", DBGmaxalloc, DBGmaxalloc/1024);
    DBGPRT(1,"cur alloc = %d", DBGcuralloc);
    DBGPRT(1,"mcalls    = %d", DBGmcalls);
@@ -556,13 +653,15 @@ void DBG_data()
     DBG_scans();
     prt_banks(DBGPRT);
     DBG_rgchain();
+    DBG_opc();
     prt_rbt (DBGPRT);
     prt_subs(DBGPRT);
     prt_syms(DBGPRT);
     prt_cmds(DBGPRT);
  //   prt_cmds(&chaux, DBGPRT);
     DBG_dtk();
-    DBG_sigs(&chsig);
+    DBG_adt();
+    DBG_sigs(CHSIG);
  }
 
 

@@ -1,6 +1,20 @@
 
 
 
+
+4.14.3
+
+1. Fixed  - columns not lining up in 'struct' printouts when used in 'compact' mode 
+2. Fixed  - Rbase registers in the 'lookup list' (0x2020 or 2060 in most bins) get incorrectly marked as invalid. 
+3. Fixed  - Autoincrement should invalidate a possible rbase register (not 2020/2060 list ones).   
+4. Fixed  - Push of immediate value (i.e. as address) may have wrong bank (symbols will not match, subroutine not always scanned) 
+4. Fixed  - an3b,w and ad3b,w opcodes not showing correct number of operands.
+5. Fixed  - data commands with extra options (mainly user) may get merged incorrectly.
+6. Change - use slightly more relaxed rule to scan for code gaps. (was too lax, made stricter, now in between) 
+7. Change - install newer version of 'signature/fingerprint' locator for special subroutines etc.
+ 
+
+
 4.14.2
 
  Many regression errors from merge of version 5 code, to move forwards with functionality.
