@@ -1,5 +1,22 @@
 
 
+4.15.1
+
+This version does not fix specific bugs, but has major internal changes in the way it processes opcodes.
+Previous to this opcodes were reprocessed at each stage from the binary image (scan,print etc.) so there was no continuity
+of opcodes+operands in each stage. This didn't support some of the improvments planned.
+This version has master list of all processed opcodes+operands, allowing better 'forwards/backwards' operations, used
+for several things in the code (conditonal jumps, argument sizing etc), and future.
+
+Some bugs ARE likely fixed, but frankly I have not kept detailed track of them.  I have checked that prinouts match.
+released for comments.
+
+
+
+
+
+
+
 
 
 4.14.3
