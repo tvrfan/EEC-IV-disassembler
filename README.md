@@ -81,7 +81,7 @@ Source Subdirectory
 
 Contains sources and headers to build SAD.  Last few versions are available.
 I have used CodeBlocks and Codelite as compilers/IDE, should be able to use any common 'C' compiler/linker.
-Not sorted out a makefile, it's a straight compile and link of the .cpp files. 
+Not sorted out a makefile, it's a straight compile and link of the .cpp and .h files. 
 
 Separate Subdirectory SADWin containing the source for the Win32API graphic interface for SAD (binfile select,
 viewing various files and config)

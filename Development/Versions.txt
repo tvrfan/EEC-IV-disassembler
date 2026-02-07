@@ -1,12 +1,42 @@
 
 
+
+
+
+4.15.2  
+INTERIM version released for comments and bugs. Main change is argument sizes. No source code as yet (it needs a good tidy up)
+
+Note
+RZASA  bins don't work.
+FM20M06 doesn't work.
+Maybe other multibanks...
+
+*** Switched off code 'gap scan' for this version, so it doesn't cover up any errors. Will restore in next versions
+
+Built extra functions on top of changes in 4.15.1
+
+Vect lists - better size analysis (not finished yet)
+
+ARG sizing - done a lot of changes to try to improve sizing of args, on top  of 15.1 changes - appears to work correctly ?
+
+Changed to a faster scan technique (not same as the failed version 5)
+
+Changed 'signature' scan details to make more flexible matching .
+
+Bug reports welcome.   (except missing code ! - as in RZASA)
+
+
+
+
+
 4.15.1
 
-This version does not fix specific bugs, but has major internal changes in the way it processes opcodes.
+This version does not fix specific bugs, but has MAJOR internal changes in the way it processes opcodes.
 Previous to this opcodes were reprocessed at each stage from the binary image (scan,print etc.) so there was no continuity
-of opcodes+operands in each stage. This didn't support some of the improvments planned.
-This version has master list of all processed opcodes+operands, allowing better 'forwards/backwards' operations, used
-for several things in the code (conditonal jumps, argument sizing etc), and future.
+of opcodes+operands in each stage. This didn't support some of the improv ments planned.
+
+This version has saved master list of all processed opcodes+operands, allowing better 'forwards/backwards' operations, used
+for many things in the code e.g. conditional jumps, argument sizing, and more,  and future enhancemnets.
 
 Some bugs ARE likely fixed, but frankly I have not kept detailed track of them.  I have checked that prinouts match.
 released for comments.
