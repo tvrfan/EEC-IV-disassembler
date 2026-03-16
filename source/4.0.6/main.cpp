@@ -6,6 +6,10 @@
 #include <string.h>                // linux
 #include "shared.h"
 
+#ifdef __ANDROID__
+#include "android/log.h"
+#endif
+
 int    get_config(char **);
 void   shutdwn   (void);
 void   startup   (void);
@@ -130,6 +134,11 @@ int main (int argc, const char **argv)
   prt_stars();
   printf ("EEC-IV disassembler Version %s (%s)", SADVERSION, SADDATE);
   printf ("\nAbsolutely no warranty or liability");
+#ifdef __ANDROID__
+  printf ("\n");
+  printf ("\nWARNING: This should be run from the");
+  printf ("\n'SD card'.");
+#endif
   prt_stars();
  
   fn = 0;

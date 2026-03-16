@@ -931,7 +931,7 @@ int recurse  = 0;             // recurse count check
 
 //********** file extensions and flags for linux and Win32 ********************
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__ANDROID__)
 
   HOP fd[] ={{".bin","r"},    {"_lst.txt","w"}, {"_msg.txt","w"},
              {"_dir.txt","r"},{"_cmt.txt","r"}, {"sad.ini","r"} , {"_dbg.txt","w"} };
