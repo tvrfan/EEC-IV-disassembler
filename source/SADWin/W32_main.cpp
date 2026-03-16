@@ -1,6 +1,6 @@
 
 /***********************************************************************
-GUI Wrapper for SAD console disassembler  WIN32    Version 0.1
+GUI Wrapper for SAD console disassembler  WIN32 API   Version 0.1
 ***********************************************************************/
 
 #include <windows.h>
@@ -122,7 +122,7 @@ void get_config(HWND hwnd)
       }
 
      fclose(fh);                 //close leaves handle addr
- };
+ }
 
 
 //-------------------------------------------------------------
@@ -268,7 +268,7 @@ int CALLBACK BrowseSet( HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpData)
 
 int get_dir(int ix)
  {
-  BROWSEINFO bi = { 0 };
+  BROWSEINFO bi = { 0, 0, 0, 0, 0, 0, 0, 0 };
   LPITEMIDLIST pidl;
   int ans;
 
@@ -277,8 +277,8 @@ int get_dir(int ix)
 
   bi.lpszTitle  = fs[ix].fcmt;
   bi.ulFlags    = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
-  bi.lParam     = (LPARAM) gstr;
   bi.lpfn       = BrowseSet;
+  bi.lParam     = (LPARAM) gstr;
 
   *(fname[ix]) = '\0';           // safety
   pidl = SHBrowseForFolder (&bi);
@@ -298,7 +298,7 @@ int get_dir(int ix)
 
 char *get_dirs(HWND hwnd)
 {
- //BROWSEINFO bi = { 0 };
+ //BROWSEINFO bi = { 0, 0, 0, 0, 0, 0, 0, 0 };
  int ans, i;
 
  build_str(gstr,0,"This option selects the locations for the file types\n");
