@@ -12,7 +12,7 @@ Windows builds (32 bit, built with CodeLite/Mingw) in Win32,  Linux builds (64 b
 
 ---------------------------------------------------------------------------------------------
 
-NB. SAD version 5 Withdrawn.  Features will be merged into version 4 code line. 
+NB. SAD version 6 is new release, which adds calculations and other features to data stuctures  (merge of version 4 and 'calcs' part of version 5)
 
 
 

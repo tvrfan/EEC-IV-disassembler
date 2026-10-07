@@ -1,5 +1,51 @@
 
 
+6.0.1           08/10/2026
+
+-- NEW CODELINE -- 
+
+Released for user assessment and testing. More work to do, some features not fully tested yet.
+
+This version is a merge of version 4 scanning model (4.15) and version 5 features, most notably calculations, along with bug fixes.
+Source code restructured into modules by function (print,command,sign,debug, etc) for easier maintenance.
+
+NEW COMMAND FORMAT (taken from version 5).  New format provides more advanced listing options.  Old format still works fine.
+Some command options will be deprecated later on (see manual V6 ).  Error/Warning reports are always in new format.
+
+A general improvement of data found, and some more features to play with.
+
+Changes
+
+Fix of vect list (background task list) missing subroutines in multibank versions, especially those which use altstack (R22) as pointer to list.
+Still have some 'overruns' where list is not terminated soon enough.  More to do here. 
+
+Fixed missing lookup subroutines (and signed/unsigned) in later multibank bins. Much better decode of tables and functions but again
+not perfect yet, a few missing rows/overruns to fix 
+
+Changed to much faster scan model (as tested in 4.15.2 below). May slow down a little in future as more test stuff added
+
+Released mostly to allow for testing of calculations features.
+
+Updated and enabled a better 'code gap' scan for binary code which is not picked up for various reasons.
+This can in some cases overrun into data, but found only a couple of occurences so far.
+
+Update attempt at getting arg sizes correct - still not right, but better.
+
+Things which still don't work (yet).
+
+1) FM20M06 does not work (but FORD broke their own coding/hardware rules !!)
+
+Added new/updated User Manual for version 6 onwards.
+
+Source code shown, but it's very messy at the moment, will tidy up due as more bugs are fixed.
+
+
+
+
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+
+
 
 
 

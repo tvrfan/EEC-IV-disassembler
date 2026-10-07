@@ -1,8 +1,14 @@
 
 Version Summary
 
-
 --- Latest versions in  'development' subdirectories
+
+
+Version 4.14 (1 Apr 2026)
+
+1. Fix bug in vector lists for multibanks which use the second stackpointer (R22) for their background task list
+
+
 
 Version 4.13 (1 Feb 2025) **********************************************
 

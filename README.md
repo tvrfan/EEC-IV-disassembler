@@ -5,14 +5,17 @@ Semi Automatic Disassembler for Ford EEC-IV and V binaries
 Split into separate subdirectories.
 
 Latest Stable Version          4.13
+Latest development Version     6.01
 
 
 --- Running SAD ---
 
-NOTE - This app is intended to help understand only how EEC code works, not as a tuning or commercial tool.
+NOTES - 
 
-Please be aware that your commands (in _dir file) are treated as 'master', and can actually break the processing.
-Therefore if something doesn't look right, please try running SAD WITHOUT any directive file, or make a _dir version only with SYMBOL commands in it.
+1) This app is intended to help understand how EEC code works, not as a tuning or commercial tool.
+
+2) Please be aware that user commands (in _dir.txt file) are always treated as 'master'. In some cases, these can actually break the processing.
+Therefore - if something doesn't look right, please try running SAD WITHOUT any directive file, or make a _dir version only with SYMBOL commands in it.
 This extra check may help show a user command error, and/or new information in case of a SAD bug.
 
 -------------------------------------------------
@@ -23,7 +26,7 @@ SAD_user_manual.pdf	            disassembler documentation and user manual.
 
 SAD_commands_definition.pdf		complete command definition, and comments file definition.
 
-SADWIN.pdf	                    Windows Wrapper documentation.
+SADWIN.pdf	                    Windows GUI Wrapper documentation.
  
 Version.txt	Short description of bugs fixed and changes made for each version.
 
@@ -46,7 +49,7 @@ SADwin.cpp   Source code        (uses WIN32 API)
 chip.ico     icon file          (same as Windows above)
 
 Notes -  SADwin will create a default config file (sad.ini) for you on its first run,
-         which you can then setup to your preference via SADWIN
+         which you can then setup to your preference via SADWIN.
 
 ---------------------------------------
 
@@ -67,22 +70,34 @@ Similar dir tree to main, with latest development builds.  Probably stable, but 
 ---------------------------------------
 
 
--- Notes sad.ini  (both Win and Linux)--
+-- Config Notes
 
-Edit sad.ini for your setup.
+config file (of directory locations) is sad.ini (both Windows and Linux)
 
-If sad.ini is not in same directory as SADvvv then use command  SAD -c 'path'   where path is location of sad.ini.
+Plain text.  Edit sad.ini as required for your setup.
 
-If no sad.ini present, then everything must be in same directory as SAD
+If sad.ini is not in same directory as SAD executable then use command  SAD -c 'path' where path is location of sad.ini.
+
+If no sad.ini present, then everything asssumed to be in same directory as SAD.
+
+Drag and drop (Windows) assumes everything in same directory as dropped binfile.
 
 ----------------------------------
 
 Source Subdirectory
 
-Contains sources and headers to build SAD.  Last few versions are available.
-I have used CodeBlocks and Codelite as compilers/IDE, should be able to use any common 'C' compiler/linker.
-Not sorted out a makefile, it's a straight compile and link of the .cpp and .h files. 
+Contains sources and headers to build SAD.  Last few stable versions are available.
 
-Separate Subdirectory SADWin containing the source for the Win32API graphic interface for SAD (binfile select,
+----------------------------------
+
+Build Notes
+
+I use Codelite IDE as my build/test environment, on Linux Mint and a Windows VM under Linux (Virtualbox). 
+  (Codelite uses gcc in Linux and MingW32 in Windows)
+
+Any common compiler, IDE, linker, etc. should work, there is no OS specific code except for SADWin whihch uses Win32 API for graphics.
+I have not sorted out a makefile, but it's a straight compile and link of the .cpp and .h files.
+
+Separate Subdirectory SADWin contains the source for the Win32API graphic interface for SAD (binfile select,
 viewing various files and config)
 
